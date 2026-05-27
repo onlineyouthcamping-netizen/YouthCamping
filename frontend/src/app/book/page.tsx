@@ -272,7 +272,6 @@ function BookingForm() {
       
       // Train options adjustment
       if (p.trainOption === '3AC') travelerPrice += 2000;
-      if (p.trainOption === '2AC') travelerPrice += 3500;
       if (p.trainOption === 'No Train') travelerPrice -= 1500;
 
       // Room sharing options adjustment
@@ -737,7 +736,7 @@ function BookingForm() {
                           <div className="space-y-1.5 pt-1">
                             <label className="text-[8px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1"><Train size={10} /> Train Ticket Option</label>
                             <div className="grid grid-cols-4 gap-2">
-                              {['Sleeper', '3AC', '2AC', 'No Train'].map((train) => (
+                              {['Sleeper', '3AC', 'No Train'].map((train) => (
                                 <button
                                   key={train}
                                   type="button"

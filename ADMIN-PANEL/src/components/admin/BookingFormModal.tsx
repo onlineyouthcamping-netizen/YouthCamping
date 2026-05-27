@@ -236,7 +236,6 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
                   <SelectContent>
                     <SelectItem value="Sleeper">Sleeper</SelectItem>
                     <SelectItem value="3AC">3AC</SelectItem>
-                    <SelectItem value="2AC">2AC</SelectItem>
                     <SelectItem value="Flight">Flight</SelectItem>
                   </SelectContent>
                 </Select>

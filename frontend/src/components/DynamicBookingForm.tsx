@@ -148,7 +148,7 @@ const DynamicBookingForm: React.FC<DynamicBookingFormProps> = ({ formId }) => {
 
         {/* --- TRAVEL INFO --- */}
         <Section title="Travel Info">
-          <Select label="Train Class" icon={<Train size={18}/>} value={formData.trainClass} onChange={(v) => handleChange('trainClass', v)} options={['3AC', '2AC', 'SL']} />
+          <Select label="Train Class" icon={<Train size={18}/>} value={formData.trainClass} onChange={(v) => handleChange('trainClass', v)} options={['3AC', 'SL']} />
           <Select label="Ticket Status" icon={<CheckCircle size={18}/>} value={formData.ticketStatus} onChange={(v) => handleChange('ticketStatus', v)} options={['Done', 'Pending']} />
           <Select label="Room Sharing" icon={<Bed size={18}/>} value={formData.room} onChange={(v) => handleChange('room', v)} options={['1 Room', '2 Room', '3 Room']} />
         </Section>

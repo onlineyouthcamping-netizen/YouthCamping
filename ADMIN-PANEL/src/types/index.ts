@@ -178,7 +178,7 @@ export interface Booking {
   age: number;
   gender: 'Male' | 'Female' | 'Other';
   mobile: string;
-  trainClass: 'Sleeper' | '3AC' | '2AC' | 'Flight';
+  trainClass: 'Sleeper' | '3AC' | 'Flight';
   ticketStatus: 'Confirmed' | 'Waiting' | 'Not Booked';
   roomType: string;
   numberOfTravelers?: number;

@@ -108,7 +108,6 @@ export default function TripBookingPage() {
             <select value={form.trainClass} onChange={e => setForm({...form, trainClass: e.target.value})} className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none">
               <option value="Sleeper" className="bg-slate-800">Sleeper</option>
               <option value="3AC" className="bg-slate-800">3AC</option>
-              <option value="2AC" className="bg-slate-800">2AC</option>
               <option value="Flight" className="bg-slate-800">Flight</option>
             </select>
             <select value={form.ticketStatus} onChange={e => setForm({...form, ticketStatus: e.target.value})} className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none">
