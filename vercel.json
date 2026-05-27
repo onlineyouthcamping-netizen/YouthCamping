@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd ADMIN-PANEL && npm install && npm run build",
+  "outputDirectory": "ADMIN-PANEL/dist"
+}
