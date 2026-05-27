@@ -149,10 +149,34 @@ function BookingForm() {
           }
         }
         if (!foundTrip && initialParams.tripName) {
-          const res = await fetch(`${API_BASE_URL}/trips?search=${encodeURIComponent(initialParams.tripName)}`);
+          const res = await fetch(`${API_BASE_URL}/trips?status=all`);
           const json = await res.json();
           if (json.success && json.data.length > 0) {
-            foundTrip = json.data.find((t: any) => t.title === initialParams.tripName) || json.data[0];
+            // Normalize spaces, casing, and all types of dashes for robust matching
+            const normalize = (str: string) => 
+              (str || '')
+                .toLowerCase()
+                .replace(/[\u2013\u2014-]/g, '-') // Normalize en-dash, em-dash, and hyphens to a single dash
+                .replace(/[^a-z0-9]/g, '')        // Keep only alphanumeric characters for comparison
+                .trim();
+
+            const targetNormalized = normalize(initialParams.tripName);
+            
+            // 1. Try exact normalized match of title or slug
+            foundTrip = json.data.find((t: any) => normalize(t.title) === targetNormalized || normalize(t.slug) === targetNormalized);
+            
+            // 2. Try fuzzy/partial match of title
+            if (!foundTrip) {
+              foundTrip = json.data.find((t: any) => 
+                normalize(t.title).includes(targetNormalized) || 
+                targetNormalized.includes(normalize(t.title))
+              );
+            }
+            
+            // 3. Fallback to index 0 if no match
+            if (!foundTrip) {
+              foundTrip = json.data[0];
+            }
           }
         }
 
