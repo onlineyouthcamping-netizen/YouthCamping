@@ -1212,6 +1212,30 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                   </div>
                 </div>
               </div>
+              
+              <div className="pt-6 border-t space-y-4">
+                <Label className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Star className="w-3 h-3" /> Booking Form Labels
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] uppercase font-black opacity-50">Joining Point Title</Label>
+                    <Input value={form.bookingFormLabels?.joiningPoint || ""} onChange={(e) => setForm({ ...form, bookingFormLabels: { ...form.bookingFormLabels, joiningPoint: e.target.value } })} placeholder="e.g. Joining Point" className="rounded-xl h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] uppercase font-black opacity-50">Travelers Manifest Title</Label>
+                    <Input value={form.bookingFormLabels?.travelers || ""} onChange={(e) => setForm({ ...form, bookingFormLabels: { ...form.bookingFormLabels, travelers: e.target.value } })} placeholder="e.g. Traveler Manifest" className="rounded-xl h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] uppercase font-black opacity-50">Travel Option Title</Label>
+                    <Input value={form.bookingFormLabels?.travelOption || ""} onChange={(e) => setForm({ ...form, bookingFormLabels: { ...form.bookingFormLabels, travelOption: e.target.value } })} placeholder="e.g. Train Ticket Option" className="rounded-xl h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] uppercase font-black opacity-50">Room Sharing Option Title</Label>
+                    <Input value={form.bookingFormLabels?.roomSharing || ""} onChange={(e) => setForm({ ...form, bookingFormLabels: { ...form.bookingFormLabels, roomSharing: e.target.value } })} placeholder="e.g. Room Sharing Option" className="rounded-xl h-10" />
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 

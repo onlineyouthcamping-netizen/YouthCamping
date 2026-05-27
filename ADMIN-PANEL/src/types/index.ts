@@ -97,6 +97,12 @@ export interface Trip {
   pickupCities?: PickupCity[];
   travelOptions: TravelOption[];
   roomOptions: RoomOption[];
+  bookingFormLabels?: {
+    joiningPoint?: string;
+    travelers?: string;
+    travelOption?: string;
+    roomSharing?: string;
+  };
   addons: TripAddon[];
   attractions?: { name: string; image: string; slug: string; description?: string }[];
   activities?: { name: string; image: string; slug: string; description?: string }[];

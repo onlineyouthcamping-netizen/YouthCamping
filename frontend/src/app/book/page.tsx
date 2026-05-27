@@ -271,12 +271,26 @@ function BookingForm() {
       let travelerPrice = basePrice;
       
       // Train options adjustment
-      if (p.trainOption === '3AC') travelerPrice += 2000;
-      if (p.trainOption === 'No Train') travelerPrice -= 1500;
+      const trainOptions = tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
+        { label: 'Sleeper', priceDelta: 0 },
+        { label: '3AC', priceDelta: 2000 },
+        { label: 'No Train', priceDelta: -1500 }
+      ];
+      const selectedTrainOpt = trainOptions.find((opt: any) => opt.label === p.trainOption);
+      if (selectedTrainOpt) {
+        travelerPrice += Number(selectedTrainOpt.priceDelta) || 0;
+      }
 
       // Room sharing options adjustment
-      if (p.roomSharing === 'Double Sharing') travelerPrice += 1500;
-      if (p.roomSharing === 'Quad Sharing') travelerPrice -= 500;
+      const roomOptions = tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
+        { label: 'Triple Sharing', priceDelta: 0 },
+        { label: 'Double Sharing', priceDelta: 1500 },
+        { label: 'Quad Sharing', priceDelta: -500 }
+      ];
+      const selectedRoomOpt = roomOptions.find((opt: any) => opt.label === p.roomSharing);
+      if (selectedRoomOpt) {
+        travelerPrice += Number(selectedRoomOpt.priceDelta) || 0;
+      }
 
       // Joining point deductions
       const deduction = selectedCity?.deductionAmount || 0;
@@ -600,7 +614,7 @@ function BookingForm() {
                         <Navigation size={20} />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">Joining Point</h2>
+                        <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">{tripData?.bookingFormLabels?.joiningPoint || 'Joining Point'}</h2>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Select where you want to meet us (Loaded from Trip info)</p>
                       </div>
                     </div>
@@ -640,8 +654,8 @@ function BookingForm() {
                         <Users size={20} />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">Traveler Manifest</h2>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fill info for all tour members</p>
+                        <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">{tripData?.bookingFormLabels?.travelers || 'Traveler Manifest'}</h2>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{tripData?.bookingFormLabels?.travelersDescription || 'Fill info for all tour members'}</p>
                       </div>
                     </div>
 
@@ -710,19 +724,21 @@ function BookingForm() {
 
                           {/* Room Sharing Option for this traveler */}
                           <div className="space-y-1.5 pt-1">
-                            <label className="text-[8px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1"><Bed size={10} /> Room Sharing Option</label>
+                            <label className="text-[8px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1"><Bed size={10} /> {tripData?.bookingFormLabels?.roomSharing || 'Room Sharing Option'}</label>
                             <div className="grid grid-cols-3 gap-2">
-                              {['Double Sharing', 'Triple Sharing', 'Quad Sharing'].map((room) => (
+                              {(tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
+                                { label: 'Double Sharing' }, { label: 'Triple Sharing' }, { label: 'Quad Sharing' }
+                              ]).map((room: any) => (
                                 <button
-                                  key={room}
+                                  key={room.label}
                                   type="button"
-                                  onClick={() => handleParticipantChange(index, 'roomSharing', room)}
+                                  onClick={() => handleParticipantChange(index, 'roomSharing', room.label)}
                                   className={cn(
                                     "py-2 rounded-lg font-bold text-[9px] border text-center transition-all",
-                                    traveler.roomSharing === room ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
+                                    traveler.roomSharing === room.label ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
                                   )}
                                 >
-                                  {room}
+                                  {room.label}
                                 </button>
                               ))}
                             </div>
@@ -730,19 +746,21 @@ function BookingForm() {
 
                           {/* Train Class Option for this traveler */}
                           <div className="space-y-1.5 pt-1">
-                            <label className="text-[8px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1"><Train size={10} /> Train Ticket Option</label>
-                            <div className="grid grid-cols-4 gap-2">
-                              {['Sleeper', '3AC', 'No Train'].map((train) => (
+                            <label className="text-[8px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1"><Train size={10} /> {tripData?.bookingFormLabels?.travelOption || 'Train Ticket Option'}</label>
+                            <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+                              {(tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
+                                { label: 'Sleeper' }, { label: '3AC' }, { label: 'No Train' }
+                              ]).map((train: any) => (
                                 <button
-                                  key={train}
+                                  key={train.label}
                                   type="button"
-                                  onClick={() => handleParticipantChange(index, 'trainOption', train)}
+                                  onClick={() => handleParticipantChange(index, 'trainOption', train.label)}
                                   className={cn(
                                     "py-2 rounded-lg font-bold text-[9px] border text-center transition-all",
-                                    traveler.trainOption === train ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
+                                    traveler.trainOption === train.label ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
                                   )}
                                 >
-                                  {train}
+                                  {train.label}
                                 </button>
                               ))}
                             </div>

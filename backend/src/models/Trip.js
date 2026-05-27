@@ -87,6 +87,12 @@ const tripSchema = new mongoose.Schema({
     default: 'published'
   },
   customSections: [mongoose.Schema.Types.Mixed],
+  bookingFormLabels: {
+    joiningPoint: { type: String, default: "Joining Point" },
+    travelers: { type: String, default: "Traveler Manifest" },
+    travelOption: { type: String, default: "Train Ticket Option" },
+    roomSharing: { type: String, default: "Room Sharing Option" }
+  },
   attractions: [mongoose.Schema.Types.Mixed],
   activities: [mongoose.Schema.Types.Mixed],
   accommodations: [mongoose.Schema.Types.Mixed],
