@@ -1,9 +1,37 @@
-// AUTH BYPASSED FOR DEVELOPMENT
+const jwt = require('jsonwebtoken');
+
+// JWT auth middleware
+// Expected header: Authorization: Bearer <token>
 const authenticate = (req, res, next) => {
-  // Always grant access and mock a default tenant
-  req.user = { id: 'dev_user', role: 'admin', tenantId: 'default' };
-  req.admin = { id: 'dev_admin', role: 'admin', name: 'Dev Admin', tenantId: 'default' };
-  next();
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Missing Bearer token' });
+    }
+
+    const token = authHeader.slice('Bearer '.length).trim();
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Missing token' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = {
+      id: decoded?.id,
+      role: decoded?.role,
+      tenantId: decoded?.tenantId || 'default',
+    };
+
+    if (!user.id || !user.role) {
+      return res.status(401).json({ success: false, message: 'Invalid token claims' });
+    }
+
+    // Existing code expects `req.admin` for authorizing role-gated admin routes.
+    req.user = user;
+    req.admin = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
 };
 
 const protect = authenticate;

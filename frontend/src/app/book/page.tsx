@@ -42,6 +42,10 @@ function BookingForm() {
       const tid = searchParams.get('tid');
       const price = searchParams.get('price');
       const salesperson = searchParams.get('salesperson');
+      const pickupCity = searchParams.get('pickupCity');
+      const payMode = searchParams.get('payMode');
+      const bookAmt = searchParams.get('bookAmt');
+      const sourceBookingLinkId = searchParams.get('sourceBookingLinkId');
 
       const sanitize = (val: string | null) => 
         val ? decodeURIComponent(val.replace(/\+/g, ' ')).trim() : '';
@@ -51,11 +55,25 @@ function BookingForm() {
         date: sanitize(date),
         tripId: sanitize(tid),
         salesPersonName: sanitize(salesperson) || 'Direct',
+        pickupCity: sanitize(pickupCity),
+        payMode: sanitize(payMode),
+        bookAmt: bookAmt ? (Number.isFinite(parseFloat(bookAmt)) ? parseFloat(bookAmt) : null) : null,
+        sourceBookingLinkId: sanitize(sourceBookingLinkId),
         basePrice: price ? parseInt(price) : 0
       };
     } catch (e) {
       console.error("❌ Failed to parse URL parameters:", e);
-      return { tripName: '', date: '', tripId: '', salesPersonName: 'Direct', basePrice: 0 };
+      return { 
+        tripName: '', 
+        date: '', 
+        tripId: '', 
+        salesPersonName: 'Direct', 
+        pickupCity: '',
+        payMode: '',
+        bookAmt: null,
+        sourceBookingLinkId: '',
+        basePrice: 0 
+      };
     }
   }, [searchParams]);
 
@@ -103,6 +121,18 @@ function BookingForm() {
   // Keep selectedCity synced once joiningPoints are resolved, matching the url price param if applicable
   useEffect(() => {
     if (joiningPoints.length > 0) {
+      // If token/link prefilled a pickup city, use it as the source of truth
+      if (initialParams.pickupCity) {
+        const normalize = (s: string) =>
+          (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const target = normalize(initialParams.pickupCity);
+        const matched = joiningPoints.find((j) => normalize(j.cityName) === target);
+        if (matched) {
+          setSelectedCity(matched);
+          return;
+        }
+      }
+
       if (initialParams.basePrice && tripData?.variants && Array.isArray(tripData.variants)) {
         const matchingVariantIdx = tripData.variants.findIndex((v: any) => v.discountedPrice === initialParams.basePrice);
         if (matchingVariantIdx !== -1 && joiningPoints[matchingVariantIdx]) {
@@ -112,12 +142,27 @@ function BookingForm() {
       }
       setSelectedCity(joiningPoints[0]);
     }
-  }, [joiningPoints, initialParams.basePrice, tripData]);
+  }, [joiningPoints, initialParams.basePrice, initialParams.pickupCity, tripData]);
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponError, setCouponError] = useState('');
   const [paymentMode, setPaymentMode] = useState<'Full Payment' | 'Partial Payment'>('Full Payment');
+  const [customDepositPerPax, setCustomDepositPerPax] = useState<number | null>(initialParams.bookAmt);
+
+  // Prefill payment mode + custom deposit from tokenized booking link
+  useEffect(() => {
+    if (initialParams.payMode === 'Partial Payment') setPaymentMode('Partial Payment');
+    else if (initialParams.payMode === 'Full Payment') setPaymentMode('Full Payment');
+  }, [initialParams.payMode]);
+
+  useEffect(() => {
+    if (initialParams.bookAmt !== null && initialParams.bookAmt !== undefined && initialParams.bookAmt > 0) {
+      setCustomDepositPerPax(initialParams.bookAmt);
+    } else {
+      setCustomDepositPerPax(null);
+    }
+  }, [initialParams.bookAmt]);
 
   // Checkboxes
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -254,8 +299,8 @@ function BookingForm() {
 
     const netBase = Math.max(0, originalTotalBase - couponDiscount);
     
-    // Partial payment details: ₹2000 deposit per traveler
-    const depositPerPax = 2000;
+    // Partial payment details: configurable deposit per traveler (defaults to 2000)
+    const depositPerPax = customDepositPerPax && customDepositPerPax > 0 ? customDepositPerPax : 2000;
     const partialBaseAmount = depositPerPax * formData.participants;
 
     // GST Calculation
@@ -283,7 +328,7 @@ function BookingForm() {
       advancePaid,
       remainingBalance: (netBase + Math.round(netBase * 0.05)) - advancePaid
     };
-  }, [basePrice, selectedCity, formData.participants, formData.participantsList, appliedCoupon, paymentMode]);
+  }, [basePrice, selectedCity, formData.participants, formData.participantsList, appliedCoupon, paymentMode, customDepositPerPax]);
 
   // Apply Coupon Code
   const applyPromo = () => {
@@ -356,6 +401,7 @@ function BookingForm() {
         tripId: initialParams.tripId || tripData?.id || 'manual',
         tripName: initialParams.tripName || tripData?.title || 'Expedition',
         departureDate: initialParams.date ? new Date(initialParams.date) : null,
+        sourceBookingLinkId: initialParams.sourceBookingLinkId || null,
         pickupCity: selectedCity.cityName,
         skipDays: selectedCity.skipDays,
         adjustedPrice: pricing.originalTotalBase / formData.participants,

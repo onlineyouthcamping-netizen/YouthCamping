@@ -79,6 +79,7 @@ app.use(morgan('dev'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/trips', require('./routes/tripRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
+app.use('/api/booking-links', require('./routes/bookingLinkRoutes'));
 app.use('/api/inquiries', require('./routes/inquiryRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/vendors', require('./routes/vendorRoutes'));

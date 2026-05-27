@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { syncBookingToSheets } = require('../utils/googleSheetsSync');
+const crypto = require('crypto');
 
 // Helper to safely parse dates and avoid crashes with "Invalid Date"
 const safeParseDate = (dateVal) => {
@@ -8,17 +9,31 @@ const safeParseDate = (dateVal) => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+const sha256 = (value) =>
+  crypto.createHash('sha256').update(String(value)).digest('hex');
+
+const getIpHash = (req) => {
+  const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.ip || '';
+  return ip ? sha256(ip) : null;
+};
+
 // ────────────────────────────────────────────
 // BOOKING MANAGEMENT
 // ────────────────────────────────────────────
 
 exports.getBookings = async (req, res, next) => {
   try {
-    const { status, tripId, paymentStatus, search } = req.query;
+    const { status, tripId, paymentStatus, search, salesAdminId } = req.query;
     const where = { tenantId: req.user.tenantId };
     if (status) where.status = status;
     if (tripId) where.tripId = tripId;
     if (paymentStatus) where.paymentStatus = paymentStatus;
+    // Role-based constraint: sales can only see bookings sourced from their own salesAdminId.
+    if (req.user?.role === 'sales') {
+      where.salesAdminId = req.user.id;
+    } else if (salesAdminId) {
+      where.salesAdminId = salesAdminId;
+    }
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -28,7 +43,18 @@ exports.getBookings = async (req, res, next) => {
     }
     const bookings = await prisma.booking.findMany({ 
       where, 
-      include: { tripRef: true },
+      include: { 
+        tripRef: true,
+        sourceBookingLink: {
+          select: {
+            id: true,
+            tokenPrefix: true,
+            expiresAt: true,
+            status: true,
+            shareUrl: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' } 
     });
     const mappedBookings = bookings.map(b => {
@@ -51,10 +77,25 @@ exports.getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const tenantId = req.user.tenantId;
+    const where = { id, tenantId };
+    if (req.user?.role === 'sales') {
+      where.salesAdminId = req.user.id;
+    }
 
     const booking = await prisma.booking.findFirst({
-      where: { id, tenantId },
-      include: { tripRef: true }
+      where,
+      include: { 
+        tripRef: true,
+        sourceBookingLink: {
+          select: {
+            id: true,
+            tokenPrefix: true,
+            expiresAt: true,
+            status: true,
+            shareUrl: true,
+          },
+        },
+      }
     });
 
     if (!booking) {
@@ -79,54 +120,132 @@ exports.getBookingById = async (req, res, next) => {
 
 exports.createBooking = async (req, res, next) => {
   try {
-    const { name, fullName, phone, mobile, tripId, amount, totalAmount, advancePaid,
-            status, paymentStatus, paymentMode, notes, email, departureDate,
-            pickupCity, skipDays, adjustedPrice, joiningDate } = req.body;
+    const { 
+      name, fullName, phone, mobile, tripId, amount, totalAmount, advancePaid,
+      status, paymentStatus, paymentMode, notes, email, departureDate,
+      pickupCity, skipDays, adjustedPrice, joiningDate,
+      sourceBookingLinkId, sourceBookingLinkToken
+    } = req.body;
     const bookingId = req.body.bookingId || `BK-${Date.now().toString().slice(-6)}`;
     const targetName = name || fullName;
     const targetPhone = phone || mobile;
-    const targetAmount = Number(amount || totalAmount || 0);
+    const amountValue = Number(amount || 0);
+    const totalAmountValue = Number(totalAmount || amountValue || 0);
+    const advanceValue = Number(advancePaid || 0) || 0;
+
+    const tenantId = req.user?.tenantId || 'default';
     
-    if (!targetName || !targetPhone || !tripId || !email) {
-      return res.status(400).json({ success: false, message: 'Required fields missing: Name, Phone, Trip, and Email are mandatory' });
+    if (!targetName || !targetPhone || !tripId) {
+      return res.status(400).json({ success: false, message: 'Required fields missing: Name, Phone, and Trip are mandatory' });
     }
     const targetTrip = await prisma.trip.findFirst({
-      where: { id: tripId, tenantId: req.user.tenantId }
+      where: { id: tripId, tenantId }
     });
 
-    const booking = await prisma.booking.create({
-      data: {
-        tenantId: req.user.tenantId, bookingId,
-        name: targetName, fullName: targetName,
-        phone: targetPhone, mobile: targetPhone,
-        tripId, 
-        tripName: targetTrip ? targetTrip.title : 'Manual Booking',
-        amount: targetAmount, totalAmount: targetAmount,
-        advancePaid: advancePaid || 0,
-        remainingAmount: targetAmount - (advancePaid || 0),
-        status: status || 'pending',
-        paymentStatus: paymentStatus || 'Pending',
-        paymentMode: paymentMode || 'UPI',
-        notes: notes || '',
-        email,
-        departureDate: departureDate ? new Date(departureDate) : null,
-        pickupCity: pickupCity || null,
-        skipDays: skipDays !== undefined ? parseInt(skipDays) : 0,
-        adjustedPrice: adjustedPrice !== undefined ? parseFloat(adjustedPrice) : null,
-        joiningDate: joiningDate ? new Date(joiningDate) : null,
-        age: req.body.age ? parseInt(req.body.age) : null,
-        gender: req.body.gender || null,
-        passengers: {
-          details: {
-            trainClass: req.body.trainClass,
-            ticketStatus: req.body.ticketStatus,
-            roomType: req.body.roomType,
-            basePrice: req.body.basePrice,
-            gstAmount: req.body.gstAmount
-          },
-          persons: req.body.passengers || []
-        }
+    // Optional link attribution + expiry enforcement
+    let sourceLink = null;
+    if (sourceBookingLinkId || sourceBookingLinkToken) {
+      if (sourceBookingLinkToken) {
+        const tokenHash = sha256(String(sourceBookingLinkToken));
+        sourceLink = await prisma.bookingLink.findFirst({
+          where: { tokenHash, tenantId },
+        });
+      } else {
+        sourceLink = await prisma.bookingLink.findFirst({
+          where: { id: sourceBookingLinkId, tenantId },
+        });
       }
+
+      if (!sourceLink) {
+        return res.status(410).json({ success: false, message: 'Booking link is invalid or no longer available' });
+      }
+
+      const now = Date.now();
+      if (sourceLink.status !== 'active' || (sourceLink.expiresAt && sourceLink.expiresAt.getTime() < now)) {
+        await prisma.bookingLink.update({
+          where: { id: sourceLink.id },
+          data: { status: 'expired' },
+        });
+        return res.status(410).json({ success: false, message: 'Booking link has expired' });
+      }
+
+      // Basic integrity check (link trip should match the booking trip)
+      if (String(sourceLink.tripId) !== String(tripId)) {
+        return res.status(400).json({ success: false, message: 'Trip mismatch for this booking link' });
+      }
+    }
+
+    const booking = await prisma.$transaction(async (tx) => {
+      const created = await tx.booking.create({
+        data: {
+          tenantId, bookingId,
+          name: targetName, fullName: targetName,
+          phone: targetPhone, mobile: targetPhone,
+          tripId,
+          tripName: targetTrip ? targetTrip.title : 'Manual Booking',
+          amount: amountValue,
+          totalAmount: totalAmountValue,
+          advancePaid: advanceValue,
+          remainingAmount: totalAmountValue - advanceValue,
+          status: status || 'pending',
+          paymentStatus: paymentStatus || 'Pending',
+          paymentMode: paymentMode || 'UPI',
+          notes: notes || '',
+          email,
+          departureDate: departureDate ? new Date(departureDate) : null,
+          pickupCity: pickupCity || null,
+          skipDays: skipDays !== undefined ? parseInt(skipDays) : 0,
+          adjustedPrice: adjustedPrice !== undefined ? parseFloat(adjustedPrice) : null,
+          joiningDate: joiningDate ? new Date(joiningDate) : null,
+          age: req.body.age ? parseInt(req.body.age) : null,
+          gender: req.body.gender || null,
+          passengers: {
+            details: {
+              trainClass: req.body.trainClass,
+              ticketStatus: req.body.ticketStatus,
+              roomType: req.body.roomType,
+              basePrice: req.body.basePrice,
+              gstAmount: req.body.gstAmount,
+            },
+            persons: req.body.passengers || [],
+          },
+          sourceBookingLinkId: sourceLink ? sourceLink.id : null,
+          salesAdminId: sourceLink ? sourceLink.createdByAdminId : null,
+          sourceMeta: sourceLink
+            ? {
+                tripId: sourceLink.tripId,
+                tripName: sourceLink.tripName,
+                departureDate: sourceLink.departureDate,
+                pickupCity: sourceLink.pickupCity,
+                paymentMode: sourceLink.paymentMode,
+                customAmount: sourceLink.customAmount,
+                expiresAt: sourceLink.expiresAt,
+              }
+            : null,
+        },
+      });
+
+      if (sourceLink) {
+        await tx.bookingLink.update({
+          where: { id: sourceLink.id },
+          data: {
+            completedCount: { increment: 1 },
+            lastCompletedAt: new Date(),
+          },
+        });
+
+        await tx.bookingLinkEvent.create({
+          data: {
+            tenantId,
+            bookingLinkId: sourceLink.id,
+            type: 'booking_created',
+            ipHash: getIpHash(req),
+            userAgent: req.headers['user-agent']?.toString(),
+          },
+        });
+      }
+
+      return created;
     });
 
     // Sync to Google Sheets
@@ -193,10 +312,13 @@ exports.updateBooking = async (req, res, next) => {
       }
     }
 
-    const booking = await prisma.booking.updateMany({
-      where: { id: req.params.id, tenantId: req.user.tenantId },
-      data: updateData
-    });
+    const role = req.user?.role;
+    const where = { id: req.params.id, tenantId: req.user.tenantId };
+    if (role === 'sales') {
+      where.salesAdminId = req.user.id;
+    }
+
+    const booking = await prisma.booking.updateMany({ where, data: updateData });
     if (booking.count === 0) return res.status(404).json({ success: false, message: 'Booking not found' });
     res.json({ success: true, message: 'Booking updated' });
   } catch (error) { next(error); }
@@ -206,25 +328,29 @@ exports.deleteBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const tenantId = req.user.tenantId;
+    const role = req.user?.role;
+    const where = { id, tenantId };
+    if (role === 'sales') {
+      where.salesAdminId = req.user.id;
+    }
 
-    // 1. Delete associated Email Logs (Foreign Key constraint)
-    await prisma.bookingEmailLog.deleteMany({
-      where: { bookingId: id }
+    const booking = await prisma.booking.findFirst({
+      where,
+      select: { id: true },
+    });
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    // Spec: "reject" should move to Cancelled state (not hard-delete),
+    // so the booking lifecycle remains auditable.
+    await prisma.booking.updateMany({
+      where,
+      data: {
+        status: 'cancelled',
+        paymentStatus: 'Cancelled',
+      },
     });
 
-    // 2. Delete associated Payments (Clean up)
-    await prisma.payment.deleteMany({
-      where: { bookingId: id, tenantId }
-    });
-
-    // 3. Delete the booking itself
-    const result = await prisma.booking.deleteMany({
-      where: { id, tenantId }
-    });
-
-    if (result.count === 0) return res.status(404).json({ success: false, message: 'Booking not found' });
-    
-    res.json({ success: true, message: 'Booking and associated records deleted successfully' });
+    res.json({ success: true, message: 'Booking cancelled successfully' });
   } catch (error) { 
     console.error('🔥 [deleteBooking Error]:', error);
     res.status(500).json({ 
@@ -241,8 +367,14 @@ exports.confirmBooking = async (req, res, next) => {
     const { totalAmount, advancePaid, paymentMode, paymentStatus, email } = req.body;
     const targetAdvance = Number(advancePaid) || 0;
 
+    const role = req.user?.role;
+    const where = { id: req.params.id, tenantId: req.user.tenantId };
+    if (role === 'sales') {
+      where.salesAdminId = req.user.id;
+    }
+
     const booking = await prisma.booking.updateMany({
-      where: { id: req.params.id, tenantId: req.user.tenantId },
+      where,
       data: {
         status: 'confirmed', 
         totalAmount: Number(totalAmount),

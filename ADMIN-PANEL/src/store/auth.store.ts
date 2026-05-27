@@ -12,8 +12,8 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  admin: { id: 'dev_admin', role: 'admin', name: 'Dev Admin', email: 'admin@youthcamping.online', tenantId: 'default' },
-  isAuthenticated: true,
+  admin: null,
+  isAuthenticated: false,
   isLoading: false,
 
   login: async (email, password) => {
@@ -41,6 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
+    set({ isLoading: true });
     const token = localStorage.getItem("token");
     console.log("🔍 Checking auth, token exists:", !!token);
     

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Copy, Trash2, CheckCircle, Clock, Filter, X, Link2, Users, ChevronDown, Edit, Pencil, FileDown, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import BookingDetailsView from "@/components/admin/BookingDetailsView";
 import type { Booking, BookingTrip } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
 
 // ── TRIP MANAGER MODAL ──
 function TripManager({ open, onClose, onRefresh }: { open: boolean; onClose: () => void; onRefresh: () => void }) {
@@ -246,37 +247,18 @@ function AccordionSection({ title, isOpen, onToggle, children }: AccordionSectio
   );
 }
 
-// Deterministic helper to generate realistic CRM metadata (bookedBy, source) for UI presentation
+// Booking source helper for list + details view
 const getBookingMetaData = (booking: Booking) => {
-  const idStr = booking.bookingId || booking.id || "";
-  const nameHash = idStr.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
-  let bookedBy = "System Auto";
-  let source = "Website";
+  const salesAdminId = (booking as any).salesAdminId as string | undefined;
+  const link = (booking as any).sourceBookingLink as
+    | { tokenPrefix?: string | null; id?: string | null; shareUrl?: string | null }
+    | undefined;
 
-  if (booking.status === 'confirmed') {
-    if (nameHash % 3 === 0) {
-      bookedBy = "Parth Patel";
-      source = "Admin Panel";
-    } else if (nameHash % 3 === 1) {
-      bookedBy = "Hemal Patel";
-      source = "Admin Panel";
-    } else {
-      bookedBy = "Varun YouthCamping";
-      source = "Agent Link";
-    }
-  } else {
-    if (nameHash % 2 === 0) {
-      bookedBy = "Self Booked";
-      source = "Website Form";
-    } else {
-      bookedBy = "Customer Inquiry";
-      source = "Inquiry Portal";
-    }
-  }
+  let bookedBy = salesAdminId ? `Sales ${salesAdminId}` : "Website / Unknown Sales";
+  let source = link?.tokenPrefix ? `Booking Link #${link.tokenPrefix}` : "Website / Inquiry";
 
-  // Fallback check on notes
-  const notesLower = (booking.notes || "").toLowerCase() + " " + (booking.adminNotes || "").toLowerCase();
+  // Keep compatibility with legacy notes patterns if present
+  const notesLower = ((booking.notes as any) || "").toString().toLowerCase() + " " + ((booking.adminNotes as any) || "").toString().toLowerCase();
   if (notesLower.includes("booked by:")) {
     const match = notesLower.match(/booked by:\s*([a-zA-Z\s]+)/);
     if (match && match[1]) bookedBy = match[1].trim();
@@ -298,6 +280,7 @@ export default function BookingsPage() {
   const [search, setSearch] = useState("");
   const [filterTrip, setFilterTrip] = useState("all");
   const [filterPayment, setFilterPayment] = useState("all");
+  const [filterSalesAdmin, setFilterSalesAdmin] = useState("all");
   const [bookingStart, setBookingStart] = useState("");
   const [bookingEnd, setBookingEnd] = useState("");
   const [depStart, setDepStart] = useState("");
@@ -361,9 +344,15 @@ export default function BookingsPage() {
   }, [bookings, detailsTarget?.id]);
 
   const filtered = bookings.filter(b => {
-    if (b.status !== tab) return false;
+    // Keep existing "pending vs confirmed" tabs, but include cancelled in the non-confirmed tab.
+    if (tab === 'confirmed') {
+      if (b.status !== 'confirmed') return false;
+    } else {
+      if (b.status === 'confirmed') return false;
+    }
     if (balanceOnly && (b.remainingAmount || 0) <= 0) return false;
     if (filterTrip !== 'all' && b.tripId !== filterTrip) return false;
+    if (filterSalesAdmin !== 'all' && String((b as any).salesAdminId || '') !== filterSalesAdmin) return false;
     if (statusFilter !== 'all' && b.paymentStatus?.toLowerCase() !== statusFilter.toLowerCase()) return false;
     if (tab === 'confirmed' && filterPayment !== 'all' && b.paymentStatus?.toLowerCase() !== filterPayment) return false;
     if (search) {
@@ -395,6 +384,55 @@ export default function BookingsPage() {
     }
     return true;
   });
+
+  const salesOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        bookings
+          .map((b) => (b as any).salesAdminId)
+          .filter((v) => typeof v === "string" && v.length > 0)
+      )
+    );
+  }, [bookings]);
+
+  const getFlowStatus = (b: any): 
+    | "Inquiry"
+    | "Pending Payment"
+    | "Partially Paid"
+    | "Confirmed"
+    | "Cancelled"
+    | "Expired" => {
+    const expiresAt =
+      b?.sourceMeta?.expiresAt ||
+      b?.sourceBookingLink?.expiresAt ||
+      null;
+    const isExpired =
+      expiresAt &&
+      b?.status === "pending" &&
+      new Date(expiresAt).getTime() < Date.now();
+
+    if (b?.status === "cancelled") return "Cancelled";
+    if (b?.status === "confirmed") return "Confirmed";
+    if (isExpired) return "Expired";
+
+    // Pending lifecycle
+    const paymentStatus = (b?.paymentStatus || "").toString().toLowerCase();
+    const advance = Number(b?.advancePaid || 0);
+    if (paymentStatus === "partial") return "Partially Paid";
+    if (paymentStatus === "pending" && advance <= 0) return "Inquiry";
+    if (paymentStatus === "pending" && advance > 0) return "Pending Payment";
+    if (paymentStatus === "paid") return "Pending Payment";
+    return "Inquiry";
+  };
+
+  const { admin: currentAdmin } = useAuthStore();
+
+  const canManageBooking = (b: any) => {
+    if (!currentAdmin) return false;
+    if (currentAdmin.role === "admin") return true;
+    if (currentAdmin.role === "sales") return String(b?.salesAdminId || "") === String(currentAdmin.id || "");
+    return false;
+  };
 
   const openEdit = (b: Booking) => {
     setEditTarget(b);
@@ -702,7 +740,29 @@ export default function BookingsPage() {
           </AccordionSection>
 
           <AccordionSection title="Search By Agent" isOpen={openSections.agent} onToggle={() => toggleSection('agent')}>
-            <span className="text-[10px] text-slate-400 italic block py-0.5">No agency links</span>
+            <div className="pt-1 space-y-2">
+              <Select value={filterSalesAdmin} onValueChange={setFilterSalesAdmin}>
+                <SelectTrigger className="h-8 text-[11px] rounded bg-slate-50 border-slate-200/80 mt-1">
+                  <SelectValue placeholder="All Sales" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">
+                    All Sales
+                  </SelectItem>
+                  {salesOptions.length === 0 ? (
+                    <SelectItem value="all" className="text-xs text-slate-400">
+                      No agents yet
+                    </SelectItem>
+                  ) : (
+                    salesOptions.map((id) => (
+                      <SelectItem key={id} value={id} className="text-xs">
+                        {id}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </AccordionSection>
 
           {/* Sidebar Action Buttons */}
@@ -875,17 +935,23 @@ export default function BookingsPage() {
                               {/* BADGES */}
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className={cn("text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm tracking-wide text-white uppercase", 
-                                  b.status === 'confirmed' ? "bg-[#2f855a]" : "bg-[#dd6b20]"
+                                  getFlowStatus(b) === 'Confirmed'
+                                    ? "bg-[#2f855a]"
+                                    : getFlowStatus(b) === 'Cancelled'
+                                      ? "bg-[#9b2c2c]"
+                                      : getFlowStatus(b) === 'Expired'
+                                        ? "bg-[#d97706]"
+                                        : "bg-[#dd6b20]"
                                 )}>
-                                  {b.status === 'confirmed' ? 'Confirmed' : 'Pending Inquiry'}
+                                  {getFlowStatus(b)}
                                 </span>
-                                {b.status === 'confirmed' && (b.remainingAmount || 0) > 0 && (
+                                {getFlowStatus(b) === 'Confirmed' && (b.remainingAmount || 0) > 0 && (
                                   <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm bg-[#9b2c2c] text-white font-mono flex items-center gap-0.5">
                                     ₹{Number(b.remainingAmount).toLocaleString('en-IN')} balance
                                     <span className="opacity-75 cursor-help pl-0.5" title="Outstanding balance due">?</span>
                                   </span>
                                 )}
-                                {b.status === 'confirmed' && (b.remainingAmount || 0) <= 0 && (
+                                {getFlowStatus(b) === 'Confirmed' && (b.remainingAmount || 0) <= 0 && (
                                   <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm bg-emerald-700 text-white font-mono uppercase">
                                     Paid
                                   </span>
@@ -897,7 +963,7 @@ export default function BookingsPage() {
                                 onClick={e => e.stopPropagation()} 
                                 className="action-btn-group flex gap-1 mt-1 shrink-0 justify-end"
                               >
-                                {b.status === 'pending' && (
+                                {['Inquiry', 'Pending Payment', 'Partially Paid'].includes(getFlowStatus(b)) && canManageBooking(b) && (
                                   <Button 
                                     size="sm" 
                                     onClick={() => setConfirmTarget(b)}
@@ -906,22 +972,26 @@ export default function BookingsPage() {
                                     Confirm
                                   </Button>
                                 )}
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => openEdit(b)}
-                                  className="h-6 w-6 rounded border border-slate-200/50 bg-slate-50/50 hover:bg-slate-100 text-slate-400 hover:text-slate-800"
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => handleDelete(b.id)}
-                                  className="h-6 w-6 rounded border border-slate-200/50 bg-rose-50/20 hover:bg-rose-100 hover:border-rose-200 text-rose-400 hover:text-rose-600"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
+                                {canManageBooking(b) && (
+                                  <>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      onClick={() => openEdit(b)}
+                                      className="h-6 w-6 rounded border border-slate-200/50 bg-slate-50/50 hover:bg-slate-100 text-slate-400 hover:text-slate-800"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      onClick={() => handleDelete(b.id)}
+                                      className="h-6 w-6 rounded border border-slate-200/50 bg-rose-50/20 hover:bg-rose-100 hover:border-rose-200 text-rose-400 hover:text-rose-600"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
 
                             </div>
@@ -970,22 +1040,32 @@ export default function BookingsPage() {
                       <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className={cn("text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm tracking-wide text-white uppercase", 
-                            b.status === 'confirmed' ? "bg-[#2f855a]" : "bg-[#dd6b20]"
+                            getFlowStatus(b) === 'Confirmed'
+                              ? "bg-[#2f855a]"
+                              : getFlowStatus(b) === 'Cancelled'
+                                ? "bg-[#9b2c2c]"
+                                : getFlowStatus(b) === 'Expired'
+                                  ? "bg-[#d97706]"
+                                  : "bg-[#dd6b20]"
                           )}>
-                            {b.status === 'confirmed' ? 'Confirmed' : 'Pending Inquiry'}
+                            {getFlowStatus(b)}
                           </span>
-                          {b.status === 'confirmed' && (b.remainingAmount || 0) > 0 && (
+                          {getFlowStatus(b) === 'Confirmed' && (b.remainingAmount || 0) > 0 && (
                             <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm bg-[#9b2c2c] text-white font-mono">
                               ₹{Number(b.remainingAmount).toLocaleString('en-IN')} due
                             </span>
                           )}
                         </div>
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                          {b.status === 'pending' && (
+                          {['Inquiry', 'Pending Payment', 'Partially Paid'].includes(getFlowStatus(b)) && canManageBooking(b) && (
                             <button onClick={() => setConfirmTarget(b)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold h-6 px-2 rounded">Confirm</button>
                           )}
-                          <button onClick={() => openEdit(b)} className="text-slate-400 hover:text-slate-800 p-1 border border-slate-200/60 rounded bg-slate-50/50"><Pencil className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => handleDelete(b.id)} className="text-rose-450 hover:text-rose-600 p-1 border border-slate-200/60 rounded bg-rose-50/20"><Trash2 className="w-3.5 h-3.5" /></button>
+                          {canManageBooking(b) && (
+                            <>
+                              <button onClick={() => openEdit(b)} className="text-slate-400 hover:text-slate-800 p-1 border border-slate-200/60 rounded bg-slate-50/50"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleDelete(b.id)} className="text-rose-450 hover:text-rose-600 p-1 border border-slate-200/60 rounded bg-rose-50/20"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

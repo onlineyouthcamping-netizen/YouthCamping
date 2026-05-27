@@ -31,9 +31,9 @@ api.interceptors.response.use(
       console.warn("🔐 Session expired - Clearing token and redirecting");
       localStorage.removeItem('token');
       
-      // Redirect to login (assuming standard path /login as per prompt)
-      if (typeof window !== 'undefined' && !window.location.pathname.includes("/login")) {
-        window.location.href = '/login';
+      // Redirect to admin login when session is invalid/expired
+      if (typeof window !== 'undefined' && !window.location.pathname.includes("/admin/login")) {
+        window.location.href = '/admin/login';
       }
     }
     return Promise.reject(err);

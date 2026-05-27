@@ -30,8 +30,9 @@ router.delete('/trips/:id', protectAny, deleteTrip);
 
 // ── ADMIN: Booking Management ──
 router.get('/', protectAny, getAllBookings);
-router.post('/', protectAny, createBooking); // Added base POST route
-router.post('/create', protectAny, createBooking);
+// PUBLIC: customer booking submissions (tokenized booking links are validated in controller)
+router.post('/', createBooking);
+router.post('/create', createBooking);
 router.get('/:id', protectAny, getBookingById);
 router.put('/:id/confirm', protectAny, confirmBooking);
 router.put('/:id', protectAny, updateBooking);

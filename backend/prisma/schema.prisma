@@ -18,6 +18,10 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Booking-link ownership (used for sales filtering + analytics)
+  createdBookingLinks BookingLink[] @relation("CreatedBookingLinks")
+  salesBookings Booking[] @relation("SalesBookings")
+
   @@index([tenantId])
 }
 
@@ -246,6 +250,9 @@ model Booking {
   paymentStatus   String            @default("Pending")
   notes           String?
   adminNotes      String?
+  sourceBookingLinkId String?
+  salesAdminId        String?
+  sourceMeta          Json?
   departureDate   DateTime?
   pickupCity      String?
   skipDays        Int?              @default(0)
@@ -257,10 +264,14 @@ model Booking {
   updatedAt       DateTime          @updatedAt
   tripRef         Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   emailLogs       BookingEmailLog[]
+  sourceBookingLink BookingLink?   @relation(fields: [sourceBookingLinkId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  salesAdmin        Admin?         @relation("SalesBookings", fields: [salesAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([tenantId])
   @@index([status])
   @@index([paymentStatus])
+  @@index([sourceBookingLinkId])
+  @@index([salesAdminId])
 }
 
 model BookingEmailLog {
@@ -276,6 +287,66 @@ model BookingEmailLog {
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([bookingId])
+}
+
+model BookingLink {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+
+  createdByAdminId String?
+  createdByAdmin   Admin?  @relation("CreatedBookingLinks", fields: [createdByAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  tripId     String
+  tripName   String?
+  departureDate DateTime?
+  pickupCity String?
+  paymentMode String?
+  customAmount Float?
+
+  expiresAt DateTime?
+  status    String   @default("active") // active|revoked|expired
+
+  tokenHash   String @unique
+  tokenPrefix String  @default("")
+  // Admin needs to copy the exact share URL later; storing the URL keeps the token server-side.
+  // Customers only see the URL they were already shared.
+  shareUrl    String?
+
+  openedCount Int     @default(0)
+  firstOpenedAt DateTime?
+  lastOpenedAt  DateTime?
+  completedCount Int   @default(0)
+  lastCompletedAt DateTime?
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events   BookingLinkEvent[]
+  bookings Booking[]
+
+  @@index([tenantId])
+  @@index([createdByAdminId])
+  @@index([tripId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model BookingLinkEvent {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  bookingLinkId String
+  type          String
+  ipHash        String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  bookingLink BookingLink @relation(fields: [bookingLinkId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([tenantId])
+  @@index([bookingLinkId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model PageBuilder {

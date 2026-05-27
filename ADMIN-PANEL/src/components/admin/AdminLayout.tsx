@@ -228,8 +228,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   useEffect(() => {
-    // Auth check bypassed for development
-    // checkAuth();
+    // Verify JWT session on every admin route load
+    checkAuth();
   }, [checkAuth]);
 
   useEffect(() => {
@@ -263,15 +263,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     }
   }, [location.pathname, admin, isLoading, navigate]);
 
-  // Redirect to login bypassed for development
-  /*
   useEffect(() => {
     if (!isLoading && !isAuthenticated && location.pathname !== "/admin/login") {
       console.log("🔒 Not authenticated, redirecting to login...");
       navigate("/admin/login");
     }
   }, [isLoading, isAuthenticated, navigate, location.pathname]);
-  */
 
   if (isLoading) {
     return (
@@ -284,9 +281,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // if (!isAuthenticated && location.pathname !== "/admin/login") {
-  //   return null; // Let the useEffect handle redirect
-  // }
+  // The redirect effect above handles unauthenticated access.
 
   // Determine if we should show the "Need Help" sidebar (VacationLabs style)
   const showHelpPanel = location.pathname.includes('/settings') || location.pathname.includes('/seo') || location.pathname.includes('/pages');

@@ -24,7 +24,7 @@ import PreviewPage from "./pages/admin/PreviewPage.tsx";
 import AttractionsPage from "./pages/admin/AttractionsPage.tsx";
 import FooterPage from "./pages/admin/FooterPage.tsx";
 import VendorsPage from "./pages/admin/VendorsPage.tsx";
-import BookingFormsPage from "./pages/admin/BookingFormsPage.tsx";
+import BookingLinksPage from "./pages/admin/BookingLinksPage.tsx";
 import QuotationsPage from "./pages/admin/QuotationsPage.tsx";
 import QuotationFormPage from "./pages/admin/QuotationFormPage.tsx";
 import AIItineraryGeneratorPage from "./pages/admin/AIItineraryGeneratorPage.tsx";
@@ -79,7 +79,7 @@ const App = () => (
               <Route path="/admin/media" element={<AdminRoute><MediaPage /></AdminRoute>} />
               <Route path="/admin/footer" element={<AdminRoute><FooterPage /></AdminRoute>} />
               <Route path="/admin/vendors" element={<AdminRoute><VendorsPage /></AdminRoute>} />
-              <Route path="/admin/booking-forms" element={<AdminRoute><BookingFormsPage /></AdminRoute>} />
+              <Route path="/admin/booking-forms" element={<AdminRoute><BookingLinksPage /></AdminRoute>} />
               <Route path="/admin/quotations" element={<AdminRoute><QuotationsPage /></AdminRoute>} />
               <Route path="/admin/quotations/:id" element={<AdminRoute><QuotationFormPage /></AdminRoute>} />
               <Route path="/admin/ai-itinerary" element={<AdminRoute><AIItineraryGeneratorPage /></AdminRoute>} />

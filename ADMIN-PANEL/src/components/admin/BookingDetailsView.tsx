@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { bookingsService } from "@/services/bookings.service";
 import { paymentsService } from "@/services/payments.service";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
 
 interface BookingDetailsViewProps {
   booking: Booking;
@@ -22,6 +23,8 @@ interface BookingDetailsViewProps {
 }
 
 export default function BookingDetailsView({ booking, onBack, onRefresh, trips }: BookingDetailsViewProps) {
+  const { admin: currentAdmin } = useAuthStore();
+
   // Local states
   const [showAddPassenger, setShowAddPassenger] = useState(false);
   const [editingPassenger, setEditingPassenger] = useState<any>(null);
@@ -131,14 +134,23 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     setNotesValue(booking.notes || "");
     setConfirmEmail(booking.email || "");
     
-    // Set custom source value based on note contents
-    const lowerNotes = (booking.notes || "").toLowerCase();
+    // Set source value using actual booking-link metadata (preferred), then fallback to legacy note parsing.
+    const linkPrefix = (booking as any)?.sourceBookingLink?.tokenPrefix;
+    const salesAdminId = (booking as any)?.salesAdminId;
     let src = "Website";
-    if (lowerNotes.includes("source:")) {
-      const match = booking.notes?.match(/source:\s*([^\n]+)/i);
-      if (match && match[1]) src = match[1].trim();
+
+    if (linkPrefix) {
+      src = `Booking Link #${linkPrefix}`;
+    } else if (salesAdminId) {
+      src = `Sales ${salesAdminId}`;
     } else {
-      src = booking.status === "confirmed" ? "Admin Panel" : "Website Form";
+      const lowerNotes = (booking.notes || "").toLowerCase();
+      if (lowerNotes.includes("source:")) {
+        const match = booking.notes?.match(/source:\s*([^\n]+)/i);
+        if (match && match[1]) src = match[1].trim();
+      } else {
+        src = booking.status === "confirmed" ? "Admin Panel" : "Website Form";
+      }
     }
     setSourceValue(src);
 
@@ -168,6 +180,43 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     setConfirmAdvance(booking.advancePaid?.toString() || "");
   }, [booking, trips]);
 
+  const canManageBooking = (() => {
+    if (!currentAdmin) return false;
+    if (currentAdmin.role === "admin") return true;
+    if (currentAdmin.role === "sales") {
+      return String((booking as any)?.salesAdminId || "") === String(currentAdmin.id || "");
+    }
+    return false;
+  })();
+
+  const isExpired = (() => {
+    const expiresAt =
+      (booking as any)?.sourceMeta?.expiresAt ||
+      (booking as any)?.sourceBookingLink?.expiresAt ||
+      null;
+    if (!expiresAt) return false;
+    const ts = new Date(expiresAt).getTime();
+    if (isNaN(ts)) return false;
+    return booking.status === "pending" && ts < Date.now();
+  })();
+
+  const flowStatus = (() => {
+    if (booking.status === "confirmed") return "Confirmed";
+    if (booking.status === "cancelled") return "Cancelled";
+    if (isExpired) return "Expired";
+
+    const paymentStatus = (booking.paymentStatus || "").toString().toLowerCase();
+    const advance = Number(booking.advancePaid || 0);
+    if (paymentStatus === "partial") return "Partially Paid";
+    if (paymentStatus === "paid") return "Pending Payment";
+    if (paymentStatus === "pending") {
+      if (advance <= 0) return "Inquiry";
+      return "Pending Payment";
+    }
+    if (advance <= 0) return "Inquiry";
+    return "Pending Payment";
+  })();
+
   const handleSendEmail = async (type: 'confirmation' | 'reminder' | 'invoice') => {
     const targetEmail = booking.email;
     if (!targetEmail || targetEmail.includes("no-email") || targetEmail.includes("example.com")) {
@@ -185,6 +234,8 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   };
 
   const handleConfirmSubmit = async () => {
+    if (!canManageBooking) return toast.error("Not authorized to confirm this booking");
+    if (isExpired) return toast.error("This booking has expired");
     if (!confirmTotal || parseFloat(confirmTotal) <= 0) {
       toast.error("Enter a valid total amount");
       return;
@@ -217,10 +268,12 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   };
 
   const handleRejectSubmit = async () => {
+    if (!canManageBooking) return toast.error("Not authorized to reject this booking");
+    if (isExpired) return toast.error("This booking has expired");
     if (!confirm("Are you sure you want to reject and delete this booking request?")) return;
     try {
       await bookingsService.delete(booking.id);
-      toast.success("Booking request rejected and deleted.");
+      toast.success("Booking request rejected (cancelled).");
       onBack();
       onRefresh();
     } catch (err) {
@@ -563,7 +616,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
           
           {/* Header Action Buttons */}
           <div className="flex gap-2">
-            {booking.status === "pending" && !isConfirming && (
+            {booking.status === "pending" && !isConfirming && !isExpired && canManageBooking && (
               <>
                 <button 
                   onClick={() => setIsRejecting(true)}
@@ -584,6 +637,11 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                 Confirmed Reservation
               </span>
             )}
+            {booking.status !== "confirmed" && isExpired && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded">
+                Expired
+              </span>
+            )}
           </div>
         </div>
 
@@ -598,12 +656,20 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
           {/* Warning banner / Status info */}
           <div className="mt-2 bg-[#fffbea] border border-[#fce588] rounded px-4 py-2 text-xs text-slate-700 flex items-center gap-2">
             <span className="bg-[#f0ad4e] text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
-              {booking.status === 'confirmed' ? 'Confirmed' : 'Pending Inquiry'}
+              {flowStatus}
             </span>
             <span>
-              {booking.status === 'confirmed' 
+              {flowStatus === 'Confirmed'
                 ? 'This booking is confirmed and payment logs are synced.'
-                : "Pending Inquiry because of trip's booking mode."}
+                : flowStatus === 'Cancelled'
+                  ? 'This booking request was cancelled.'
+                  : flowStatus === 'Expired'
+                    ? 'This booking link has expired. Confirmation actions are disabled.'
+                    : flowStatus === 'Partially Paid'
+                      ? 'This booking is partially paid. Remaining balance is pending.'
+                      : flowStatus === 'Pending Payment'
+                        ? 'This booking has payment pending. Confirmation will be possible once the right payment is recorded.'
+                        : "Pending Inquiry because of trip's booking mode."}
             </span>
           </div>
         </div>
@@ -612,13 +678,13 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
         {isRejecting && (
           <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded text-xs space-y-2">
             <p className="font-bold text-red-800">Are you sure you want to reject this booking inquiry?</p>
-            <p className="text-red-600/90">This action will delete the reservation request and notify the administrators.</p>
+            <p className="text-red-600/90">This action will cancel the reservation request and notify the administrators.</p>
             <div className="flex gap-2">
               <button 
                 onClick={handleRejectSubmit}
                 className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded transition-colors"
               >
-                Yes, Reject and Delete
+                Yes, Reject and Cancel
               </button>
               <button 
                 onClick={() => setIsRejecting(false)}
@@ -1258,16 +1324,22 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
           <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
             <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-xs">Passengers</h3>
-              <button 
-                onClick={() => {
-                  setEditingPassenger(null);
-                  setNewPassenger({ firstName: "", lastName: "", gender: "Male", age: "", phone: "", email: "" });
-                  setShowAddPassenger(true);
-                }}
-                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-[10px] uppercase px-3 py-1 rounded transition-all shadow-sm"
-              >
-                + Add passengers
-              </button>
+              {canManageBooking && !isExpired ? (
+                <button 
+                  onClick={() => {
+                    setEditingPassenger(null);
+                    setNewPassenger({ firstName: "", lastName: "", gender: "Male", age: "", phone: "", email: "" });
+                    setShowAddPassenger(true);
+                  }}
+                  className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-[10px] uppercase px-3 py-1 rounded transition-all shadow-sm"
+                >
+                  + Add passengers
+                </button>
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Passengers locked
+                </span>
+              )}
             </div>
 
             <div className="p-0 overflow-x-auto no-scrollbar">
@@ -1289,32 +1361,38 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                       {/* Action buttons */}
                       <td className="px-4 py-3">
                         <div className="flex gap-1.5">
-                          <button 
-                            onClick={() => handleEditPassenger(p)}
-                            className="p-1 text-slate-400 hover:text-slate-700 border border-slate-200 bg-slate-50/60 rounded"
-                            title="Edit details"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={async () => {
-                              if (confirm(`Remove passenger ${p.name}?`)) {
-                                const updated = passengers.filter(x => x.id !== p.id);
-                                setPassengers(updated);
-                                try {
-                                  await bookingsService.update(booking.id, { passengers: updated });
-                                  toast.success("Passenger removed");
-                                  onRefresh();
-                                } catch (e) {
-                                  toast.error("Failed to sync delete passenger");
-                                }
-                              }
-                            }}
-                            className="p-1 text-red-400 hover:text-red-600 border border-slate-200 bg-slate-50/60 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {canManageBooking && !isExpired ? (
+                            <>
+                              <button 
+                                onClick={() => handleEditPassenger(p)}
+                                className="p-1 text-slate-400 hover:text-slate-700 border border-slate-200 bg-slate-50/60 rounded"
+                                title="Edit details"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (confirm(`Remove passenger ${p.name}?`)) {
+                                    const updated = passengers.filter(x => x.id !== p.id);
+                                    setPassengers(updated);
+                                    try {
+                                      await bookingsService.update(booking.id, { passengers: updated });
+                                      toast.success("Passenger removed");
+                                      onRefresh();
+                                    } catch (e) {
+                                      toast.error("Failed to sync delete passenger");
+                                    }
+                                  }
+                                }}
+                                className="p-1 text-red-400 hover:text-red-600 border border-slate-200 bg-slate-50/60 rounded"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">—</span>
+                          )}
                         </div>
                       </td>
                       
