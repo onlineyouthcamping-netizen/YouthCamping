@@ -1,5 +1,7 @@
 {
   "scripts": {
+    "postinstall": "cd ADMIN-PANEL && npm install",
+    "build": "cd ADMIN-PANEL && npm run build",
     "test": "jest",
     "test:unit": "jest tests/unit",
     "test:api": "jest tests/api",
