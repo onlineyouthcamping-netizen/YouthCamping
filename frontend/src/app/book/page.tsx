@@ -97,7 +97,7 @@ function BookingForm() {
           cityName: v.location || 'Unknown Point',
           deductionAmount: deduction,
           skipDays: Number(v.skipDays) || 0,
-          pickupPoint: v.duration || 'Standard Package'
+          pickupPoint: v.duration || ''
         };
       });
     }
@@ -626,10 +626,6 @@ function BookingForm() {
                                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{city.pickupPoint}</p>
                               </div>
                               {active && <Check size={14} className="text-[#FF5B00]" />}
-                            </div>
-                            <div className="flex justify-between items-end w-full pt-2 mt-2 border-t border-slate-100 text-[9px] font-black uppercase text-slate-400">
-                              <span className="text-emerald-600">Deduction: -₹{city.deductionAmount}</span>
-                              <span className="text-slate-500">Skip: {city.skipDays} Days</span>
                             </div>
                           </button>
                         );
