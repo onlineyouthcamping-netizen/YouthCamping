@@ -1,0 +1,44 @@
+import axios from 'axios';
+
+let apiBaseUrl = import.meta.env.VITE_API_URL || 'https://bktp1.onrender.com/api';
+if (apiBaseUrl.includes('youthcamping.online') || apiBaseUrl.includes('youthcamping.in')) {
+  apiBaseUrl = 'https://bktp1.onrender.com/api';
+}
+
+const api = axios.create({
+  baseURL: apiBaseUrl.replace(/\/api$/, '')
+});
+
+api.interceptors.request.use((config) => {
+  // Ensure URL starts with /api if it's a relative path
+  if (config.url && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
+    config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
+  }
+
+  // As per requirement, use 'token' key instead of 'admin_token'
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    // 401 Handling: Session expired or unauthorized
+    if (err.response?.status === 401) {
+      console.warn("🔐 Session expired - Clearing token and redirecting");
+      localStorage.removeItem('token');
+      
+      // Redirect to login (assuming standard path /login as per prompt)
+      if (typeof window !== 'undefined' && !window.location.pathname.includes("/login")) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(err);
+  }
+);
+
+export { api };
+export default api;

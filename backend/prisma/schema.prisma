@@ -1,0 +1,315 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("manager")
+  tenantId  String   @default("default")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Inquiry {
+  id         String   @id @default(cuid())
+  tenantId   String   @default("default")
+  name       String?
+  email      String?
+  phone      String
+  message    String?
+  tripId     String?
+  tripTitle  String?
+  date       String?
+  count      Int?
+  source     String?
+  status     String   @default("new")
+  adminNotes String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Vendor {
+  id          String       @id @default(cuid())
+  tenantId    String       @default("default")
+  name        String
+  type        String
+  email       String?
+  phone       String?
+  location    String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assignments TripVendor[]
+
+  @@index([tenantId])
+}
+
+model TripVendor {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  tripId        String
+  vendorId      String
+  agreedCost    Float
+  paidAmount    Float    @default(0)
+  paymentStatus String   @default("pending")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([tenantId])
+  @@index([tripId])
+}
+
+model Blog {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  title     String
+  slug      String   @unique
+  content   String
+  image     String?
+  author      String?  @default("Expedition Team")
+  authorImage String?
+  status      String   @default("draft")
+  readTime    String?  @default("5 MIN READ")
+  hasVideo    Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  tenantId   String   @default("default")
+  userName   String
+  userHandle String?
+  instagram  String?
+  city       String?
+  tripName   String?
+  tripType   String?
+  userImage  String?
+  comment    String
+  rating     Int      @default(5)
+  isFeatured Boolean  @default(true)
+  photos     String[] @default([])
+  tripId     String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  bookingId     String
+  amount        Float
+  status        String   @default("pending")
+  transactionId String?
+  paymentMode   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Quotation {
+  id          String   @id @default(cuid())
+  tenantId    String   @default("default")
+  title       String
+  slug        String?  @unique
+  clientName  String
+  totalAmount Float
+  status      String   @default("draft")
+  data        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Trip {
+  id              String       @id @default(cuid())
+  tenantId        String       @default("default")
+  title           String
+  shortName       String?
+  slug            String       @unique
+  location        String
+  price           Float
+  duration        String
+  description     String
+  category        String       @default("himalayan")
+  isActive        Boolean      @default(true)
+  status          String       @default("published")
+  heroImage       String?
+  images          String[]
+  itinerary       Json?
+  availableDates  Json?
+  variants        Json?
+  travelOptions   Json?
+  roomOptions     Json?
+  seo             Json?
+  highlights      Json?
+  inclusions      Json?
+  exclusions      Json?
+  faqs            Json?
+  addons          Json?
+  maxGroupSize    Int?
+  difficulty      String?
+  departureCity   String?
+  pickupCities    Json?
+
+  ageLimit        String?
+  bookingUrl      String?
+  customSections  Json?
+  attractions     Json?
+  activities      Json?
+  accommodations  Json?
+  popupDetails    Json?
+  route           Json?
+  ageGroup        String?
+  maxAltitude     String?
+  tripType        String?
+  startEnd        String?
+  pickupMode      String?
+  stickyCardPrice Float?
+  stickyCardLabel String?
+  reels           Json?
+  tripReviews     Json?
+
+  order           Int          @default(999)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  bookings        Booking[]
+  assignments     TripVendor[]
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([status])
+  @@index([order])
+}
+
+model Booking {
+  id              String            @id @default(cuid())
+  tenantId        String            @default("default")
+  bookingId       String            @unique
+  tripId          String
+  tripName        String?
+  status          String            @default("pending")
+  name            String
+  fullName        String?
+  phone           String
+  mobile          String?
+  email           String?
+  age             Int?
+  gender          String?
+  numberOfTravelers Int?
+  baseAmount      Float?
+  gstAmount       Float?
+  totalAmount     Float             @default(0)
+  amount          Float
+  advancePaid     Float             @default(0)
+  remainingAmount Float             @default(0)
+  paymentMode     String?
+  paymentStatus   String            @default("Pending")
+  notes           String?
+  adminNotes      String?
+  departureDate   DateTime?
+  pickupCity      String?
+  skipDays        Int?              @default(0)
+  adjustedPrice   Float?
+  joiningDate     DateTime?
+  reminderSent    Boolean           @default(false)
+  passengers      Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  tripRef         Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  emailLogs       BookingEmailLog[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model BookingEmailLog {
+  id        String   @id @default(cuid())
+  bookingId String
+  type      String
+  recipient String
+  subject   String
+  status    String
+  error     String?
+  sentAt    DateTime @default(now())
+  metadata  Json?
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([bookingId])
+}
+
+model PageBuilder {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  name      String   @unique
+  sections  Json?    @default("[]")
+  draft     Json?    @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([key])
+}
+model Theme {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  name      String   @unique @default("primary")
+  config    Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([name])
+}
