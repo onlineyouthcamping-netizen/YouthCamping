@@ -126,7 +126,7 @@ function BookingForm() {
         const normalize = (s: string) =>
           (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
         const target = normalize(initialParams.pickupCity);
-        const matched = joiningPoints.find((j) => normalize(j.cityName) === target);
+        const matched = joiningPoints.find((j: { cityName: string; deductionAmount: number; skipDays: number; pickupPoint: string }) => normalize(j.cityName) === target);
         if (matched) {
           setSelectedCity(matched);
           return;
