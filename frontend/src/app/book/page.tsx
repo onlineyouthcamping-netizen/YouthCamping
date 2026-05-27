@@ -69,6 +69,22 @@ function BookingForm() {
 
   // Dynamic joining points loaded from tripData or fallback
   const joiningPoints = useMemo(() => {
+    // 1. Primary Source: Location Variants (variants)
+    if (tripData?.variants && Array.isArray(tripData.variants) && tripData.variants.length > 0) {
+      const baselinePrice = tripData.price || Math.max(...tripData.variants.map((v: any) => v.discountedPrice || 0), basePrice);
+      return tripData.variants.map((v: any) => {
+        const variantPrice = Number(v.discountedPrice) || Number(v.originalPrice) || 0;
+        const deduction = Math.max(0, baselinePrice - variantPrice);
+        return {
+          cityName: v.location || 'Unknown Point',
+          deductionAmount: deduction,
+          skipDays: Number(v.skipDays) || 0,
+          pickupPoint: v.duration || 'Standard Package'
+        };
+      });
+    }
+
+    // 2. Secondary Source: Pickup Cities
     if (tripData?.pickupCities && Array.isArray(tripData.pickupCities) && tripData.pickupCities.length > 0) {
       return tripData.pickupCities.map((c: any) => ({
         cityName: c.cityName || 'Unknown Point',
@@ -77,17 +93,26 @@ function BookingForm() {
         pickupPoint: c.pickupPoint || 'Assigned Landmark'
       }));
     }
+
+    // 3. Fallback
     return FALLBACK_JOINING_POINTS;
-  }, [tripData]);
+  }, [tripData, basePrice]);
 
   const [selectedCity, setSelectedCity] = useState<typeof FALLBACK_JOINING_POINTS[0]>(FALLBACK_JOINING_POINTS[0]);
   
-  // Keep selectedCity synced once joiningPoints are resolved
+  // Keep selectedCity synced once joiningPoints are resolved, matching the url price param if applicable
   useEffect(() => {
     if (joiningPoints.length > 0) {
+      if (initialParams.basePrice && tripData?.variants && Array.isArray(tripData.variants)) {
+        const matchingVariantIdx = tripData.variants.findIndex((v: any) => v.discountedPrice === initialParams.basePrice);
+        if (matchingVariantIdx !== -1 && joiningPoints[matchingVariantIdx]) {
+          setSelectedCity(joiningPoints[matchingVariantIdx]);
+          return;
+        }
+      }
       setSelectedCity(joiningPoints[0]);
     }
-  }, [joiningPoints]);
+  }, [joiningPoints, initialParams.basePrice, tripData]);
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
@@ -133,9 +158,9 @@ function BookingForm() {
 
         if (foundTrip) {
           setTripData(foundTrip);
-          if (!initialParams.basePrice) {
-            setBasePrice(foundTrip.price || 13999);
-          }
+          // Always use the master trip price as the baseline basePrice so that the variant deductions are calculated correctly from the baseline
+          const baseline = foundTrip.price || (foundTrip.variants && foundTrip.variants.length > 0 ? Math.max(...foundTrip.variants.map((v: any) => v.discountedPrice || 0)) : 13999);
+          setBasePrice(baseline);
         }
       } catch (err) {
         console.warn("Could not fetch live trip info, using fallback data.");
