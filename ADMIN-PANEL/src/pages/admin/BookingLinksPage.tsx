@@ -34,6 +34,17 @@ const normalizeDateInput = (value: string) => {
   return d.toISOString().slice(0, 10);
 };
 
+const getTripPickupCities = (trip: any): string[] => {
+  if (!trip) return [];
+  if (Array.isArray(trip.variants) && trip.variants.length > 0) {
+    return trip.variants.map((v: any) => v?.location).filter(Boolean);
+  }
+  if (Array.isArray(trip.pickupCities) && trip.pickupCities.length > 0) {
+    return trip.pickupCities.map((c: any) => c?.cityName).filter(Boolean);
+  }
+  return [];
+};
+
 export default function BookingLinksPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -64,11 +75,7 @@ export default function BookingLinksPage() {
   const selectedTrip = useMemo(() => trips.find((t) => t.id === formData.tripId) || null, [trips, formData.tripId]);
 
   const pickupCities = useMemo(() => {
-    const list = (selectedTrip as any)?.pickupCities;
-    if (!Array.isArray(list)) return [];
-    return list
-      .map((c: any) => c?.cityName)
-      .filter(Boolean);
+    return getTripPickupCities(selectedTrip);
   }, [selectedTrip]);
 
   const load = useCallback(async () => {
@@ -95,14 +102,12 @@ export default function BookingLinksPage() {
 
   const handleTripSelect = (tripId: string) => {
     const trip = trips.find((t) => t.id === tripId);
+    const cities = getTripPickupCities(trip);
     setFormData((prev) => ({
       ...prev,
       tripId,
       tripName: trip?.title || "",
-      // Auto-fill pickup city when trip has pickupCities
-      pickupCity: Array.isArray((trip as any)?.pickupCities) && (trip as any)?.pickupCities?.[0]?.cityName
-        ? (trip as any).pickupCities[0].cityName
-        : prev.pickupCity,
+      pickupCity: cities.length > 0 ? cities[0] : prev.pickupCity,
     }));
   };
 
