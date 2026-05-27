@@ -1,6 +1,5 @@
 {
   "scripts": {
-    "build": "cd ADMIN-PANEL && npm install && npx vite build && cd .. && node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive:true, force:true}); fs.renameSync('ADMIN-PANEL/dist', 'dist')\"",
     "test": "jest",
     "test:unit": "jest tests/unit",
     "test:api": "jest tests/api",
