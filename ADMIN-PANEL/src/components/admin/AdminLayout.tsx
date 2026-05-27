@@ -168,6 +168,7 @@ function AdminSidebar() {
             if (!item.roles) return true;
             // Fallback: Show all items if in development or if admin role check is pending
             if (!admin) return true; 
+            if (admin.role === 'superadmin') return true;
             return item.roles.includes(admin.role);
           });
 
@@ -248,7 +249,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       const item = group.items.find(i => i.url === currentPath);
       if (item) {
         targetItem = item;
-        if (item.roles && !item.roles.includes(admin.role)) {
+        if (item.roles && !item.roles.includes(admin.role) && admin.role !== 'superadmin') {
           allowed = false;
         }
         break;
