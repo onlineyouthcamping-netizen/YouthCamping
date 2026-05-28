@@ -293,7 +293,8 @@
     line-height: 1.05 !important;
     letter-spacing: -0.03em !important;
     text-wrap: balance !important;
-    max-width: 10ch !important;
+    max-width: 100% !important;
+    width: 100% !important;
     margin-left: auto !important;
     margin-right: auto !important;
     text-align: center !important;
@@ -302,7 +303,8 @@
   @media (max-width: 768px) {
     .hero-title {
       font-weight: 400 !important;
-      max-width: 8ch !important;
+      max-width: 100% !important;
+      width: 100% !important;
       line-height: 1.08 !important;
     }
   }
