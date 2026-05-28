@@ -4,6 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.force-single-line {
+  white-space: nowrap !important;
+  text-wrap: nowrap !important;
+}
+
 @theme inline {
   --font-montserrat: var(--font-montserrat);
   --color-primary-orange: var(--primary);
@@ -557,11 +562,6 @@
       width: 177.78cqh;
       height: 100cqh;
     }
-  }
-
-  .force-single-line {
-    white-space: nowrap !important;
-    text-wrap: nowrap !important;
   }
 }
 
