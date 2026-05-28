@@ -558,6 +558,11 @@
       height: 100cqh;
     }
   }
+
+  .force-single-line {
+    white-space: nowrap !important;
+    text-wrap: nowrap !important;
+  }
 }
 
 /* Professional Print Styles */
