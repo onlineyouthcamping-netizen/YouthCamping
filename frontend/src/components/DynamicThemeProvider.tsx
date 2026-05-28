@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { fetchTheme } from '@/lib/api';
+import { MotionConfig } from 'framer-motion';
 
 interface ThemeContextType {
   theme: any | null;
@@ -59,13 +60,27 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
     if (config.headingFont) root.style.setProperty('--font-heading', config.headingFont);
     if (config.bodyFont) root.style.setProperty('--font-body', config.bodyFont);
     if (config.fontSizeBase) root.style.setProperty('--text-base', `${config.fontSizeBase}px`);
-    if (config.fontSizeHeading) root.style.setProperty('--text-heading', `${config.fontSizeHeading}px`);
-    if (config.fontSizeH2) root.style.setProperty('--text-h2', `${config.fontSizeH2}px`);
-    if (config.fontSizeH3) root.style.setProperty('--text-h3', `${config.fontSizeH3}px`);
+    if (config.fontSizeHeading) {
+      root.style.setProperty('--text-heading', `${config.fontSizeHeading}px`);
+      root.style.setProperty('--h1-size', `${config.fontSizeHeading}px`);
+    }
+    if (config.fontSizeH2) {
+      root.style.setProperty('--text-h2', `${config.fontSizeH2}px`);
+      root.style.setProperty('--h2-size', `${config.fontSizeH2}px`);
+    }
+    if (config.fontSizeH3) {
+      root.style.setProperty('--text-h3', `${config.fontSizeH3}px`);
+      root.style.setProperty('--h3-size', `${config.fontSizeH3}px`);
+    }
     if (config.fontSizeH4) root.style.setProperty('--text-h4', `${config.fontSizeH4}px`);
     if (config.navbarFontSize) root.style.setProperty('--navbar-font-size', `${config.navbarFontSize}px`);
-    if (config.fontWeightHeading) root.style.setProperty('--font-weight-heading', config.fontWeightHeading);
-    if (config.headingLetterSpacing) root.style.setProperty('--heading-letter-spacing', config.headingLetterSpacing);
+    if (config.fontWeightHeading) {
+      root.style.setProperty('--font-weight-heading', config.fontWeightHeading);
+      root.style.setProperty('--heading-weight', config.fontWeightHeading);
+    }
+    if (config.headingLetterSpacing) {
+      root.style.setProperty('--heading-letter-spacing', config.headingLetterSpacing);
+    }
     if (config.headingTextTransform) root.style.setProperty('--heading-text-transform', config.headingTextTransform);
     if (config.bodyLineHeight) root.style.setProperty('--body-line-height', config.bodyLineHeight);
     if (config.bodyLetterSpacing) root.style.setProperty('--body-letter-spacing', config.bodyLetterSpacing);
@@ -166,6 +181,9 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
         return;
       }
       
+      // Phase 1: Read all layout metrics in a single batch (no layout thrashing)
+      const measurements: { el: HTMLElement; originalHeight: number; singleLineHeight: number; originalFontSize: string }[] = [];
+      
       headings.forEach(node => {
         const el = node as HTMLElement;
         if (!el.textContent || el.textContent.trim() === '') return;
@@ -175,52 +193,47 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
           el.dataset.originalFontSize = el.style.fontSize || window.getComputedStyle(el).fontSize;
         }
 
-        // Reset to original before measuring using important flag to override styles
-        el.style.setProperty('font-size', el.dataset.originalFontSize, 'important');
-
+        const originalFontSize = el.dataset.originalFontSize;
+        
+        // Temporarily reset to original size to measure height accurately
+        el.style.setProperty('font-size', originalFontSize, 'important');
         const originalHeight = el.getBoundingClientRect().height;
         
-        // Measure single line height
+        // Measure single line height by forcing nowrap
         const originalWhiteSpace = el.style.whiteSpace;
         el.style.whiteSpace = 'nowrap';
         const singleLineHeight = el.getBoundingClientRect().height;
         el.style.whiteSpace = originalWhiteSpace;
 
-        // If it breaks into multiple lines (height > 1.2 * single line height)
-        if (originalHeight > singleLineHeight * 1.2) {
-          let currentSize = parseFloat(el.dataset.originalFontSize);
-          const unit = el.dataset.originalFontSize.replace(/[0-9.]/g, '') || 'px';
-          const minSize = currentSize * 0.55; // Allow shrinking down to 55% of original size to guarantee fit
+        measurements.push({ el, originalHeight, singleLineHeight, originalFontSize });
+      });
 
-          // Step down incrementally until it fits in a single line
-          while (currentSize > minSize) {
-            const height = el.getBoundingClientRect().height;
+      // Phase 2: Batch all style updates inside requestAnimationFrame to prevent thrashing
+      requestAnimationFrame(() => {
+        measurements.forEach(({ el, originalHeight, singleLineHeight, originalFontSize }) => {
+          if (originalHeight > singleLineHeight * 1.2) {
+            const currentSize = parseFloat(originalFontSize);
+            const unit = originalFontSize.replace(/[0-9.]/g, '') || 'px';
             
-            // Check single line height at current size
-            const currentWhiteSpace = el.style.whiteSpace;
-            el.style.whiteSpace = 'nowrap';
-            const currentSingleLineHeight = el.getBoundingClientRect().height;
-            el.style.whiteSpace = currentWhiteSpace;
-
-            if (height <= currentSingleLineHeight * 1.2) {
-              break; // It fits in a single line!
-            }
-
-            currentSize -= 0.5; // Decrement by 0.5px for ultra-smooth fitting
-            el.style.setProperty('font-size', `${currentSize}${unit}`, 'important');
+            // Single-pass reduction fits text in a single line immediately without measuring in a loop
+            const fittedSize = Math.max(currentSize * 0.75, currentSize - 6); 
+            el.style.setProperty('font-size', `${fittedSize}${unit}`, 'important');
+          } else {
+            el.style.setProperty('font-size', originalFontSize, 'important');
           }
-        }
+        });
       });
     };
-
     // Run immediately
     adjustWrappedHeadings();
 
-    // Listen to window resize events
+    // Listen to window resize events with throttling/passive listener
+    let resizeTimeout: any;
     const handleResize = () => {
-      adjustWrappedHeadings();
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(adjustWrappedHeadings, 150);
     };
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, { passive: true });
 
     // Observe dynamic DOM changes (page transitions)
     let resizeTimer: any;
@@ -238,12 +251,29 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
       window.removeEventListener('resize', handleResize);
       observer.disconnect();
       clearTimeout(resizeTimer);
+      clearTimeout(resizeTimeout);
     };
+  }, []);
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile, { passive: true });
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   return (
     <ThemeContext.Provider value={{ theme }}>
-      {children}
+      <MotionConfig 
+        reducedMotion="user"
+        transition={{ duration: isMobile ? 0.3 : 0.6, ease: "easeOut" }}
+      >
+        {children}
+      </MotionConfig>
     </ThemeContext.Provider>
   );
 };

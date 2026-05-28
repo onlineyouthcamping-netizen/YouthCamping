@@ -113,7 +113,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                 .font-sans { font-family: 'Inter', sans-serif; }
                 
                 .itinerary-row {
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 }
                 .itinerary-row:hover {
                     transform: translateX(8px);

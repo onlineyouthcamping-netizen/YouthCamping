@@ -1,17 +1,55 @@
 import Hero from "@/components/Hero";
 import SocialProofBar from "@/components/SocialProofBar";
-import CommunityTrips from "@/components/CommunityTrips";
-import BestieSection from "@/components/BestieSection";
-import RealitySection from "@/components/RealitySection";
-import Destinations from "@/components/Destinations";
-import BlogSection from "@/components/BlogSection";
-import ReviewsSection from "@/components/ReviewsSection";
-import VibeSection from "@/components/VibeSection";
-import FloatingSocialBar from "@/components/FloatingSocialBar";
 import PageRenderer from "@/components/PageRenderer";
-import CTASlider from "@/components/CTASlider";
-import CTABanner from "@/components/CTABanner";
 import { fetchTrips, fetchReviews, fetchBlogs, fetchPageBySlug, fetchSettings, fetchTheme } from "@/lib/api";
+import dynamicImport from "next/dynamic";
+
+// Centralized Premium Shimmer Loader to prevent Cumulative Layout Shift (CLS)
+function SectionSkeleton({ height = "400px" }: { height?: string }) {
+  return (
+    <div 
+      className="w-full flex flex-col justify-center px-4 sm:px-6 md:px-12 lg:px-20 animate-pulse bg-white border border-slate-50/50" 
+      style={{ height }}
+    >
+      <div className="w-24 h-3 bg-zinc-100 rounded mb-4" />
+      <div className="w-1/3 h-8 bg-zinc-100 rounded mb-12" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="h-[280px] bg-zinc-50 rounded-[24px]" />
+        <div className="h-[280px] bg-zinc-50 rounded-[24px] hidden md:block" />
+        <div className="h-[280px] bg-zinc-50 rounded-[24px] hidden lg:block" />
+      </div>
+    </div>
+  );
+}
+
+const CommunityTrips = dynamicImport(() => import("@/components/CommunityTrips"), {
+  loading: () => <SectionSkeleton height="650px" />
+});
+const BestieSection = dynamicImport(() => import("@/components/BestieSection"), {
+  loading: () => <SectionSkeleton height="500px" />
+});
+const RealitySection = dynamicImport(() => import("@/components/RealitySection"), {
+  loading: () => <SectionSkeleton height="450px" />
+});
+const Destinations = dynamicImport(() => import("@/components/Destinations"), {
+  loading: () => <SectionSkeleton height="600px" />
+});
+const BlogSection = dynamicImport(() => import("@/components/BlogSection"), {
+  loading: () => <SectionSkeleton height="550px" />
+});
+const ReviewsSection = dynamicImport(() => import("@/components/ReviewsSection"), {
+  loading: () => <SectionSkeleton height="500px" />
+});
+const VibeSection = dynamicImport(() => import("@/components/VibeSection"), {
+  loading: () => <SectionSkeleton height="550px" />
+});
+const CTASlider = dynamicImport(() => import("@/components/CTASlider"), {
+  loading: () => <div className="h-[350px] w-full bg-zinc-50 animate-pulse rounded-[32px] border border-slate-100" />
+});
+const CTABanner = dynamicImport(() => import("@/components/CTABanner"), {
+  loading: () => <div className="h-[300px] w-full bg-zinc-50 animate-pulse rounded-[32px] border border-slate-100" />
+});
+const FloatingSocialBar = dynamicImport(() => import("@/components/FloatingSocialBar"));
 
 import { Trip, Review, Blog } from "@/types";
 

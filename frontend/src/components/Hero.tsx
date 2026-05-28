@@ -64,6 +64,16 @@ export default function Hero({
   titleWeight,
 }: HeroProps) {
   const { theme } = useTheme();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile, { passive: true });
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const hasVideo = videoUrl && videoUrl.trim() !== "" && videoUrl.includes("http");
   const normalizedBg = normalizeImageUrl(backgroundImage);
@@ -107,13 +117,12 @@ export default function Hero({
     >
       {/* Background Media */}
       <div className="absolute inset-0 z-0">
-        {hasVideo ? (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {hasVideo && !isMobile ? (
+          <div className="hero-video-wrapper">
             <iframe
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full min-h-full opacity-60"
+              className="hero-video-iframe opacity-60"
               src={`${videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1&loop=1&playlist=${videoUrl.split('v=')[1] || videoUrl.split('/').pop()}&controls=0&showinfo=0&rel=0&modestbranding=1`}
               title="Hero Video"
-              frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             />
           </div>

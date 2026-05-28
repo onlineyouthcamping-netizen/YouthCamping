@@ -33,7 +33,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
 
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 100);
-        window.addEventListener("scroll", handleScroll);
+        window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
