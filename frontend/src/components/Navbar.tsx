@@ -40,6 +40,17 @@ export default function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMenuOpen]);
+
   const isSticky = theme?.navbarSticky ?? true;
   const isTransparent = theme?.navbarTransparent ?? false;
   const blurClass = (theme?.navbarBlur ?? true) ? "backdrop-blur-md" : "backdrop-blur-none";
@@ -140,7 +151,7 @@ export default function Navbar({
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
-              <X className={cn("w-6 h-6", textColorClass)} />
+              <X className="w-6 h-6 text-navy" />
             ) : (
               <Menu className={cn("w-6 h-6", textColorClass)} />
             )}

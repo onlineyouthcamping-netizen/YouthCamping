@@ -117,7 +117,7 @@ export default function Hero({
     >
       {/* Background Media */}
       <div className="absolute inset-0 z-0">
-        {hasVideo && !isMobile ? (
+        {hasVideo ? (
           <div className="hero-video-wrapper">
             <iframe
               className="hero-video-iframe opacity-60"
