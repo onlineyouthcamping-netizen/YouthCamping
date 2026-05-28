@@ -68,7 +68,7 @@ export default function Navbar({
           <Link 
             href="/" 
             className="relative z-[60] flex items-center shrink-0"
-            style={{ width: 'var(--navbar-logo-size)', height: 'calc(var(--navbar-height) * 0.8)' }}
+            style={{ width: 'calc(var(--navbar-logo-size) * 2)', height: 'calc(var(--navbar-height) * 0.8)' }}
           >
             <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none">
               <img 
@@ -77,7 +77,7 @@ export default function Navbar({
                 fetchPriority="high"
                 loading="eager"
                 className="w-auto object-contain drop-shadow-lg pointer-events-auto transition-transform hover:scale-105"
-                style={{ height: 'calc(var(--navbar-height) * 1.2)' }}
+                style={{ height: 'calc(var(--navbar-height) * 2.4)' }}
               />
             </div>
           </Link>
@@ -94,8 +94,8 @@ export default function Navbar({
                   key={link.name}
                   href={link.href}
                   className={cn(
-                    "text-[15px] font-medium capitalize tracking-wide transition-colors",
-                    isActive ? "text-primary-orange font-semibold" : textColorClass
+                    "nav-link transition-colors",
+                    isActive ? "text-primary-orange" : textColorClass
                   )}
                   style={{
                     color: isActive ? 'var(--navbar-active-color)' : undefined,
@@ -113,7 +113,7 @@ export default function Navbar({
             })}
             <Link 
               href="/contact" 
-              className={cn("transition-colors text-[15px] font-medium capitalize tracking-wide hover:text-primary-orange", textColorClass)}
+              className={cn("nav-link transition-colors hover:text-primary-orange", textColorClass)}
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--navbar-hover-color)'}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
             >
@@ -121,7 +121,7 @@ export default function Navbar({
             </Link>
             <Link
               href="/login"
-              className="px-6 py-2.5 rounded-full text-[15px] font-medium capitalize tracking-wide transition-all bg-navy text-white hover:bg-primary-orange shadow-lg h-11 flex items-center justify-center"
+              className="px-6 py-2.5 rounded-full font-medium transition-all bg-navy text-white hover:bg-primary-orange shadow-lg h-11 flex items-center justify-center"
               style={{
                 borderRadius: 'var(--radius-button)',
                 padding: 'var(--button-padding-y) var(--button-padding-x)',

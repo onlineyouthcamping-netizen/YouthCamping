@@ -137,9 +137,13 @@ export default function Hero({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-4 md:mb-8 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] leading-[1.1] text-center"
+            className="hero-title mb-4 md:mb-8"
             style={{ 
-              fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+              fontSize: titleSize 
+                ? (isNaN(Number(titleSize)) 
+                    ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
+                    : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
+                : undefined,
               fontWeight: titleWeight || undefined
             }}
           >
@@ -151,7 +155,7 @@ export default function Hero({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center text-base sm:text-xl md:text-4xl font-medium mt-3 md:mt-6 drop-shadow-[0_2px_8px_rgba(255,91,0,0.5)]"
+            className="flex items-center justify-center text-base sm:text-xl md:text-3xl font-medium mt-3 md:mt-6"
           >
             <Typewriter phrases={typingPhrases} />
             <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>

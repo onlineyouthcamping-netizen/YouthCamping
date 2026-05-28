@@ -50,7 +50,10 @@ export default function TripCard({ trip, index }: TripCardProps) {
           {trip.location}
         </div>
         
-        <h3 className="text-xl font-semibold text-navy mb-4 md:mb-6 leading-tight tracking-tight group-hover:text-primary-orange transition-colors break-words">
+        <h3 
+          className="text-xl text-navy mb-4 md:mb-6 leading-tight tracking-tight group-hover:text-primary-orange transition-colors break-words"
+          style={{ fontWeight: 'var(--font-weight-heading, 500)' }}
+        >
           {trip.title}
         </h3>
 

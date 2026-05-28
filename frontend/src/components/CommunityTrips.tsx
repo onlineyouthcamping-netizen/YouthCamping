@@ -170,7 +170,11 @@ export default function CommunityTrips({
               <h2 
                 className="section-heading text-navy"
                 style={{ 
-                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+                  fontSize: titleSize 
+                    ? (isNaN(Number(titleSize)) 
+                        ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
+                        : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
+                    : undefined,
                   fontWeight: titleWeight || undefined
                 }}
               >
@@ -310,9 +314,10 @@ export default function CommunityTrips({
                         }}
                       >
                         <h3 
-                          className="font-semibold mb-4 leading-tight tracking-tight capitalize break-words text-white"
+                          className="mb-4 leading-tight tracking-tight capitalize break-words text-white"
                           style={{
                             fontSize: 'var(--card-title-size)',
+                            fontWeight: 'var(--font-weight-heading, 500)'
                           }}
                         >
                           {trip.title}
