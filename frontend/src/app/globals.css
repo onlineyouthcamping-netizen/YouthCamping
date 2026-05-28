@@ -383,7 +383,8 @@
   .section-heading {
     font-family: 'Montserrat', var(--font-montserrat), sans-serif;
     font-weight: var(--h2-weight, 600) !important;
-    font-size: var(--text-h2);
+    font-size: clamp(1.15rem, 6.2vw, var(--text-h2)) !important;
+    white-space: nowrap !important;
     letter-spacing: var(--heading-letter-spacing, -0.03em) !important;
     line-height: var(--heading-line-height, 1.1) !important;
     text-transform: capitalize;
