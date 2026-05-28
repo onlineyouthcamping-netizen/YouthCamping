@@ -124,13 +124,26 @@ export default function Hero({
       {/* Background Media */}
       <div className="absolute inset-0 z-0" style={{ transform: 'scale(1.01)', backfaceVisibility: 'hidden' }}>
         {hasVideo ? (
-          <div className="hero-video-wrapper">
-            <iframe
-              className="hero-video-iframe opacity-60"
-              src={`${videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1&loop=1&playlist=${videoUrl.split('v=')[1] || videoUrl.split('/').pop()}&controls=0&showinfo=0&rel=0&modestbranding=1`}
-              title="Hero Video"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            />
+          <div className="absolute inset-0 w-full h-full overflow-hidden">
+            {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
+              <div className="hero-video-wrapper">
+                <iframe
+                  className="hero-video-iframe opacity-60"
+                  src={`${videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1&loop=1&playlist=${videoUrl.split('v=')[1] || videoUrl.split('/').pop()}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                  title="Hero Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                />
+              </div>
+            ) : (
+              <video
+                src={videoUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover opacity-60 absolute inset-0"
+              />
+            )}
           </div>
         ) : normalizedBg ? (
           <OptimizedImage 
