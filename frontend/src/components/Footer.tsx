@@ -38,7 +38,7 @@ export default function Footer({
   logoUrl,
   address = "Money Plant High Street, A 738, Jagatpur Rd, Gota, Ahmedabad, Gujarat 382470",
   phone = "+91-99242 46267",
-  email = "hello@youthcamping.com",
+  email = "info@youthcamping.com",
   website = "www.youthcamping.com",
   companyName = "YOUTHCAMPING EXPERIENCES PVT LTD",
   cin = "CIN-U12345GJ2026PTC987654"
@@ -173,8 +173,8 @@ export default function Footer({
         {/* Bottom Bar */}
         <div className="w-full border-t border-white/10 bg-[#090F14]">
           <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left relative">
-            <p className="text-zinc-500 text-xs font-bold tracking-widest uppercase">
-              © {new Date().getFullYear()} {companyName}, All rights reserved.
+            <p className="text-zinc-500 text-[10px] md:text-xs font-bold tracking-widest uppercase">
+              © {new Date().getFullYear()} {brandName.toUpperCase()}. ALL RIGHTS RESERVED.
             </p>
             
             {/* Scroll to Top Button */}
