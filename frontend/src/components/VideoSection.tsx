@@ -61,7 +61,7 @@ export default function VideoSection({
                   transition={{ delay: i * 0.1 }}
                   viewport={{ once: true }}
                   onClick={() => setActiveVideoId(video.id)}
-                  className="flex-shrink-0 w-[280px] md:w-[400px] cursor-pointer group/video active:scale-[0.98] transition-transform"
+                  className="flex-shrink-0 w-[80vw] max-w-[340px] md:w-[400px] cursor-pointer group/video active:scale-[0.98] transition-transform"
                 >
                   <div className="relative aspect-video rounded-[20px] md:rounded-[32px] overflow-hidden mb-4 shadow-xl border border-zinc-100">
                     <OptimizedImage 

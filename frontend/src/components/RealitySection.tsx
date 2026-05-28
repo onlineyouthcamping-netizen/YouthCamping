@@ -86,7 +86,7 @@ export default function RealitySection({
               transition={{ delay: i * 0.1 }}
               viewport={{ once: true }}
               onClick={() => vid.url && setActiveVideo(vid.url)}
-              className="relative min-w-[300px] md:min-w-[500px] aspect-video rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-2xl border-4 border-white ring-1 ring-black/5"
+              className="relative w-[85vw] max-w-[340px] md:min-w-[500px] aspect-video rounded-[24px] md:rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-2xl border-2 md:border-4 border-white ring-1 ring-black/5 shrink-0"
             >
               <OptimizedImage 
                 src={normalizeImageUrl(vid.img) || "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=2070"} 
