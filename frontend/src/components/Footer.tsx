@@ -160,12 +160,17 @@ export default function Footer({
 
       {/* Skyline Image */}
       <div className="w-full relative z-10 flex flex-col items-center mt-auto">
-        <div 
-          className="w-full h-20 bg-repeat-x bg-bottom pointer-events-none opacity-50 transition-opacity duration-500"
-          style={{ 
-            backgroundImage: `url('https://www.wanderon.in/svg/footer-skyline.svg')`,
-            backgroundSize: 'auto 100%',
-            filter: 'invert(1) brightness(0.9) opacity(0.6)'
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/footer-skyline.png"
+          alt="City Skyline"
+          className="w-full pointer-events-none select-none"
+          style={{
+            height: '90px',
+            objectFit: 'cover',
+            objectPosition: 'center bottom',
+            opacity: 0.65,
+            display: 'block',
           }}
         />
         

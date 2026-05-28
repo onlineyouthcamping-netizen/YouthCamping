@@ -358,7 +358,7 @@
   /* ─── Premium Luxury Hero Heading ─── */
   .hero-title {
     font-family: 'Montserrat', var(--font-montserrat), sans-serif;
-    font-weight: var(--heading-weight, 300) !important;
+    font-weight: var(--heading-weight, 900) !important;
     font-size: var(--text-heading);
     line-height: var(--heading-line-height, 1.1) !important;
     letter-spacing: var(--heading-letter-spacing, -0.03em) !important;
@@ -372,7 +372,7 @@
 
   @media (max-width: 768px) {
     .hero-title {
-      font-weight: var(--heading-weight, 300) !important;
+      font-weight: var(--heading-weight, 900) !important;
       max-width: 100% !important;
       width: 100% !important;
       line-height: var(--heading-line-height, 1.1) !important;
