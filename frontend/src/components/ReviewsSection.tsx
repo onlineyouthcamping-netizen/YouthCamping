@@ -58,7 +58,13 @@ export default function ReviewsSection({
             <div className={cn(
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
-              <h2 className="section-heading text-navy">
+              <h2 
+                className="section-heading text-navy"
+                style={{ 
+                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+                  fontWeight: titleWeight ? titleWeight : undefined
+                }}
+              >
                 {title}
               </h2>
             </div>

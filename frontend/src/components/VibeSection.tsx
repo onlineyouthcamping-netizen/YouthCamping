@@ -28,7 +28,13 @@ export default function VibeSection({
   return (
     <section className="section-wrapper bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto">
-        <h2 className="section-heading text-center text-navy mb-16">
+        <h2 
+          className="section-heading text-center text-navy mb-16"
+          style={{ 
+            fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+            fontWeight: titleWeight ? titleWeight : undefined
+          }}
+        >
           {title}
         </h2>
 

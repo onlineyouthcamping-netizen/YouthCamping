@@ -80,6 +80,10 @@ export default function BestieSection({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="section-heading text-[#1B2A4A]"
+            style={{ 
+              fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+              fontWeight: titleWeight ? titleWeight : undefined
+            }}
           >
             {title}
           </motion.h2>
