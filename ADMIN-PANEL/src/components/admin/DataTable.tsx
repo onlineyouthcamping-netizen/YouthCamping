@@ -62,19 +62,19 @@ export function DataTable<T extends Record<string, any>>({
               placeholder={searchPlaceholder} 
               value={search} 
               onChange={(e) => { setSearch(e.target.value); setPage(0); }} 
-              className="pl-11 h-12 rounded-2xl bg-white border-slate-100 shadow-sm focus-visible:ring-primary font-medium text-sm" 
+              className="pl-11 h-10 rounded-xl bg-white border-slate-200 focus-visible:ring-primary font-normal text-sm" 
             />
           </div>
         )}
         {filters?.map((f) => (
           <Select key={f.key} defaultValue="all" onValueChange={(v) => onFilterChange?.(f.key, v)}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl bg-white border-slate-100 shadow-sm font-bold text-[10px] uppercase tracking-widest">
+            <SelectTrigger className="w-full sm:w-[180px] h-10 rounded-xl bg-white border-slate-200 font-medium text-xs text-slate-600">
               <SelectValue placeholder={f.label} />
             </SelectTrigger>
-            <SelectContent className="rounded-2xl border-slate-100">
-              <SelectItem value="all" className="font-bold text-[10px] uppercase tracking-widest">All {f.label}</SelectItem>
+            <SelectContent className="rounded-xl border-slate-200">
+              <SelectItem value="all" className="font-medium text-xs">All {f.label}</SelectItem>
               {f.options.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="font-bold text-[10px] uppercase tracking-widest">
+                <SelectItem key={o.value} value={o.value} className="font-medium text-xs">
                   {o.label}
                 </SelectItem>
               ))}
@@ -83,24 +83,24 @@ export function DataTable<T extends Record<string, any>>({
         ))}
       </div>
 
-      <div className="modern-card p-0 overflow-hidden shadow-premium">
+      <div className="admin-card !p-0 overflow-hidden">
         <div className="responsive-table">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-50">
+              <tr className="border-b border-slate-100 bg-slate-50/50">
                 {columns.map((col) => (
-                  <th key={col.key} className={cn("px-8 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400", col.className)}>
+                  <th key={col.key} className={cn("px-6 py-4 text-left text-xs font-semibold text-slate-500 tracking-tight", col.className)}>
                     {col.header}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i}>
                     {columns.map((col) => (
-                      <td key={col.key} className="px-8 py-6">
+                      <td key={col.key} className="px-6 py-4">
                         <div className="h-4 bg-slate-50 animate-pulse rounded-lg w-full max-w-[120px]" />
                       </td>
                     ))}
@@ -108,10 +108,10 @@ export function DataTable<T extends Record<string, any>>({
                 ))
               ) : paged.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="px-8 py-20 text-center">
+                  <td colSpan={columns.length} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-200">
-                        {emptyIcon || <Search className="w-8 h-8" />}
+                      <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+                        {emptyIcon || <Search className="w-6 h-6" />}
                       </div>
                       <p className="text-xs font-medium text-slate-400 italic">{emptyMessage}</p>
                     </div>
@@ -121,7 +121,7 @@ export function DataTable<T extends Record<string, any>>({
                 paged.map((item, i) => (
                   <tr key={String(item[rowKey] || i)} className="hover:bg-slate-50/50 transition-all group">
                     {columns.map((col) => (
-                      <td key={col.key} className={cn("px-8 py-6 text-slate-600 font-medium", col.className)}>
+                      <td key={col.key} className={cn("px-6 py-4 text-slate-600 font-normal text-sm", col.className)}>
                         {renderCellValue(item, col)}
                       </td>
                     ))}
@@ -135,7 +135,7 @@ export function DataTable<T extends Record<string, any>>({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <p className="text-xs font-normal text-slate-500">
             Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of {filtered.length}
           </p>
           <div className="flex gap-2">
@@ -144,7 +144,7 @@ export function DataTable<T extends Record<string, any>>({
               size="icon" 
               onClick={() => setPage((p) => p - 1)} 
               disabled={page === 0}
-              className="h-10 w-10 rounded-xl border-slate-100 hover:bg-slate-50"
+              className="h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -153,7 +153,7 @@ export function DataTable<T extends Record<string, any>>({
               size="icon" 
               onClick={() => setPage((p) => p + 1)} 
               disabled={page >= totalPages - 1}
-              className="h-10 w-10 rounded-xl border-slate-100 hover:bg-slate-50"
+              className="h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

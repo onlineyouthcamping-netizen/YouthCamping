@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { settingsService } from "@/services/settings.service";
 import { toast } from "sonner";
 import { 
-  Palette, Navigation, Layout, Share2, Phone, Save, Plus, Trash2 
+  Palette, Navigation, Layout, Share2, Save, Plus, Trash2, HelpCircle 
 } from "lucide-react";
 import api from "@/services/api";
 
@@ -17,12 +17,23 @@ export default function SettingsPage() {
   const { register, handleSubmit, reset, watch, setValue } = useForm<any>();
 
   const navbarLinks = watch('navbarLinks') || [];
+  const footerLinks = watch('footer.links') || [];
+  const roomSharingOptions = watch('bookingForm.roomSharingOptions') || [];
+  const trainOptions = watch('bookingForm.trainOptions') || [];
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await settingsService.get();
-        reset(data);
+        // Fallback for nested default structures
+        const formatted = {
+          ...data,
+          navbarLinks: data.navbarLinks || [],
+          socialLinks: data.socialLinks || {},
+          footer: data.footer || { links: [] },
+          bookingForm: data.bookingForm || { roomSharingOptions: [], trainOptions: [] }
+        };
+        reset(formatted);
       } catch (err) {
         toast.error("Failed to load settings");
       } finally {
@@ -50,65 +61,221 @@ export default function SettingsPage() {
     setValue('navbarLinks', navbarLinks.filter((_: any, i: number) => i !== index));
   };
 
-  if (loading) return <div className="p-10 text-center font-black uppercase tracking-widest opacity-40">Loading System...</div>;
+  const addFooterLink = () => {
+    setValue('footer.links', [...footerLinks, { label: '', href: '' }]);
+  };
+
+  const removeFooterLink = (index: number) => {
+    setValue('footer.links', footerLinks.filter((_: any, i: number) => i !== index));
+  };
+
+  const addRoomOption = () => {
+    setValue('bookingForm.roomSharingOptions', [...roomSharingOptions, { label: '', priceAdjustment: 0 }]);
+  };
+
+  const removeRoomOption = (index: number) => {
+    setValue('bookingForm.roomSharingOptions', roomSharingOptions.filter((_: any, i: number) => i !== index));
+  };
+
+  const addTrainOption = () => {
+    setValue('bookingForm.trainOptions', [...trainOptions, { label: '', priceAdjustment: 0 }]);
+  };
+
+  const removeTrainOption = (index: number) => {
+    setValue('bookingForm.trainOptions', trainOptions.filter((_: any, i: number) => i !== index));
+  };
+
+  if (loading) {
+    return <div className="p-10 text-center font-bold uppercase tracking-widest opacity-40">Loading System Settings...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black uppercase tracking-tight">Global Settings</h1>
-        <Button onClick={handleSubmit(onSubmit)}>
-          <Save className="w-4 h-4 mr-2" /> Save Changes
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="admin-title">Global Settings</h1>
+          <p className="admin-body">Configure site-wide branding, navigation, footer links, social accounts, and checkout rules.</p>
+        </div>
+        <Button onClick={handleSubmit(onSubmit)} className="admin-button-primary self-start sm:self-auto">
+          <Save className="w-4 h-4" /> Save Changes
         </Button>
       </div>
 
       <Tabs defaultValue="branding" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full bg-muted/50 rounded-2xl p-1 h-14">
-          <TabsTrigger value="branding" className="rounded-xl font-bold uppercase text-[10px] tracking-widest"><Palette className="w-3 h-3 mr-2" /> Branding</TabsTrigger>
-          <TabsTrigger value="navigation" className="rounded-xl font-bold uppercase text-[10px] tracking-widest"><Navigation className="w-3 h-3 mr-2" /> Navigation</TabsTrigger>
-          <TabsTrigger value="footer" className="rounded-xl font-bold uppercase text-[10px] tracking-widest"><Layout className="w-3 h-3 mr-2" /> Footer</TabsTrigger>
-          <TabsTrigger value="social" className="rounded-xl font-bold uppercase text-[10px] tracking-widest"><Share2 className="w-3 h-3 mr-2" /> Social</TabsTrigger>
-          <TabsTrigger value="contact" className="rounded-xl font-bold uppercase text-[10px] tracking-widest"><Phone className="w-3 h-3 mr-2" /> Contact</TabsTrigger>
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full bg-slate-100 p-1 h-auto md:h-14 rounded-xl gap-1">
+          <TabsTrigger value="branding" className="rounded-lg font-medium text-xs py-2.5 md:py-1"><Palette className="w-3.5 h-3.5 mr-2" /> Branding</TabsTrigger>
+          <TabsTrigger value="navigation" className="rounded-lg font-medium text-xs py-2.5 md:py-1"><Navigation className="w-3.5 h-3.5 mr-2" /> Navigation</TabsTrigger>
+          <TabsTrigger value="footer" className="rounded-lg font-medium text-xs py-2.5 md:py-1"><Layout className="w-3.5 h-3.5 mr-2" /> Footer</TabsTrigger>
+          <TabsTrigger value="social" className="rounded-lg font-medium text-xs py-2.5 md:py-1"><Share2 className="w-3.5 h-3.5 mr-2" /> Social</TabsTrigger>
+          <TabsTrigger value="booking" className="rounded-lg font-medium text-xs py-2.5 md:py-1 col-span-2 md:col-span-1"><HelpCircle className="w-3.5 h-3.5 mr-2" /> Booking</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="branding" className="mt-6">
-          <Card className="rounded-[32px] border-none shadow-sm">
-            <CardContent className="p-10 space-y-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Logo URL</Label>
-                <div className="flex gap-4">
-                  <Input {...register("logo.url")} className="h-14 rounded-2xl border-2" />
+        {/* --- BRANDING --- */}
+        <TabsContent value="branding" className="mt-6 animate-premium">
+          <Card className="admin-card border border-slate-200">
+            <CardContent className="p-0 space-y-6">
+              <h2 className="admin-heading">Brand & Identity</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="admin-label">Brand Name</Label>
+                  <Input {...register("siteName")} className="admin-input" placeholder="e.g. YouthCamping" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="admin-label">Favicon URL</Label>
+                  <Input {...register("favicon")} className="admin-input" placeholder="/favicon.ico" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="admin-label">Header Logo URL</Label>
+                  <Input {...register("logo.url")} className="admin-input" placeholder="https://..." />
                   {watch('logo.url') && (
-                    <div className="w-14 h-14 rounded-2xl bg-muted p-2 flex items-center justify-center border-2 overflow-hidden shadow-inner">
-                      <img src={watch('logo.url')} className="max-w-full max-h-full object-contain" />
+                    <div className="mt-2 h-14 rounded-xl border p-2 bg-slate-50 flex items-center justify-center overflow-hidden max-w-fit">
+                      <img src={watch('logo.url')} className="max-h-full object-contain" alt="Header logo" />
                     </div>
                   )}
                 </div>
-              </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Logo Alt Text</Label>
-                <Input {...register("logo.alt")} className="h-14 rounded-2xl border-2" />
+                <div className="space-y-2">
+                  <Label className="admin-label">Logo Alt Text</Label>
+                  <Input {...register("logo.alt")} className="admin-input" placeholder="Brand Logo Alt" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="navigation" className="mt-6">
-          <Card className="rounded-[32px] border-none shadow-sm">
-            <CardContent className="p-10 space-y-6">
+        {/* --- NAVIGATION --- */}
+        <TabsContent value="navigation" className="mt-6 animate-premium">
+          <Card className="admin-card border border-slate-200">
+            <CardContent className="p-0 space-y-6">
               <div className="flex items-center justify-between">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Navbar Links</Label>
-                <Button variant="outline" size="sm" onClick={addNavbarLink}>
-                  <Plus className="w-3 h-3 mr-2" /> Add Link
+                <h2 className="admin-heading">Navigation Settings</h2>
+                <Button variant="outline" size="sm" onClick={addNavbarLink} className="admin-button-outline h-8 text-xs">
+                  <Plus className="w-3.5 h-3.5" /> Add Link
                 </Button>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="admin-label">CTA Button Text (Desktop Header)</Label>
+                  <Input {...register("headerCtaText")} className="admin-input" placeholder="e.g. Book Now" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="admin-label">Header Style</Label>
+                  <select {...register("headerStyle")} className="admin-input">
+                    <option value="sticky">Sticky Header (Default)</option>
+                    <option value="normal">Normal Scroll</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-4">
+                <Label className="admin-label">Header Menu Links</Label>
                 {navbarLinks.map((link: any, index: number) => (
-                  <div key={index} className="flex gap-4 items-center bg-muted/20 p-4 rounded-2xl border-2 border-dashed">
-                    <Input {...register(`navbarLinks.${index}.label`)} placeholder="Label" className="h-12 rounded-xl" />
-                    <Input {...register(`navbarLinks.${index}.href`)} placeholder="Href" className="h-12 rounded-xl" />
-                    <Button variant="ghost" size="icon" onClick={() => removeNavbarLink(index)} className="text-destructive">
+                  <div key={index} className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border border-slate-200 border-dashed group">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input {...register(`navbarLinks.${index}.label`)} placeholder="Link Text (e.g. Trips)" className="admin-input h-9" />
+                      <Input {...register(`navbarLinks.${index}.href`)} placeholder="URL Path (e.g. /trips)" className="admin-input h-9 font-mono" />
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeNavbarLink(index)} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-9 w-9">
                       <Trash2 className="w-4 h-4" />
                     </Button>
+                  </div>
+                ))}
+                {navbarLinks.length === 0 && (
+                  <div className="text-center py-8 border border-dashed rounded-xl border-slate-200 text-slate-400 text-xs">
+                    No navbar links defined. Click Add Link to insert menu items.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --- FOOTER & LEGAL --- */}
+        <TabsContent value="footer" className="mt-6 animate-premium">
+          <Card className="admin-card border border-slate-200">
+            <CardContent className="p-0 space-y-6">
+              <h2 className="admin-heading">Footer & Contact Settings</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="admin-label">Footer Logo URL</Label>
+                  <Input {...register("footer.logoUrl")} className="admin-input" placeholder="https://..." />
+                  {watch('footer.logoUrl') && (
+                    <div className="mt-2 h-14 rounded-xl border p-2 bg-slate-50 flex items-center justify-center overflow-hidden max-w-fit">
+                      <img src={watch('footer.logoUrl')} className="max-h-full object-contain" alt="Footer logo" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="admin-label">Footer Tagline / Description</Label>
+                  <Input {...register("footer.tagline")} className="admin-input" placeholder="Your Story Starts Here" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="admin-label">Support Email</Label>
+                  <Input {...register("footer.email")} className="admin-input" placeholder="info@youthcamping.in" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="admin-label">Support Phone</Label>
+                  <Input {...register("footer.phone")} className="admin-input" placeholder="99242 46267" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="admin-label">Copyright Text</Label>
+                  <Input {...register("footer.copyright")} className="admin-input" placeholder="© 2024 Youthcamping." />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="admin-label">Office Address</Label>
+                <textarea {...register("footer.address")} className="admin-input h-18 py-2" placeholder="Office physical address..." />
+              </div>
+
+              <div className="border-t pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="admin-label">Legal / Quick Links (Terms, Privacy, etc.)</Label>
+                  <Button variant="outline" size="sm" onClick={addFooterLink} className="admin-button-outline h-8 text-xs">
+                    <Plus className="w-3.5 h-3.5" /> Add Link
+                  </Button>
+                </div>
+                {footerLinks.map((link: any, index: number) => (
+                  <div key={index} className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border border-slate-200 border-dashed group">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input {...register(`footer.links.${index}.label`)} placeholder="Label (e.g. Privacy Policy)" className="admin-input h-9" />
+                      <Input {...register(`footer.links.${index}.href`)} placeholder="Href (e.g. /privacy)" className="admin-input h-9 font-mono" />
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeFooterLink(index)} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-9 w-9">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {footerLinks.length === 0 && (
+                  <div className="text-center py-8 border border-dashed rounded-xl border-slate-200 text-slate-400 text-xs">
+                    No legal/quick links defined yet.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --- SOCIAL MEDIA --- */}
+        <TabsContent value="social" className="mt-6 animate-premium">
+          <Card className="admin-card border border-slate-200">
+            <CardContent className="p-0 space-y-6">
+              <h2 className="admin-heading">Social Media Links</h2>
+              <p className="admin-body">Add links to your official brand handles. These automatically map to the social icons in the footer.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {['instagram', 'facebook', 'youtube', 'linkedin', 'whatsapp'].map(platform => (
+                  <div key={platform} className="space-y-2">
+                    <Label className="admin-label capitalize">{platform} URL</Label>
+                    <Input {...register(`socialLinks.${platform}`)} className="admin-input" placeholder={`https://${platform}.com/...`} />
                   </div>
                 ))}
               </div>
@@ -116,99 +283,68 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="footer" className="mt-6">
-          <Card className="rounded-[32px] border-none shadow-sm">
-            <CardContent className="p-10 space-y-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Footer Tagline</Label>
-                <Input {...register("footer.tagline")} className="h-14 rounded-2xl border-2" />
-              </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Copyright Text</Label>
-                <Input {...register("footer.copyright")} className="h-14 rounded-2xl border-2" />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* --- BOOKING CHECKOUT --- */}
+        <TabsContent value="booking" className="mt-6 animate-premium">
+          <Card className="admin-card border border-slate-200">
+            <CardContent className="p-0 space-y-6">
+              <h2 className="admin-heading">Booking Options & Forms</h2>
 
-        <TabsContent value="social" className="mt-6">
-          <Card className="rounded-[32px] border-none shadow-sm">
-            <CardContent className="p-10 space-y-8">
-              {['instagram', 'facebook', 'youtube'].map(platform => (
-                <div key={platform} className="space-y-4">
-                  <Label className="text-[10px] font-black uppercase tracking-widest opacity-50 capitalize">{platform} URL</Label>
-                  <Input {...register(`socialLinks.${platform}`)} className="h-14 rounded-2xl border-2" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="admin-label">Submit Button Text</Label>
+                  <Input {...register("bookingForm.submitButtonText")} className="admin-input" placeholder="Confirm Booking" />
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <div className="space-y-2">
+                  <Label className="admin-label">Booking Success Message</Label>
+                  <Input {...register("bookingForm.successMessage")} className="admin-input" placeholder="Your booking has been received!" />
+                </div>
+              </div>
 
-        <TabsContent value="contact" className="mt-6">
-          <Card className="rounded-[32px] border-none shadow-sm">
-            <CardContent className="p-10 space-y-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Contact Phone</Label>
-                <Input {...register("contactPhone")} className="h-14 rounded-2xl border-2" />
+              <div className="space-y-2">
+                <Label className="admin-label">Checkout Special Notes / Policy</Label>
+                <textarea {...register("bookingForm.checkoutNotes")} className="admin-input h-20 py-2" placeholder="Enter special policies or warnings shown during checkout..." />
               </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Contact Email</Label>
-                <Input {...register("contactEmail")} className="h-14 rounded-2xl border-2" />
-              </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Office Address</Label>
-                <Input {...register("address")} className="h-14 rounded-2xl border-2" />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="booking" className="mt-6">
-          <Card className="rounded-[32px] border-none shadow-sm">
-            <CardContent className="p-10 space-y-10">
-              <div className="space-y-6">
+              {/* Room Sharing options */}
+              <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Room Sharing Options</Label>
-                  <Button variant="outline" size="sm" onClick={() => setValue('bookingForm.roomSharingOptions', [...(watch('bookingForm.roomSharingOptions') || []), { label: '', priceAdjustment: 0 }])}>
-                    <Plus className="w-3 h-3 mr-2" /> Add Option
+                  <h3 className="admin-card-title">Room Sharing Accommodations</h3>
+                  <Button variant="outline" size="sm" onClick={addRoomOption} className="admin-button-outline h-8 text-xs">
+                    <Plus className="w-3.5 h-3.5" /> Add Option
                   </Button>
                 </div>
-                <div className="space-y-3">
-                  {(watch('bookingForm.roomSharingOptions') || []).map((_: any, index: number) => (
-                    <div key={index} className="flex gap-4 items-center bg-muted/20 p-4 rounded-2xl border-2 border-dashed">
-                      <Input {...register(`bookingForm.roomSharingOptions.${index}.label`)} placeholder="Label (e.g. Twin Sharing)" className="h-12 rounded-xl" />
-                      <Input {...register(`bookingForm.roomSharingOptions.${index}.priceAdjustment`)} type="number" placeholder="Price +/-" className="h-12 rounded-xl w-32" />
-                      <Button variant="ghost" size="icon" onClick={() => setValue('bookingForm.roomSharingOptions', watch('bookingForm.roomSharingOptions').filter((_: any, i: number) => i !== index))} className="text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                {roomSharingOptions.map((_: any, index: number) => (
+                  <div key={index} className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border border-slate-200 border-dashed group">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input {...register(`bookingForm.roomSharingOptions.${index}.label`)} placeholder="Label (e.g. Double Sharing)" className="admin-input h-9" />
+                      <Input {...register(`bookingForm.roomSharingOptions.${index}.priceAdjustment`)} type="number" placeholder="Price Adjustment (+/-)" className="admin-input h-9" />
                     </div>
-                  ))}
-                </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeRoomOption(index)} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-9 w-9">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
 
-              <div className="space-y-6">
+              {/* Train options */}
+              <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Train Travel Options</Label>
-                  <Button variant="outline" size="sm" onClick={() => setValue('bookingForm.trainOptions', [...(watch('bookingForm.trainOptions') || []), { label: '', priceAdjustment: 0 }])}>
-                    <Plus className="w-3 h-3 mr-2" /> Add Option
+                  <h3 className="admin-card-title">Train Class Selections</h3>
+                  <Button variant="outline" size="sm" onClick={addTrainOption} className="admin-button-outline h-8 text-xs">
+                    <Plus className="w-3.5 h-3.5" /> Add Option
                   </Button>
                 </div>
-                <div className="space-y-3">
-                  {(watch('bookingForm.trainOptions') || []).map((_: any, index: number) => (
-                    <div key={index} className="flex gap-4 items-center bg-muted/20 p-4 rounded-2xl border-2 border-dashed">
-                      <Input {...register(`bookingForm.trainOptions.${index}.label`)} placeholder="Label (e.g. 3AC)" className="h-12 rounded-xl" />
-                      <Input {...register(`bookingForm.trainOptions.${index}.priceAdjustment`)} type="number" placeholder="Price +/-" className="h-12 rounded-xl w-32" />
-                      <Button variant="ghost" size="icon" onClick={() => setValue('bookingForm.trainOptions', watch('bookingForm.trainOptions').filter((_: any, i: number) => i !== index))} className="text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                {trainOptions.map((_: any, index: number) => (
+                  <div key={index} className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border border-slate-200 border-dashed group">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input {...register(`bookingForm.trainOptions.${index}.label`)} placeholder="Label (e.g. 3AC Sleepers)" className="admin-input h-9" />
+                      <Input {...register(`bookingForm.trainOptions.${index}.priceAdjustment`)} type="number" placeholder="Price Adjustment (+/-)" className="admin-input h-9" />
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Submit Button Text</Label>
-                <Input {...register("bookingForm.submitButtonText")} className="h-14 rounded-2xl border-2" />
+                    <Button variant="ghost" size="icon" onClick={() => removeTrainOption(index)} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-9 w-9">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

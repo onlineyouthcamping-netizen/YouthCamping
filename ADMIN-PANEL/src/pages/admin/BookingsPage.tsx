@@ -561,71 +561,74 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="space-y-4 pb-12 animate-premium text-xs">
+    <div className="space-y-6 pb-12 animate-premium text-xs">
       
       {/* ─── Top Header Action Panel ─── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200/60 pb-3">
-        <h1 className="text-xl font-bold text-slate-900">Bookings</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
+        <div className="space-y-1">
+          <h1 className="admin-title">Bookings</h1>
+          <p className="admin-body">Manage customer reservations, payments, and departures</p>
+        </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <Button onClick={() => setShowTrips(true)} variant="outline" className="h-8.5 px-3.5 rounded border-slate-200 text-[10px] uppercase font-bold tracking-wide bg-white hover:bg-slate-50">
-            <Link2 className="w-3.5 h-3.5 mr-1.5" /> Trips Manager
+          <Button onClick={() => setShowTrips(true)} className="admin-button-outline">
+            <Link2 className="w-4 h-4" /> Trips Manager
           </Button>
-          <Button onClick={clearFilters} variant="ghost" className="h-8.5 px-3 rounded text-[10px] uppercase font-bold tracking-wide text-slate-400 hover:text-slate-800">
+          <Button onClick={clearFilters} className="admin-button-secondary">
             Reset Filters
           </Button>
           <button 
             onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-            className="md:hidden flex items-center gap-1.5 h-8.5 px-3 border border-slate-200 bg-white rounded text-[10px] uppercase font-bold text-slate-600 hover:bg-slate-50"
+            className="md:hidden admin-button border border-slate-350 bg-white"
           >
-            <Filter className="w-3.5 h-3.5" /> Filters
+            <Filter className="w-4 h-4" /> Filters
           </button>
         </div>
       </div>
 
       {/* ─── Quick Stats Strip ─── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-white border border-slate-200/70 p-3 rounded shadow-sm">
-        <div className="space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-slate-400 block">Total Inquiries</span>
-          <span className="text-base font-bold text-slate-800">{bookings.length}</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 admin-card">
+        <div className="space-y-1">
+          <span className="admin-label block">Total Inquiries</span>
+          <span className="text-[20px] font-medium tracking-tight text-slate-900">{bookings.length}</span>
         </div>
-        <div className="border-l border-slate-100 pl-3 space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-slate-400 block">Confirmed bookings</span>
-          <span className="text-base font-bold text-emerald-600">{totalConfirmedCount}</span>
+        <div className="border-l border-slate-200 pl-6 space-y-1">
+          <span className="admin-label block">Confirmed Bookings</span>
+          <span className="text-[20px] font-medium tracking-tight text-emerald-600">{totalConfirmedCount}</span>
         </div>
-        <div className="border-l border-slate-100 pl-3 space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-slate-400 block">Pending Confirmation</span>
-          <span className="text-base font-bold text-amber-500">{totalPendingInquiries}</span>
+        <div className="border-l border-slate-200 pl-6 space-y-1">
+          <span className="admin-label block">Pending Confirmation</span>
+          <span className="text-[20px] font-medium tracking-tight text-amber-500">{totalPendingInquiries}</span>
         </div>
-        <div className="border-l border-slate-100 pl-3 space-y-0.5">
-          <span className="text-[9px] uppercase font-bold text-slate-400 block">Balance Outstanding</span>
-          <span className="text-base font-bold text-rose-600 font-mono">₹{totalAmountDue.toLocaleString('en-IN')}</span>
+        <div className="border-l border-slate-200 pl-6 space-y-1">
+          <span className="admin-label block">Balance Outstanding</span>
+          <span className="text-[20px] font-medium tracking-tight text-rose-600 font-mono">₹{totalAmountDue.toLocaleString('en-IN')}</span>
         </div>
       </div>
 
       {/* ─── Presets Row ─── */}
-      <div className="flex items-center justify-between bg-slate-50 border border-slate-200/50 px-3 py-1.5 rounded text-[11px] text-slate-600 flex-wrap gap-2">
+      <div className="flex items-center justify-between bg-slate-50 border border-slate-200/50 px-4 py-2 rounded-xl text-xs text-slate-650 flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wide">Saved Presets:</span>
+          <span className="admin-label">Saved Presets:</span>
           <button 
             onClick={() => setPreset('all')} 
-            className={cn("px-2 py-0.5 rounded border border-slate-200/70 hover:bg-slate-100 transition-colors font-medium", activePreset === 'all' && "bg-slate-800 border-slate-800 text-white hover:bg-slate-800")}
+            className={cn("px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors font-medium text-xs", activePreset === 'all' && "bg-slate-950 border-slate-950 text-white hover:bg-slate-950")}
           >
             All Bookings
           </button>
           <button 
             onClick={() => setPreset('due')} 
-            className={cn("px-2 py-0.5 rounded border border-slate-200/70 hover:bg-slate-100 transition-colors font-medium", activePreset === 'due' && "bg-slate-800 border-slate-800 text-white hover:bg-slate-800")}
+            className={cn("px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors font-medium text-xs", activePreset === 'due' && "bg-slate-950 border-slate-950 text-white hover:bg-slate-950")}
           >
             Due Balance
           </button>
           <button 
             onClick={() => setPreset('unconfirmed')} 
-            className={cn("px-2 py-0.5 rounded border border-slate-200/70 hover:bg-slate-100 transition-colors font-medium", activePreset === 'unconfirmed' && "bg-slate-800 border-slate-800 text-white hover:bg-slate-800")}
+            className={cn("px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors font-medium text-xs", activePreset === 'unconfirmed' && "bg-slate-950 border-slate-950 text-white hover:bg-slate-950")}
           >
             Pending Inquiry
           </button>
         </div>
-        <div className="text-[10px] text-slate-400 font-medium">
+        <div className="admin-label">
           Showing {filtered.length} of {bookings.length} reservations
         </div>
       </div>
@@ -851,17 +854,17 @@ export default function BookingsPage() {
             </div>
           ) : (
             <>
-              {/* TABLE VIEW (Tablet & Desktop) */}
-              <div className="hidden md:block bg-white border border-slate-200 rounded shadow-sm overflow-x-auto max-h-[75vh] overflow-y-auto relative no-scrollbar">
-                <table className="w-full text-left table-striped border-collapse">
-                  <thead className="sticky top-0 bg-white shadow-[0_1px_0_0_rgba(226,232,240,1)] z-10">
-                    <tr className="bg-slate-50/70 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="px-3.5 py-2.5 font-bold">Tour details</th>
-                      <th className="px-3.5 py-2.5 font-bold">Contact details</th>
-                      <th className="px-3.5 py-2.5 font-bold hidden lg:table-cell">Departure details</th>
-                      <th className="px-3.5 py-2.5 font-bold text-right lg:text-left">Booking status</th>
-                    </tr>
-                  </thead>
+              <div className="hidden md:block admin-card !p-0 overflow-hidden">
+                <div className="responsive-table max-h-[75vh]">
+                  <table className="w-full text-left table-striped border-collapse">
+                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-150 z-10">
+                      <tr className="text-xs font-semibold text-slate-500 tracking-tight">
+                        <th className="px-4 py-3 font-semibold">Tour Details</th>
+                        <th className="px-4 py-3 font-semibold">Contact Details</th>
+                        <th className="px-4 py-3 font-semibold hidden lg:table-cell">Departure Details</th>
+                        <th className="px-4 py-3 font-semibold text-right lg:text-left">Booking Status</th>
+                      </tr>
+                    </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filtered.map(b => {
                       const tripName = b.tripName || trips.find(t => t.tripCode === b.tripId)?.tripName || "Expedition Tour Package";
@@ -1002,6 +1005,7 @@ export default function BookingsPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
 
               {/* CARD LIST VIEW (Mobile Breakpoint) */}
               <div className="md:hidden space-y-2">

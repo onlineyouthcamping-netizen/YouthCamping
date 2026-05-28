@@ -4,10 +4,8 @@ import { KPICard } from "@/components/admin/KPICard";
 import { StatusBadge, getBookingBadgeVariant } from "@/components/admin/StatusBadge";
 import { dashboardService } from "@/services/dashboard.service";
 import type { DashboardStats } from "@/types";
-import { Map, CalendarCheck, DollarSign, MessageSquare, TrendingUp, AlertTriangle, Building2, Banknote, Star } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-
-const COLORS = ["hsl(142, 71%, 45%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)", "hsl(220, 70%, 50%)"];
+import { CalendarCheck, DollarSign, TrendingUp, AlertTriangle, Star } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -28,8 +26,8 @@ export default function DashboardPage() {
     <div className="space-y-6 pb-12">
       {/* ─── Page Title ─── */}
       <div className="space-y-1">
-        <h1 className="text-xl font-bold text-slate-900">Dashboard Overview</h1>
-        <p className="text-xs text-slate-400">Business insights and real-time analytics</p>
+        <h1 className="admin-title">Dashboard Overview</h1>
+        <p className="admin-body">Business insights and real-time analytics</p>
       </div>
 
       {/* ─── Primary KPIs ─── */}
@@ -42,11 +40,11 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Monthly Revenue Chart */}
-        <div className="lg:col-span-2 modern-card p-6">
+        <div className="lg:col-span-2 admin-card">
           <div className="flex items-center justify-between mb-6">
             <div className="space-y-1">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Revenue Stream</h3>
-              <p className="text-base font-bold text-slate-900">Monthly Performance</p>
+              <p className="admin-label">Revenue Stream</p>
+              <h3 className="admin-card-title">Monthly Performance</h3>
             </div>
             <div className="h-9 w-9 rounded-lg bg-orange-50 flex items-center justify-center text-primary">
                <TrendingUp className="w-4 h-4" />
@@ -60,7 +58,7 @@ export default function DashboardPage() {
                 axisLine={false} 
                 tickLine={false} 
                 fontSize={10} 
-                fontWeight="700" 
+                fontWeight="500" 
                 tick={{fill: '#94A3B8'}} 
                 dy={10}
               />
@@ -68,17 +66,17 @@ export default function DashboardPage() {
                 axisLine={false} 
                 tickLine={false} 
                 fontSize={10} 
-                fontWeight="700" 
+                fontWeight="500" 
                 tick={{fill: '#94A3B8'}}
                 dx={-10}
               />
               <Tooltip 
                 cursor={{fill: '#F8FAFC'}} 
                 contentStyle={{ 
-                  borderRadius: '20px', 
-                  border: 'none', 
+                  borderRadius: '16px', 
+                  border: '1px solid #E2E8F0', 
                   boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-                  padding: '15px 20px'
+                  padding: '12px 16px'
                 }} 
               />
               <Bar dataKey="revenue" fill="#FF5400" radius={[12, 12, 0, 0]} barSize={40} />
@@ -87,11 +85,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Sales Leaderboard */}
-        <div className="modern-card p-6 flex flex-col">
+        <div className="admin-card flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="space-y-1">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Leaderboard</h3>
-              <p className="text-base font-bold text-slate-900">Top Agents</p>
+              <p className="admin-label">Leaderboard</p>
+              <h3 className="admin-card-title">Top Agents</h3>
             </div>
             <div className="h-9 w-9 rounded-lg bg-orange-50 flex items-center justify-center text-primary">
                <Star className="w-4 h-4" />
@@ -105,13 +103,13 @@ export default function DashboardPage() {
                     0{i + 1}
                   </div>
                   <div className="space-y-0.5">
-                    <p className="text-[13px] font-bold text-slate-900">{s.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{s.conversion}% Conversion</p>
+                    <p className="text-[13px] font-semibold text-slate-900">{s.name}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{s.conversion}% Conversion</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-slate-900">₹{s.revenue.toLocaleString()}</p>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase">{s.accepted}/{s.total} Trx</p>
+                  <p className="text-[13px] font-semibold text-slate-900">₹{s.revenue.toLocaleString()}</p>
+                  <p className="text-[9px] text-slate-400 font-medium">{s.accepted}/{s.total} Trx</p>
                 </div>
               </div>
             ))}
@@ -123,21 +121,21 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Profit Summary ─── */}
-      <div className="modern-card p-6">
+      <div className="admin-card">
         <div className="flex items-center gap-2 mb-6">
            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Financial Performance</h3>
+           <h3 className="admin-card-title">Financial Performance</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-6 bg-slate-50 rounded-xl space-y-3 border border-transparent hover:border-slate-100 transition-all">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gross Revenue</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Gross Revenue</p>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-slate-900">₹{(Number(stats?.totalRevenue) || 0).toLocaleString()}</span>
               <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">+12%</span>
             </div>
           </div>
           <div className="p-6 bg-slate-50 rounded-xl space-y-3 border border-transparent hover:border-slate-100 transition-all">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Operating Costs</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Operating Costs</p>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-slate-900">₹{(Number(stats?.totalVendorCost) || 0).toLocaleString()}</span>
             </div>
@@ -154,10 +152,10 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Recent Activity Table ─── */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+      <div className="admin-card overflow-hidden !p-0">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div className="space-y-0.5">
-            <p className="text-xs font-bold text-slate-900">Recent Bookings</p>
+            <p className="text-sm font-semibold text-slate-900">Recent Bookings</p>
           </div>
           <Button variant="ghost" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-primary h-8 px-3">View All</Button>
         </div>

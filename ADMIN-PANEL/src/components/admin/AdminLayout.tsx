@@ -97,7 +97,6 @@ const navGroups = [
       { title: "Attractions", url: "/admin/attractions", icon: Map, roles: ['admin', 'manager'] },
       { title: "Review Center", url: "/admin/reviews", icon: Star, roles: ['admin', 'manager'] },
       { title: "Question System", url: "/admin/questions", icon: HelpCircle, roles: ['admin', 'manager'] },
-      { title: "Footer Management", url: "/admin/footer", icon: Layout, roles: ['admin'] },
     ]
   },
   {

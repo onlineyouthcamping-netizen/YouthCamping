@@ -98,6 +98,63 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Unified Premium SaaS Styles */
+  .admin-title {
+    @apply text-[28px] font-semibold tracking-tight text-slate-900;
+  }
+  
+  .admin-heading {
+    @apply text-[20px] font-medium tracking-tight text-slate-900;
+  }
+  
+  .admin-card-title {
+    @apply text-[16px] font-medium text-slate-900;
+  }
+  
+  .admin-body {
+    @apply text-[14px] font-normal text-slate-500 leading-relaxed;
+  }
+  
+  .admin-label {
+    @apply text-[12px] font-normal text-slate-400;
+  }
+
+  .admin-card {
+    @apply bg-white border border-slate-200 rounded-2xl p-6 shadow-premium;
+  }
+
+  .admin-input {
+    @apply h-10 rounded-xl border border-slate-300 px-3 text-sm focus:border-slate-950 focus:outline-none transition-all w-full bg-white text-slate-900 placeholder:text-slate-400;
+  }
+
+  .admin-button {
+    @apply h-10 rounded-xl px-4 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-50 inline-flex items-center justify-center gap-2 select-none;
+  }
+
+  .admin-button-primary {
+    @apply admin-button bg-primary text-white shadow-sm;
+  }
+  .admin-button-primary:hover {
+    background-color: hsl(var(--primary) / 0.9);
+  }
+
+  .admin-button-secondary {
+    @apply admin-button bg-slate-100 hover:bg-slate-200 text-slate-900;
+  }
+
+  .admin-button-outline {
+    @apply admin-button border border-slate-300 hover:bg-slate-50 text-slate-900;
+  }
+
+  .admin-section {
+    @apply space-y-6;
+  }
+
+  .responsive-table {
+    @apply w-full overflow-x-auto no-scrollbar;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Custom Scrollbar for better UX */

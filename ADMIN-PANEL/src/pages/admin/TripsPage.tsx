@@ -196,46 +196,49 @@ export default function TripsPage() {
   }
 
   return (
-    <div className="space-y-5 pb-12">
+    <div className="space-y-6 pb-12">
       {/* ─── Page Title ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-slate-900">Products</h1>
-        <div className="flex gap-2">
+        <div className="space-y-1">
+          <h1 className="admin-title">Products</h1>
+          <p className="admin-body">Manage travel itineraries, pricing, and configurations</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
           <Button 
             onClick={() => setSortModalOpen(true)} 
-            variant="outline" 
-            className="h-9 px-4 rounded border-slate-200 font-semibold text-xs bg-white hover:bg-slate-50"
+            className="admin-button-outline"
           >
-            <GripVertical className="w-3.5 h-3.5 mr-1.5" /> Reorder
+            <GripVertical className="w-4 h-4" /> Reorder
           </Button>
           <Button 
             onClick={handleShuffle} 
-            variant="outline" 
-            className="h-9 px-4 rounded border-slate-200 font-semibold text-xs bg-white hover:bg-slate-50"
+            className="admin-button-outline"
           >
-            <Shuffle className="w-3.5 h-3.5 mr-1.5" /> Shuffle
+            <Shuffle className="w-4 h-4" /> Shuffle
           </Button>
           <Button 
             onClick={openCreate} 
-            className="h-9 px-5 rounded bg-primary hover:bg-primary/90 text-white font-semibold text-xs"
+            className="admin-button-primary"
           >
-            <Plus className="w-3.5 h-3.5 mr-1.5" /> New Trip
+            <Plus className="w-4 h-4" /> New Trip
           </Button>
         </div>
       </div>
 
       {/* Payment automation banner */}
-      <div className="bg-[#fffbea] border border-[#fce588] rounded px-4 py-2.5 text-xs text-slate-700">
-        <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded mr-2 uppercase">New</span>
-        <strong>Payment automation is here:</strong> ✅ Accept partial deposits ✅ Set payment deadlines ✅ Auto-request balance payments ✅ Auto-send reminders
+      <div className="bg-[#FFF8E6] border border-[#FFE0B2] rounded-2xl px-5 py-4 text-sm text-[#E65100] flex items-start gap-3 shadow-sm">
+        <span className="bg-[#FF5400] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Update</span>
+        <div>
+          <strong className="font-semibold">Payment automation is active:</strong> Accept partial deposits, set deadlines, auto-request balance payments, and send automatic reminders.
+        </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+      <div className="admin-card !p-0">
         <DataTable
           columns={columns} data={filtered} loading={loading}
-          searchKey="title" searchPlaceholder="Search by title, code, overview, inclusions, exclu..."
+          searchKey="title" searchPlaceholder="Search by title, code..."
           emptyMessage="No trips found" 
-          emptyIcon={<Map className="h-10 w-10 text-slate-300" />}
+          emptyIcon={<Map className="h-8 w-8 text-slate-300" />}
           filters={[{ key: "status", label: "Status", options: [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }] }]}
           onFilterChange={(_, v) => setStatusFilter(v)}
         />

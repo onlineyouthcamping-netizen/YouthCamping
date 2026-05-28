@@ -115,27 +115,34 @@ export default function InquiriesPage() {
   }
 
   return (
-    <div className="space-y-0 animate-fade-in">
+    <div className="space-y-6 pb-12 animate-premium">
       {/* Page Title */}
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-900">Inquiries</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
+        <div className="space-y-1">
+          <h1 className="admin-title">Inquiries</h1>
+          <p className="admin-body">Track, assign and manage customer tour inquiries</p>
+        </div>
       </div>
 
       {/* Info Banners */}
-      <div className="space-y-2 mb-5">
-        <div className="bg-[#fffbea] border border-[#fce588] rounded px-4 py-2.5 text-xs text-slate-700">
-          <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded mr-2 uppercase">New</span>
-          You can now configure the tour inquiry form to <strong>popup automatically</strong> for your website visitors.
+      <div className="space-y-3">
+        <div className="bg-[#FFF8E6] border border-[#FFE0B2] rounded-2xl px-5 py-4 text-sm text-[#E65100] flex items-start gap-3 shadow-sm">
+          <span className="bg-[#FF5400] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Update</span>
+          <div>
+            You can now configure the tour inquiry form to <strong className="font-semibold">pop up automatically</strong> for your website visitors.
+          </div>
         </div>
-        <div className="bg-[#fffbea] border border-[#fce588] rounded px-4 py-2.5 text-xs text-slate-700">
-          <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded mr-2 uppercase">New</span>
-          You can now <strong>track the status of inquiries</strong> to help you focus on only those which need attention or follow up.
+        <div className="bg-[#FFF8E6] border border-[#FFE0B2] rounded-2xl px-5 py-4 text-sm text-[#E65100] flex items-start gap-3 shadow-sm">
+          <span className="bg-[#FF5400] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Update</span>
+          <div>
+            You can now <strong className="font-semibold">track the status of inquiries</strong> to help you focus on only those which need attention or follow up.
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 mb-4">
-        <div className="flex gap-0 overflow-x-auto no-scrollbar">
+      <div className="border-b border-slate-250">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {STATUS_TABS.map(tab => {
             const count = getTabCount(tab.key);
             const isActive = activeTab === tab.key;
@@ -143,15 +150,15 @@ export default function InquiriesPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                className={`px-4 py-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-all ${
                   isActive
                     ? "border-primary text-primary"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-350"
                 }`}
               >
                 {tab.label}
                 {count > 0 && (
-                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${
+                  <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${
                     isActive ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-500"
                   }`}>
                     {count}
@@ -164,20 +171,20 @@ export default function InquiriesPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="flex-1 relative">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[280px]">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by customer name, customer email, tour name, tour code, etc"
-            className="w-full h-9 px-3 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+            placeholder="Search by customer name, email, or tour title..."
+            className="admin-input"
           />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="h-9 px-3 border border-slate-300 rounded text-xs text-slate-600 flex items-center gap-1.5 hover:bg-slate-50">
-              Any Source/Type <ChevronDown className="w-3.5 h-3.5" />
+            <button className="admin-button-outline">
+              Any Source/Type <ChevronDown className="w-4 h-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -188,177 +195,176 @@ export default function InquiriesPage() {
             <DropdownMenuItem>Referral</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <button className="h-9 w-9 flex items-center justify-center border border-slate-300 rounded hover:bg-slate-50">
+        <button className="h-10 w-10 flex items-center justify-center border border-slate-300 rounded-xl hover:bg-slate-50 transition-all bg-white">
           <User className="w-4 h-4 text-slate-500" />
         </button>
-        <Button size="sm" className="h-9 px-5 bg-primary hover:bg-primary/90 text-white rounded text-xs font-semibold">
-          <Search className="w-3.5 h-3.5 mr-1.5" /> Search
+        <Button onClick={load} className="admin-button-primary">
+          <Search className="w-4 h-4" /> Search
         </Button>
       </div>
 
       {/* Inquiry Table */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+      <div className="admin-card !p-0 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-muted-foreground">
             <MessageSquare className="h-10 w-10 mb-3 text-slate-300" />
             <p className="text-sm text-slate-400">No inquiries found</p>
           </div>
         ) : (
-          <table className="w-full text-left table-striped">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[30%]">Source</th>
-                <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[25%]">Customer</th>
-                <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[25%]">Details</th>
-                <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[20%] text-right">Assignee & Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((inq) => (
-                <tr key={inq.id} className="hover:bg-slate-50/80 transition-colors group cursor-pointer" onClick={() => handleView(inq)}>
-                  {/* Source Column */}
-                  <td className="px-4 py-3.5">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${!inq.read ? 'bg-primary' : 'bg-emerald-500'}`} />
-                        <span className="text-xs font-semibold text-primary hover:underline truncate">
-                          {inq.tripTitle || 'General Inquiry'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 pl-3.5">
-                        {formatDateTime(inq.createdAt)}
-                      </p>
-                      {inq.isDuplicate && (
-                        <span className="text-[9px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded ml-3.5 inline-block">DUPLICATE</span>
-                      )}
-                    </div>
-                  </td>
-                  {/* Customer Column */}
-                  <td className="px-4 py-3.5">
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-semibold text-slate-800">{inq.name}</p>
-                      {inq.email && (
-                        <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                          {inq.email} <span className="text-slate-300">▼</span>
-                        </p>
-                      )}
-                      {inq.phone && (
-                        <p className="text-[11px] text-slate-400">{inq.phone}</p>
-                      )}
-                    </div>
-                  </td>
-                  {/* Details Column */}
-                  <td className="px-4 py-3.5">
-                    <div className="space-y-1">
-                      {inq.date && (
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Preferred travel date
-                        </p>
-                      )}
-                      {inq.date && (
-                        <p className="text-xs font-medium text-slate-700">{formatDate(inq.date)}</p>
-                      )}
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-1">
-                        <MessageCircle className="w-3 h-3" />
-                        {inq.message ? (
-                          <span className="truncate max-w-[180px]">{inq.message}</span>
-                        ) : (
-                          <span className="italic">(no comments)</span>
-                        )}
-                      </p>
-                    </div>
-                  </td>
-                  {/* Assignee & Actions Column */}
-                  <td className="px-4 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="h-7 w-7 rounded-full bg-slate-200 flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-slate-500" />
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button 
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-8 px-3 border border-slate-300 rounded text-xs text-slate-600 flex items-center gap-1 hover:bg-slate-50"
-                          >
-                            Actions <ChevronDown className="w-3 h-3" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(inq); }}>
-                            <Eye className="w-3.5 h-3.5 mr-2" /> View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); updateStatus(inq, 'contacted'); }}>
-                            Mark as Active
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); updateStatus(inq, 'converted'); }}>
-                            Mark as Won
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); updateStatus(inq, 'closed'); }}>
-                            Mark as Lost
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); updateStatus(inq, 'archived'); }}>
-                            Archive
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); updateStatus(inq, 'spam'); }} className="text-red-600">
-                            Mark as Spam
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </td>
+          <div className="responsive-table">
+            <table className="w-full text-left table-striped">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/50">
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 tracking-tight w-[30%]">Source</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 tracking-tight w-[25%]">Customer</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 tracking-tight w-[25%]">Details</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 tracking-tight w-[20%] text-right">Assignee & Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((inq) => (
+                  <tr key={inq.id} className="hover:bg-slate-50/80 transition-colors group cursor-pointer" onClick={() => handleView(inq)}>
+                    {/* Source Column */}
+                    <td className="px-5 py-3.5">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${!inq.read ? 'bg-primary' : 'bg-emerald-500'}`} />
+                          <span className="text-xs font-semibold text-primary hover:underline truncate">
+                            {inq.tripTitle || 'General Inquiry'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 pl-3.5">
+                          {formatDateTime(inq.createdAt)}
+                        </p>
+                        {inq.isDuplicate && (
+                          <span className="text-[9px] font-bold bg-orange-100 text-orange-650 px-1.5 py-0.5 rounded-full ml-3.5 inline-block">DUPLICATE</span>
+                        )}
+                      </div>
+                    </td>
+                    {/* Customer Column */}
+                    <td className="px-5 py-3.5">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-semibold text-slate-800">{inq.name}</p>
+                        {inq.email && (
+                          <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                            {inq.email} <span className="text-slate-350">▼</span>
+                          </p>
+                        )}
+                        {inq.phone && (
+                          <p className="text-[11px] text-slate-550">{inq.phone}</p>
+                        )}
+                      </div>
+                    </td>
+                    {/* Details Column */}
+                    <td className="px-5 py-3.5">
+                      <div className="space-y-1">
+                        {inq.date && (
+                          <p className="text-[10px] font-semibold text-slate-400">
+                            Preferred travel date
+                          </p>
+                        )}
+                        {inq.date && (
+                          <p className="text-xs font-medium text-slate-700">{formatDate(inq.date)}</p>
+                        )}
+                        <p className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-1">
+                          <MessageCircle className="w-3.5 h-3.5 text-slate-400" />
+                          {inq.message ? (
+                            <span className="truncate max-w-[180px]">{inq.message}</span>
+                          ) : (
+                            <span className="italic text-slate-400">(no comments)</span>
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                    {/* Assignee & Actions Column */}
+                    <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                          <User className="w-3.5 h-3.5 text-slate-500" />
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="admin-button-outline !h-8 px-2">
+                              Actions <ChevronDown className="w-3 h-3" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem onClick={() => handleView(inq)}>
+                              <Eye className="w-3.5 h-3.5 mr-2" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(inq, 'contacted')}>
+                              Mark as Active
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(inq, 'converted')}>
+                              Mark as Won
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(inq, 'closed')}>
+                              Mark as Lost
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(inq, 'archived')}>
+                              Archive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(inq, 'spam')} className="text-red-650">
+                              Mark as Spam
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       {/* Pagination */}
       {filtered.length > 0 && (
-        <div className="flex items-center justify-end mt-4 text-xs text-slate-500">
+        <div className="flex items-center justify-end mt-4 text-xs text-slate-500 font-medium">
           Page 1 of {Math.ceil(filtered.length / 20)}
         </div>
       )}
 
       {/* Detail Dialog */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent aria-describedby="inquiry-details" className="max-w-2xl w-[95vw] sm:w-full max-h-[95dvh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent aria-describedby="inquiry-details" className="max-w-lg w-[95%] max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Inquiry from {selected?.name}</DialogTitle>
-            <p id="inquiry-details" className="text-xs text-muted-foreground">Detailed view of lead information and sales history.</p>
+            <DialogTitle className="admin-heading">Inquiry from {selected?.name}</DialogTitle>
+            <p id="inquiry-details" className="admin-label mt-1">Detailed view of lead information and sales history.</p>
           </DialogHeader>
           {selected && (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4" />{selected.email || 'No Email Provided'}</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><Phone className="h-4 w-4" />{selected.phone}</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" />{formatDateTime(selected.createdAt)}</div>
+            <div className="space-y-5 pt-3">
+              <div className="flex flex-col gap-2.5 text-sm">
+                <div className="flex items-center gap-2 text-slate-600"><Mail className="h-4 w-4 text-slate-400" />{selected.email || 'No Email Provided'}</div>
+                <div className="flex items-center gap-2 text-slate-600"><Phone className="h-4 w-4 text-slate-400" />{selected.phone}</div>
+                <div className="flex items-center gap-2 text-slate-600"><Calendar className="h-4 w-4 text-slate-400" />{formatDateTime(selected.createdAt)}</div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg bg-muted p-3">
-                  <p className="text-xs text-muted-foreground">Travel Date</p>
-                  <p className="text-sm font-medium text-card-foreground">{selected.date || 'Not specified'}</p>
+                <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                  <p className="admin-label">Travel Date</p>
+                  <p className="text-sm font-semibold text-slate-800 mt-0.5">{selected.date || 'Not specified'}</p>
                 </div>
-                <div className="rounded-lg bg-muted p-3">
-                  <p className="text-xs text-muted-foreground">Travellers</p>
-                  <p className="text-sm font-medium text-card-foreground">{selected.count || '1'}</p>
+                <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                  <p className="admin-label">Travellers</p>
+                  <p className="text-sm font-semibold text-slate-800 mt-0.5">{selected.count || '1'}</p>
                 </div>
               </div>
               {selected.tripTitle && (
-                <div className="rounded-lg bg-muted p-3">
-                  <p className="text-xs text-muted-foreground">Related Trip</p>
-                  <p className="text-sm font-medium text-card-foreground">{selected.tripTitle}</p>
+                <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                  <p className="admin-label">Related Trip</p>
+                  <p className="text-sm font-semibold text-slate-800 mt-0.5">{selected.tripTitle}</p>
                 </div>
               )}
-              <div className="bg-orange-50 rounded-lg p-4 border border-orange-100 space-y-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary">CRM Action Panel</h4>
+              <div className="bg-[#FFF8E6] rounded-2xl p-5 border border-[#FFE0B2] space-y-4">
+                <h4 className="text-xs font-semibold text-[#E65100] uppercase tracking-wide">CRM Action Panel</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</label>
+                    <label className="text-[11px] font-medium text-slate-600">Status</label>
                     <select 
                       value={selected.status}
                       onChange={(e) => updateInquiry({ status: e.target.value as any })}
-                      className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-xs font-medium"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-900"
                     >
                       <option value="new">New Lead</option>
                       <option value="contacted">In Discussion</option>
@@ -368,21 +374,21 @@ export default function InquiriesPage() {
                   </div>
                   {selected.status === 'converted' && (
                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Revenue (₹)</label>
+                       <label className="text-[11px] font-medium text-slate-600">Revenue (₹)</label>
                        <input 
                          type="number"
                          placeholder="Enter Amount"
                          defaultValue={selected.convertedAmount}
                          onBlur={(e) => updateInquiry({ convertedAmount: Number(e.target.value) })}
-                         className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-xs font-medium"
+                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-850"
                        />
                     </div>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Admin Notes</label>
+                   <label className="text-[11px] font-medium text-slate-600">Admin Notes</label>
                    <textarea 
-                     className="w-full bg-white border border-slate-200 rounded-md p-3 text-xs font-medium min-h-[80px]"
+                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-slate-800 min-h-[80px]"
                      defaultValue={selected.adminNotes}
                      placeholder="Notes from call: customer budget, group dates..."
                      onBlur={(e) => updateInquiry({ adminNotes: e.target.value })}
@@ -391,11 +397,11 @@ export default function InquiriesPage() {
               </div>
 
               <div className="flex gap-3">
-                 <Button className="flex-1 bg-slate-900 text-white hover:bg-slate-800 rounded-md py-5 font-bold uppercase text-[10px] tracking-widest" onClick={() => { window.open(`tel:${selected.phone}`); updateInquiry({ status: 'contacted' }); }}>
-                   <Phone className="h-3.5 w-3.5 mr-2" /> Call Now
+                 <Button className="flex-1 admin-button-primary h-11" onClick={() => { window.open(`tel:${selected.phone}`); updateInquiry({ status: 'contacted' }); }}>
+                   <Phone className="h-4 w-4" /> Call Now
                  </Button>
-                 <Button variant="outline" className="flex-1 border-slate-200 rounded-md py-5 font-bold uppercase text-[10px] tracking-widest" onClick={() => { window.open(`mailto:${selected.email}`); }}>
-                   <Mail className="h-3.5 w-3.5 mr-2" /> Email
+                 <Button variant="outline" className="flex-1 admin-button-outline h-11" onClick={() => { window.open(`mailto:${selected.email}`); }}>
+                   <Mail className="h-4 w-4" /> Email
                  </Button>
               </div>
             </div>
