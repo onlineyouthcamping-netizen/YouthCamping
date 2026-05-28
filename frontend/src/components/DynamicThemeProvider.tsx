@@ -148,6 +148,100 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
     loadTheme();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const adjustWrappedHeadings = () => {
+      if (window.innerWidth > 768) {
+        // Restore original font sizes on desktop
+        const headings = document.querySelectorAll('.hero-title, .section-heading, .main-heading, h1, h2');
+        headings.forEach(node => {
+          const el = node as HTMLElement;
+          if (el.dataset.originalFontSize) {
+            el.style.fontSize = el.dataset.originalFontSize;
+            el.removeAttribute('data-original-font-size');
+          }
+        });
+        return;
+      }
+
+      const headings = document.querySelectorAll('.hero-title, .section-heading, .main-heading, h1, h2');
+      
+      headings.forEach(node => {
+        const el = node as HTMLElement;
+        if (!el.textContent || el.textContent.trim() === '') return;
+
+        // Save original font size if not already saved
+        if (!el.dataset.originalFontSize) {
+          el.dataset.originalFontSize = el.style.fontSize || window.getComputedStyle(el).fontSize;
+        }
+
+        // Reset to original before measuring
+        el.style.fontSize = el.dataset.originalFontSize;
+
+        const originalHeight = el.getBoundingClientRect().height;
+        
+        // Measure single line height
+        const originalWhiteSpace = el.style.whiteSpace;
+        el.style.whiteSpace = 'nowrap';
+        const singleLineHeight = el.getBoundingClientRect().height;
+        el.style.whiteSpace = originalWhiteSpace;
+
+        // If it breaks into multiple lines (height > 1.2 * single line height)
+        if (originalHeight > singleLineHeight * 1.2) {
+          let currentSize = parseFloat(el.dataset.originalFontSize);
+          const unit = el.dataset.originalFontSize.replace(/[0-9.]/g, '') || 'px';
+          const minSize = currentSize * 0.65; // Don't shrink below 65% of original size
+
+          // Step down incrementally until it fits in a single line
+          while (currentSize > minSize) {
+            const height = el.getBoundingClientRect().height;
+            
+            // Check single line height at current size
+            const currentWhiteSpace = el.style.whiteSpace;
+            el.style.whiteSpace = 'nowrap';
+            const currentSingleLineHeight = el.getBoundingClientRect().height;
+            el.style.whiteSpace = currentWhiteSpace;
+
+            if (height <= currentSingleLineHeight * 1.2) {
+              break; // It fits in a single line!
+            }
+
+            currentSize -= 1;
+            el.style.fontSize = `${currentSize}${unit}`;
+          }
+        }
+      });
+    };
+
+    // Run immediately
+    adjustWrappedHeadings();
+
+    // Listen to window resize events
+    const handleResize = () => {
+      adjustWrappedHeadings();
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Observe dynamic DOM changes (page transitions)
+    let resizeTimer: any;
+    const observer = new MutationObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(adjustWrappedHeadings, 100);
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+      clearTimeout(resizeTimer);
+    };
+  }, []);
+
   return (
     <ThemeContext.Provider value={{ theme }}>
       {children}
