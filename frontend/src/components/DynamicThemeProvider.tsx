@@ -152,20 +152,19 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
     if (typeof window === 'undefined') return;
 
     const adjustWrappedHeadings = () => {
+      const headings = document.querySelectorAll('.hero-title, .section-heading, .main-heading, h1, h2');
+
       if (window.innerWidth > 768) {
         // Restore original font sizes on desktop
-        const headings = document.querySelectorAll('.hero-title, .section-heading, .main-heading, h1, h2');
         headings.forEach(node => {
           const el = node as HTMLElement;
           if (el.dataset.originalFontSize) {
-            el.style.fontSize = el.dataset.originalFontSize;
+            el.style.removeProperty('font-size');
             el.removeAttribute('data-original-font-size');
           }
         });
         return;
       }
-
-      const headings = document.querySelectorAll('.hero-title, .section-heading, .main-heading, h1, h2');
       
       headings.forEach(node => {
         const el = node as HTMLElement;
@@ -176,8 +175,8 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
           el.dataset.originalFontSize = el.style.fontSize || window.getComputedStyle(el).fontSize;
         }
 
-        // Reset to original before measuring
-        el.style.fontSize = el.dataset.originalFontSize;
+        // Reset to original before measuring using important flag to override styles
+        el.style.setProperty('font-size', el.dataset.originalFontSize, 'important');
 
         const originalHeight = el.getBoundingClientRect().height;
         
@@ -191,7 +190,7 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
         if (originalHeight > singleLineHeight * 1.2) {
           let currentSize = parseFloat(el.dataset.originalFontSize);
           const unit = el.dataset.originalFontSize.replace(/[0-9.]/g, '') || 'px';
-          const minSize = currentSize * 0.65; // Don't shrink below 65% of original size
+          const minSize = currentSize * 0.55; // Allow shrinking down to 55% of original size to guarantee fit
 
           // Step down incrementally until it fits in a single line
           while (currentSize > minSize) {
@@ -207,8 +206,8 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
               break; // It fits in a single line!
             }
 
-            currentSize -= 1;
-            el.style.fontSize = `${currentSize}${unit}`;
+            currentSize -= 0.5; // Decrement by 0.5px for ultra-smooth fitting
+            el.style.setProperty('font-size', `${currentSize}${unit}`, 'important');
           }
         }
       });
