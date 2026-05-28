@@ -26,7 +26,7 @@ export default function CTABanner({
 }: CTABannerProps) {
   return (
     <div className="relative py-20 overflow-hidden">
-      <div className="max-w-[1440px] mx-auto relative z-10">
+      <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20">
         <div className="relative h-[400px] md:h-[500px] w-full rounded-[32px] overflow-hidden shadow-2xl group border border-zinc-50">
           {/* Background Image */}
           <div className="absolute inset-0">
@@ -55,10 +55,10 @@ export default function CTABanner({
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-6xl md:text-[14rem] font-semibold text-white capitalize leading-[0.75] tracking-tighter drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+              className="text-4xl md:text-6xl lg:text-7xl text-white capitalize leading-[1.05] tracking-tighter mb-4"
               style={{ 
                 fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
-                fontWeight: titleWeight || undefined
+                fontWeight: 'var(--font-weight-heading, 300)'
               }}
             >
               Group <br className="hidden md:block" /> Trips

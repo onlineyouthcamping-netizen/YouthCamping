@@ -139,7 +139,10 @@ export default function Destinations({
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
               <div className="absolute inset-0 flex items-center justify-center p-6">
-                <h3 className="text-3xl md:text-4xl font-semibold text-white tracking-tighter drop-shadow-2xl text-center capitalize">
+                <h3 
+                  className="text-2xl md:text-3xl text-white tracking-tighter text-center capitalize"
+                  style={{ fontWeight: 'var(--font-weight-card, 500)' }}
+                >
                   {dest.name}
                 </h3>
               </div>

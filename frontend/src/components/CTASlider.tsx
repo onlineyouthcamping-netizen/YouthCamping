@@ -78,7 +78,7 @@ export default function CTASlider({
 
   return (
     <section className="relative py-20 overflow-hidden">
-      <div className="max-w-[1440px] mx-auto relative z-10">
+      <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20">
         <div className="relative h-[300px] md:h-[400px] w-full rounded-[32px] overflow-hidden group shadow-2xl bg-zinc-900 border border-zinc-50">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
@@ -129,7 +129,8 @@ export default function CTASlider({
                     <motion.h2 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-5xl md:text-7xl lg:text-[100px] font-bold text-white drop-shadow-lg leading-tight mb-6 md:mb-8 capitalize tracking-tighter"
+                      className="text-4xl md:text-6xl lg:text-7xl text-white leading-[1.05] mb-6 md:mb-8 capitalize tracking-tighter"
+                      style={{ fontWeight: 'var(--font-weight-heading, 300)' }}
                     >
                       {current.title}
                     </motion.h2>
