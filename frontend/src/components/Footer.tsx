@@ -158,37 +158,23 @@ export default function Footer({
         </div>
       </div>
 
-      {/* Skyline Image */}
-      <div className="w-full relative z-10 flex flex-col items-center mt-auto">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/footer-skyline.png"
-          alt="City Skyline"
-          className="w-full pointer-events-none select-none"
-          style={{
-            height: '90px',
-            objectFit: 'cover',
-            objectPosition: 'center bottom',
-            opacity: 0.65,
-            display: 'block',
-          }}
-        />
-        
-        {/* Bottom Bar */}
-        <div className="w-full border-t border-white/10 bg-[#090F14]">
-          <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left relative">
-            <p className="text-zinc-500 text-[10px] md:text-xs font-bold tracking-widest uppercase">
-              © {new Date().getFullYear()} {brandName.toUpperCase()}. ALL RIGHTS RESERVED.
-            </p>
-            
-            {/* Scroll to Top Button */}
-            <button 
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="w-9 h-9 rounded-full bg-[#1E293B]/60 border border-white/10 flex items-center justify-center text-white hover:bg-primary-orange hover:text-white transition-all shadow-lg active:scale-95 shrink-0"
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
-            </button>
-          </div>
+      {/* Bottom Copyright Bar */}
+      <div 
+        className="w-full border-t border-white/10 mt-auto"
+        style={{ backgroundColor: '#090F14' }}
+      >
+        <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left relative">
+          <p className="text-zinc-500 text-[10px] md:text-xs font-bold tracking-widest uppercase">
+            © {new Date().getFullYear()} {brandName.toUpperCase()}. ALL RIGHTS RESERVED.
+          </p>
+          
+          {/* Scroll to Top Button */}
+          <button 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="w-9 h-9 rounded-full bg-[#1E293B]/60 border border-white/10 flex items-center justify-center text-white hover:bg-primary-orange hover:text-white transition-all shadow-lg active:scale-95 shrink-0"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+          </button>
         </div>
       </div>
     </footer>

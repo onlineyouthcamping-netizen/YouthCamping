@@ -128,7 +128,8 @@
   --sidebar-ring: oklch(0.708 0 0);
 
   /* Hero */
-  --hero-height: 100vh;
+  --hero-height: 100svh;
+  --hero-height-fallback: 100vh;
   --hero-overlay: 60;
   
   /* Navbar */
@@ -178,7 +179,7 @@
   /* Mobile */
   --mobile-font-base: 14px;
   --mobile-font-heading: 28px;
-  --mobile-hero-height: 70vh;
+  --mobile-hero-height: 100svh;
 }
 
 .dark {
@@ -231,12 +232,12 @@
     --text-heading: var(--h1-size);
     --text-h2: var(--h2-size);
     --text-h3: var(--h3-size);
-    --hero-height: var(--mobile-hero-height, 75vh);
+    --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
     --section-spacing: 40px;
     --card-width: 290px;
     --card-height: 420px;
-    --title-size-multiplier: 0.55;
+    --title-size-multiplier: 0.75;
     --h1-size: 34px;
     --h2-size: 28px;
     --h3-size: 22px;
@@ -264,10 +265,13 @@
     box-shadow: none !important;
   }
 
-  /* Disable parallax or scaling animations */
-  .ken-burns,
-  [class*="hover:scale-"],
-  [class*="active:scale-"] {
+  /* Disable parallax or scaling animations — exclude hero video elements */
+  .ken-burns {
+    animation: none !important;
+    transform: none !important;
+  }
+  [class*="hover:scale-"]:not(.hero-video-wrapper *):not(.hero-video-iframe),
+  [class*="active:scale-"]:not(.hero-video-wrapper *):not(.hero-video-iframe) {
     animation: none !important;
     transform: none !important;
   }
@@ -505,6 +509,17 @@
     perspective: 1000px;
   }
 
+  /* ─── Hero Container — GPU-stable, flicker-free ─── */
+  .hero-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    transform: scale(1.001);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
   /* Aspect-ratio based iframe background video wrapper with object-fit: cover behavior */
   .hero-video-wrapper {
     position: absolute;
@@ -512,15 +527,22 @@
     pointer-events: none;
     overflow: hidden;
     container-type: size;
+    transform: scale(1.01);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 
   .hero-video-iframe {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(1.02); /* 1.02 scaling guarantees zero subpixel gaps or black borders */
+    transform: translate(-50%, -50%) scale(1.02);
     pointer-events: none;
     border: none;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 
   @container (min-aspect-ratio: 16/9) {

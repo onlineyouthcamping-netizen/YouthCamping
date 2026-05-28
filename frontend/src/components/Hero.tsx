@@ -112,11 +112,17 @@ export default function Hero({
 
   return (
     <div 
-      className="relative w-full overflow-hidden bg-navy" 
-      style={{ height: 'var(--hero-height)', minHeight: '400px' }}
+      className="hero-container relative w-full overflow-hidden bg-navy" 
+      style={{ 
+        height: 'var(--hero-height)', 
+        minHeight: '400px',
+        transform: 'scale(1.001)',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+      }}
     >
       {/* Background Media */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0" style={{ transform: 'scale(1.01)', backfaceVisibility: 'hidden' }}>
         {hasVideo ? (
           <div className="hero-video-wrapper">
             <iframe
@@ -131,6 +137,7 @@ export default function Hero({
             src={normalizedBg} 
             className="w-full h-full object-cover" 
             alt="Hero Background"
+            style={{ objectFit: 'cover', objectPosition: 'center' }}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-navy via-charcoal to-navy" />
@@ -140,8 +147,8 @@ export default function Hero({
         <div className="absolute inset-0 bg-black/60 transition-opacity duration-700" style={overlayOpacity != null ? { opacity: overlayOpacity } : undefined} />
       </div>
 
-      {/* Content Over the Frame */}
-      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 sm:px-6 md:px-10 py-8 text-white ${alignClass}`}>
+      {/* Content Over the Frame — identical layout desktop & mobile, proportionally scaled */}
+      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-6 md:px-10 py-8 text-white ${alignClass}`}>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -164,7 +171,8 @@ export default function Hero({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center text-base sm:text-xl md:text-3xl font-medium mt-3 md:mt-6"
+            className="flex items-center justify-center font-medium mt-3 md:mt-6"
+            style={{ fontSize: 'clamp(1rem, 2.5vw, 1.875rem)' }}
           >
             <Typewriter phrases={typingPhrases} />
             <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>
