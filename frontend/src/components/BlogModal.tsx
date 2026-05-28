@@ -84,14 +84,14 @@ export default function BlogModal({ isOpen, onClose, blog }: BlogModalProps) {
                   className="space-y-4"
                 >
                   <div className="flex flex-wrap gap-3">
-                    <span className="px-4 py-1.5 rounded-full bg-primary text-white font-black text-[10px] uppercase tracking-widest shadow-lg">
+                    <span className="px-4 py-1.5 rounded-full bg-primary text-white font-bold text-[10px] capitalize tracking-widest shadow-lg">
                       Travel Journal
                     </span>
-                    <span className="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white font-bold text-[10px] uppercase tracking-widest border border-white/20">
+                    <span className="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white font-bold text-[10px] capitalize tracking-widest border border-white/20">
                       {blog.readTime}
                     </span>
                   </div>
-                  <h1 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none drop-shadow-2xl">
+                  <h1 className="text-3xl md:text-5xl font-bold text-white capitalize tracking-tighter leading-none drop-shadow-2xl">
                     {blog.title}
                   </h1>
                 </motion.div>
@@ -114,14 +114,14 @@ export default function BlogModal({ isOpen, onClose, blog }: BlogModalProps) {
                         />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Authored By</p>
-                        <p className="text-sm font-black text-navy">{blog.author}</p>
+                        <p className="text-[10px] font-bold capitalize text-zinc-400 tracking-widest">Authored By</p>
+                        <p className="text-sm font-bold text-navy">{blog.author}</p>
                       </div>
                     </div>
                     <div className="h-8 w-px bg-zinc-200" />
                     <div>
-                      <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Published On</p>
-                      <p className="text-sm font-black text-navy">{dateStr}</p>
+                      <p className="text-[10px] font-bold capitalize text-zinc-400 tracking-widest">Published On</p>
+                      <p className="text-sm font-bold text-navy">{dateStr}</p>
                     </div>
                   </div>
 
@@ -139,7 +139,7 @@ export default function BlogModal({ isOpen, onClose, blog }: BlogModalProps) {
                 {/* Sidebar */}
                 <div className="w-full md:w-64 space-y-8">
                   <div className="p-8 bg-navy text-white rounded-[40px] shadow-xl space-y-6">
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Share Adventure</p>
+                    <p className="text-[10px] font-bold capitalize tracking-widest opacity-60">Share Adventure</p>
                     <div className="flex flex-col gap-4">
                       <button className="flex items-center gap-3 group text-sm font-bold">
                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-[#1877F2] transition-colors">
@@ -169,9 +169,9 @@ export default function BlogModal({ isOpen, onClose, blog }: BlogModalProps) {
                   </div>
 
                   <div className="p-8 bg-primary/5 border-2 border-primary/10 rounded-[40px] space-y-4">
-                    <h4 className="font-black text-navy uppercase text-sm tracking-tight leading-none">Ready for your own story?</h4>
+                    <h4 className="font-bold text-navy capitalize text-sm tracking-tight leading-none">Ready for your own story?</h4>
                     <p className="text-[11px] text-zinc-500 font-bold leading-relaxed">Book a trip today and start your own adventure in the Himalayas.</p>
-                    <button className="w-full py-3 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20">
+                    <button className="w-full py-3 bg-primary text-white rounded-2xl font-bold text-[10px] capitalize tracking-widest shadow-lg shadow-primary/20">
                       Explore Trips
                     </button>
                   </div>

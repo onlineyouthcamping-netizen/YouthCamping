@@ -22,16 +22,16 @@ export default async function BlogsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
             <div className="max-w-3xl">
-              <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-primary-orange mb-8 font-bold text-xs uppercase tracking-widest transition-colors">
+              <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-primary-orange mb-8 font-bold text-xs capitalize tracking-widest transition-colors">
                 <ChevronLeft className="w-4 h-4" /> Back to Home
               </Link>
               <div className="flex items-center gap-3 text-primary-orange mb-6">
                 <BookOpen className="w-6 h-6" />
-                <span className="font-black tracking-[0.3em] uppercase text-xs">The Travel Journal</span>
+                <span className="font-bold tracking-[0.3em] capitalize text-xs">The Travel Journal</span>
               </div>
               <h1 className="text-6xl md:text-8xl font-semibold tracking-tighter text-navy mb-8 leading-[0.9]">
                 WATCH & <br />
-                <span className="text-primary-orange">READ</span>
+                <span className="text-primary-orange">Read</span>
               </h1>
               <p className="text-zinc-500 text-xl font-medium max-w-xl leading-relaxed">
                 Dive into our collection of travel stories, destination guides, and visual journeys. Find inspiration for your next adventure.
@@ -74,7 +74,7 @@ export default async function BlogsPage() {
                       
                       <div className="mt-auto pt-6 border-t border-zinc-50 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary-orange/10 flex items-center justify-center font-black text-[10px] text-primary-orange border border-primary-orange/20">
+                          <div className="w-8 h-8 rounded-full bg-primary-orange/10 flex items-center justify-center font-bold text-[10px] text-primary-orange border border-primary-orange/20">
                             {art.author ? art.author[0] : 'Y'}
                           </div>
                           <div>
@@ -96,8 +96,8 @@ export default async function BlogsPage() {
               <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-8">
                 <BookOpen className="w-10 h-10 text-zinc-300" />
               </div>
-              <h2 className="text-3xl font-black uppercase text-navy mb-4">No stories published yet</h2>
-              <p className="text-zinc-400 font-bold max-w-sm mx-auto uppercase tracking-widest text-xs">
+              <h2 className="text-3xl font-bold capitalize text-navy mb-4">No stories published yet</h2>
+              <p className="text-zinc-400 font-bold max-w-sm mx-auto capitalize tracking-widest text-xs">
                 Check back soon for new travel guides and stories!
               </p>
             </div>

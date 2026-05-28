@@ -58,10 +58,37 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
     root.style.setProperty('--foreground', config.textColor);
     
     // Buttons
-    root.style.setProperty('--button-bg', config.buttonColor);
-    root.style.setProperty('--button-hover', config.buttonHoverColor);
-    root.style.setProperty('--button-text', config.buttonTextColor);
-    root.style.setProperty('--radius-button', `${config.buttonRadius}px`);
+    if (config.buttonStylePreset) {
+      let radius = '12px';
+      let bg = config.buttonColor || '#FF6B00';
+      let text = config.buttonTextColor || '#FFFFFF';
+      let border = 'none';
+      
+      if (config.buttonStylePreset.includes('box')) radius = '0px';
+      else if (config.buttonStylePreset.includes('curved')) radius = '8px';
+      else if (config.buttonStylePreset.includes('rounded')) radius = '9999px';
+
+      if (config.buttonStylePreset.includes('hollow')) {
+        bg = 'transparent';
+        text = config.buttonColor || '#FF6B00';
+        border = `2px solid ${config.buttonColor || '#FF6B00'}`;
+      }
+      
+      root.style.setProperty('--radius-button', radius);
+      root.style.setProperty('--button-bg', bg);
+      root.style.setProperty('--button-text', text);
+      root.style.setProperty('--button-border', border);
+    } else {
+      root.style.setProperty('--button-bg', config.buttonColor);
+      root.style.setProperty('--button-hover', config.buttonHoverColor);
+      root.style.setProperty('--button-text', config.buttonTextColor);
+      root.style.setProperty('--radius-button', `${config.buttonRadius}px`);
+    }
+
+    if (config.sectionHeadingStyle) root.style.setProperty('--section-heading-style', config.sectionHeadingStyle);
+    if (config.tourCardStyle) root.style.setProperty('--tour-card-style', config.tourCardStyle);
+    if (config.collectionCardStyle) root.style.setProperty('--collection-card-style', config.collectionCardStyle);
+    if (config.headerStylePreset) root.style.setProperty('--header-style-preset', config.headerStylePreset);
     
     // Cards
     root.style.setProperty('--card', config.cardBgColor);

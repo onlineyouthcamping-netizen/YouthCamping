@@ -111,7 +111,7 @@ export default function TripSubNav({ sections }: TripSubNavProps) {
                 data-section={section.id}
                 onClick={() => scrollToSection(section.id)}
                 className={cn(
-                  "group relative text-[11px] font-black uppercase tracking-widest whitespace-nowrap py-1 transition-all",
+                  "group relative text-[11px] font-bold capitalize tracking-widest whitespace-nowrap py-1 transition-all",
                   activeSection === section.id 
                     ? "text-primary-orange" 
                     : "text-zinc-400 hover:text-navy"

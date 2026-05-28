@@ -58,7 +58,7 @@ export default function TripBookingPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-6">
       <div className="text-center">
         <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-white uppercase">Trip Not Found</h1>
+        <h1 className="text-2xl font-bold text-white capitalize">Trip Not Found</h1>
         <p className="text-gray-400 mt-2">The booking link is invalid or this trip is no longer active.</p>
       </div>
     </div>
@@ -68,11 +68,11 @@ export default function TripBookingPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-900 to-slate-900 p-6">
       <div className="text-center max-w-md">
         <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto mb-6" />
-        <h1 className="text-3xl font-black text-white uppercase mb-2">Booking Submitted!</h1>
+        <h1 className="text-3xl font-bold text-white capitalize mb-2">Booking Submitted!</h1>
         <p className="text-emerald-200 mb-4">Your booking for <strong>{tripName}</strong> has been received.</p>
         <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-6">
-          <p className="text-xs text-white/50 uppercase tracking-widest mb-1">Your Booking ID</p>
-          <p className="text-2xl font-black text-emerald-400 font-mono">{bookingId}</p>
+          <p className="text-xs text-white/50 capitalize tracking-widest mb-1">Your Booking ID</p>
+          <p className="text-2xl font-bold text-emerald-400 font-mono">{bookingId}</p>
         </div>
         <p className="text-sm text-gray-400">Our team will contact you shortly to confirm your booking and discuss payment details.</p>
       </div>
@@ -83,14 +83,14 @@ export default function TripBookingPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
       <div className="max-w-lg mx-auto">
         <div className="text-center mb-8">
-          <div className="inline-block bg-blue-500/20 text-blue-400 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-3">{tripCode}</div>
-          <h1 className="text-3xl font-black text-white uppercase tracking-tight">{tripName}</h1>
+          <div className="inline-block bg-blue-500/20 text-blue-400 px-4 py-1 rounded-full text-xs font-bold capitalize tracking-widest mb-3">{tripCode}</div>
+          <h1 className="text-3xl font-bold text-white capitalize tracking-tight">{tripName}</h1>
           <p className="text-gray-400 text-sm mt-2">Fill in your details to book this trip</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 space-y-4">
-            <h3 className="text-xs font-black text-white/40 uppercase tracking-widest flex items-center gap-2"><User className="w-3.5 h-3.5" /> Personal Info</h3>
+            <h3 className="text-xs font-bold text-white/40 capitalize tracking-widest flex items-center gap-2"><User className="w-3.5 h-3.5" /> Personal Info</h3>
             <input required placeholder="Full Name *" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
             <div className="grid grid-cols-3 gap-3">
               <input required placeholder="Mobile *" maxLength={10} value={form.mobile} onChange={e => setForm({...form, mobile: e.target.value})} className="col-span-2 bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -104,7 +104,7 @@ export default function TripBookingPage() {
           </div>
 
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 space-y-4">
-            <h3 className="text-xs font-black text-white/40 uppercase tracking-widest flex items-center gap-2"><Train className="w-3.5 h-3.5" /> Travel Details</h3>
+            <h3 className="text-xs font-bold text-white/40 capitalize tracking-widest flex items-center gap-2"><Train className="w-3.5 h-3.5" /> Travel Details</h3>
             <select value={form.trainClass} onChange={e => setForm({...form, trainClass: e.target.value})} className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none">
               <option value="Sleeper" className="bg-slate-800">Sleeper</option>
               <option value="3AC" className="bg-slate-800">3AC</option>
@@ -119,11 +119,11 @@ export default function TripBookingPage() {
           </div>
 
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 space-y-4">
-            <h3 className="text-xs font-black text-white/40 uppercase tracking-widest">Notes</h3>
+            <h3 className="text-xs font-bold text-white/40 capitalize tracking-widest">Notes</h3>
             <textarea placeholder="Any special requests..." value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm min-h-[80px] outline-none" />
           </div>
 
-          <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black uppercase tracking-widest py-4 rounded-2xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25">
+          <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold capitalize tracking-widest py-4 rounded-2xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
             {submitting ? 'Submitting...' : 'Submit Booking'}
           </button>

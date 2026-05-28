@@ -105,10 +105,10 @@ export default function DestinationInquiryModal({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 text-white">
-                <p className="text-sm font-bold uppercase tracking-widest mb-2 opacity-90">
+                <p className="text-sm font-bold capitalize tracking-widest mb-2 opacity-90">
                   {destination.duration || "Custom Itinerary"}
                 </p>
-                <h2 className="text-3xl md:text-5xl font-black mb-2 tracking-tighter uppercase italic leading-[0.9]">
+                <h2 className="text-3xl md:text-5xl font-bold mb-2 tracking-tighter capitalize italic leading-[0.9]">
                   {destination.name} Highlights
                 </h2>
                 <p className="text-sm font-medium opacity-80">
@@ -127,8 +127,8 @@ export default function DestinationInquiryModal({
               </button>
 
               <div className="mb-10">
-                <h3 className="text-3xl font-black text-navy tracking-tighter leading-none mb-4 italic uppercase">Plan Your Next Trip</h3>
-                <p className="text-zinc-400 font-bold text-xs uppercase tracking-widest">Connect with our destination experts</p>
+                <h3 className="text-3xl font-bold text-navy tracking-tighter leading-none mb-4 italic capitalize">Plan Your Next Trip</h3>
+                <p className="text-zinc-400 font-bold text-xs capitalize tracking-widest">Connect with our destination experts</p>
               </div>
 
               {isSuccess ? (
@@ -136,7 +136,7 @@ export default function DestinationInquiryModal({
                   <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-100">
                     <Send className="w-8 h-8" />
                   </div>
-                  <h4 className="text-2xl font-black text-navy mb-2 uppercase italic tracking-tighter">Request Received!</h4>
+                  <h4 className="text-2xl font-bold text-navy mb-2 capitalize italic tracking-tighter">Request Received!</h4>
                   <p className="text-zinc-500 font-bold">Our expert will reach out to you within 24 hours.</p>
                 </div>
               ) : (
@@ -219,7 +219,7 @@ export default function DestinationInquiryModal({
                   <button
                     disabled={isSubmitting}
                     type="submit"
-                    className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-lg uppercase tracking-tighter shadow-xl hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+                    className="w-full py-5 bg-red-600 text-white rounded-2xl font-bold text-lg capitalize tracking-tighter shadow-xl hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
                   >
                     {isSubmitting ? "Connecting..." : "Connect with Expert"}
                   </button>

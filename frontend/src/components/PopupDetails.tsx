@@ -219,7 +219,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                 <div className="w-10 h-10 rounded-2xl bg-zinc-50 group-hover:bg-primary-orange/10 flex items-center justify-center transition-all group-hover:scale-110">
                    <Icon className="w-5 h-5 text-zinc-400 group-hover:text-primary-orange transition-colors" />
                 </div>
-                <span className="font-black text-xs uppercase tracking-widest text-zinc-400 group-hover:text-navy transition-colors">{sec.label}</span>
+                <span className="font-bold text-xs capitalize tracking-widest text-zinc-400 group-hover:text-navy transition-colors">{sec.label}</span>
               </div>
               <ArrowRight className="w-5 h-5 text-zinc-300 group-hover:text-primary-orange transition-all transform group-hover:translate-x-1" />
             </button>
@@ -233,8 +233,8 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
               {/* Modal Header */}
               <div className="p-8 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/30">
                  <div className="space-y-1">
-                    <h2 className="text-2xl font-black text-navy tracking-tight uppercase italic">{activeSection?.label}</h2>
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Information & Guidelines</p>
+                    <h2 className="text-2xl font-bold text-navy tracking-tight capitalize italic">{activeSection?.label}</h2>
+                    <p className="text-[10px] text-zinc-400 font-bold capitalize tracking-widest">Information & Guidelines</p>
                  </div>
                  <button 
                    onClick={() => setActiveId(null)}
@@ -252,7 +252,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                       if (!cat || !cat.items) return null;
                       return (
                         <div key={idx} className="space-y-6">
-                          <h3 className="text-xs font-black text-primary-orange uppercase tracking-[0.3em] pl-4 border-l-4 border-primary-orange">{cat.category}</h3>
+                          <h3 className="text-xs font-bold text-primary-orange capitalize tracking-[0.3em] pl-4 border-l-4 border-primary-orange">{cat.category}</h3>
                           <div className="grid grid-cols-1 gap-4">
                             {cat.items.map((item: any, i: number) => (
                               <div key={i} className="flex items-center gap-4 p-4 bg-zinc-50/50 rounded-2xl border border-zinc-100 hover:bg-white hover:shadow-md transition-all group">
@@ -262,7 +262,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                                     {item.text || item.label || item}
                                   </p>
                                   {item.linkText && (
-                                    <span className="text-[10px] font-black text-navy uppercase tracking-widest ml-2 bg-white px-3 py-1 rounded-full border border-zinc-100 shadow-sm">
+                                    <span className="text-[10px] font-bold text-navy capitalize tracking-widest ml-2 bg-white px-3 py-1 rounded-full border border-zinc-100 shadow-sm">
                                       {item.linkText}
                                     </span>
                                   )}
@@ -287,15 +287,15 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-zinc-100/50">
-                            <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-zinc-400">Item Name</th>
-                            <th className="text-right px-6 py-4 text-[10px] font-black uppercase tracking-widest text-zinc-400">Rent Price</th>
+                            <th className="text-left px-6 py-4 text-[10px] font-bold capitalize tracking-widest text-zinc-400">Item Name</th>
+                            <th className="text-right px-6 py-4 text-[10px] font-bold capitalize tracking-widest text-zinc-400">Rent Price</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
                           {activeSection.content.map((row: any, i: number) => (
                             <tr key={i} className="hover:bg-white transition-colors">
                               <td className="px-6 py-5 font-bold text-navy text-sm">{row.item}</td>
-                              <td className="px-6 py-5 text-right font-black text-primary-orange">{row.price}</td>
+                              <td className="px-6 py-5 text-right font-bold text-primary-orange">{row.price}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -304,7 +304,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                     {activeSection.note && (
                       <div className="flex items-start gap-3 p-4 bg-primary-orange/5 rounded-2xl border border-primary-orange/10">
                         <ArrowRight className="w-4 h-4 text-primary-orange shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider italic">{activeSection.note}</p>
+                        <p className="text-[10px] text-zinc-500 font-bold capitalize tracking-wider italic">{activeSection.note}</p>
                       </div>
                     )}
                   </div>
@@ -314,8 +314,8 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                   <div className="space-y-4">
                     {activeSection.content.map((item: any, i: number) => (
                       <div key={i} className="flex items-center justify-between p-6 bg-zinc-50/50 rounded-[24px] border border-zinc-100 hover:bg-white hover:shadow-lg hover:shadow-zinc-100 transition-all">
-                        <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{item.label}</span>
-                        <span className="text-sm font-black text-navy bg-white px-4 py-2 rounded-xl shadow-sm border border-zinc-100">{item.val}</span>
+                        <span className="text-xs font-bold text-zinc-400 capitalize tracking-widest">{item.label}</span>
+                        <span className="text-sm font-bold text-navy bg-white px-4 py-2 rounded-xl shadow-sm border border-zinc-100">{item.val}</span>
                       </div>
                     ))}
                     {activeSection.note && (
@@ -342,7 +342,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
               <div className="p-8 bg-zinc-50 border-t border-zinc-100 flex justify-center">
                  <button 
                    onClick={() => setActiveId(null)}
-                   className="px-12 py-4 bg-navy text-white rounded-full font-black uppercase text-[10px] tracking-[0.2em] hover:bg-primary-orange hover:shadow-xl hover:shadow-primary-orange/20 transition-all"
+                   className="px-12 py-4 bg-navy text-white rounded-full font-bold capitalize text-[10px] tracking-[0.2em] hover:bg-primary-orange hover:shadow-xl hover:shadow-primary-orange/20 transition-all"
                  >
                    Got it, Thanks
                  </button>

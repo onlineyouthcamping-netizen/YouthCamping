@@ -25,7 +25,7 @@ export default function ContactPage() {
         className="text-white py-2 px-6 hidden md:block"
         style={{ backgroundColor: primaryColor }}
       >
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[11px] font-bold uppercase tracking-wider">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[11px] font-bold capitalize tracking-wider">
           <div className="flex items-center gap-6">
             <span>We are available 10AM to 07PM</span>
             <div className="flex items-center gap-2">
@@ -57,7 +57,7 @@ export default function ContactPage() {
               }}
             />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <h1 className="text-white text-5xl md:text-8xl font-black italic uppercase tracking-tighter">
+              <h1 className="text-white text-5xl md:text-8xl font-bold italic capitalize tracking-tighter">
                 Contact Us
               </h1>
             </div>
@@ -69,7 +69,7 @@ export default function ContactPage() {
           <section className="py-24 px-6 bg-zinc-50/50">
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-16 space-y-4">
-                 <h2 className="text-5xl font-black text-[#111111] italic uppercase tracking-tighter">Find us here!</h2>
+                 <h2 className="text-5xl font-bold text-[#111111] italic capitalize tracking-tighter">Find us here!</h2>
                  <div 
                   className="w-24 h-1 mx-auto rounded-full" 
                   style={{ backgroundColor: primaryColor }}

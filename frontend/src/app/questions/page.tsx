@@ -20,11 +20,11 @@ export default function QuestionsPage() {
         </div>
         
         <div className="container mx-auto px-6 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-primary text-[10px] font-black uppercase tracking-widest mb-8">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-primary text-[10px] font-bold capitalize tracking-widest mb-8">
             <Sparkles size={14} /> Interactive Experience
           </div>
-          <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tighter leading-none">
-            KNOWLEDGE <span className="text-primary italic font-serif font-light">QUEST</span>
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tighter leading-none">
+            Knowledge <span className="text-primary italic font-serif font-light">Quest</span>
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto text-lg font-light leading-relaxed">
             Test your travel IQ with our curated collection of questions about destinations, adventure, and local cultures. Are you a true explorer?
@@ -47,13 +47,13 @@ export default function QuestionsPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a 
                     href="/tour-packages" 
-                    className="bg-primary text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+                    className="bg-primary text-black px-10 py-5 rounded-2xl font-bold capitalize tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-105 transition-all"
                 >
                     View All Trips
                 </a>
                 <a 
                     href="/contact" 
-                    className="bg-slate-900 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all"
+                    className="bg-slate-900 text-white px-10 py-5 rounded-2xl font-bold capitalize tracking-widest text-xs hover:bg-black transition-all"
                 >
                     Talk to an Expert
                 </a>

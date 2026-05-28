@@ -23,7 +23,7 @@ export default function TripPolicies({ inclusions = [], exclusions = [], thingsT
             <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
               <ShieldCheck className="w-6 h-6 text-green-600" />
             </div>
-            <h2 className="text-2xl font-black text-navy tracking-tight italic uppercase">Inclusions</h2>
+            <h2 className="text-2xl font-bold text-navy tracking-tight italic capitalize">Inclusions</h2>
           </div>
           <ul className="space-y-4">
             {inclusions.map((item, i) => (
@@ -43,7 +43,7 @@ export default function TripPolicies({ inclusions = [], exclusions = [], thingsT
             <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
               <AlertCircle className="w-6 h-6 text-red-600" />
             </div>
-            <h2 className="text-2xl font-black text-navy tracking-tight italic uppercase">Exclusions</h2>
+            <h2 className="text-2xl font-bold text-navy tracking-tight italic capitalize">Exclusions</h2>
           </div>
           <ul className="space-y-4">
             {exclusions.map((item, i) => (
@@ -65,7 +65,7 @@ export default function TripPolicies({ inclusions = [], exclusions = [], thingsT
             <div className="w-10 h-10 rounded-full bg-primary-orange/10 flex items-center justify-center">
               <Backpack className="w-6 h-6 text-primary-orange" />
             </div>
-            <h2 className="text-2xl font-black text-navy tracking-tight italic uppercase">Things to Carry</h2>
+            <h2 className="text-2xl font-bold text-navy tracking-tight italic capitalize">Things to Carry</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {categorizedCarry.map((category, i) => {
@@ -74,7 +74,7 @@ export default function TripPolicies({ inclusions = [], exclusions = [], thingsT
               
               return (
                 <div key={i} className="bg-zinc-50 rounded-3xl p-8 border border-zinc-100 hover:border-primary-orange/20 transition-colors">
-                  <h3 className="text-lg font-black text-navy mb-6 tracking-tight uppercase italic">{title}</h3>
+                  <h3 className="text-lg font-bold text-navy mb-6 tracking-tight capitalize italic">{title}</h3>
                   <ul className="space-y-3">
                     {itemList.map((item: string, idx: number) => (
                       <li key={idx} className="flex items-center gap-2 text-zinc-500 font-bold text-sm">

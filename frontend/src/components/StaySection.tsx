@@ -50,7 +50,7 @@ export default function StaySection({ accommodations }: StaySectionProps) {
     <section className="mb-24">
       <div className="bg-white border border-zinc-100 rounded-[40px] p-10 md:p-14 shadow-sm relative">
         <div className="flex justify-between items-center mb-10">
-          <h2 className="text-2xl font-bold text-navy uppercase italic">Stay Options</h2>
+          <h2 className="text-2xl font-bold text-navy capitalize italic">Stay Options</h2>
         </div>
         
         <div className="flex flex-nowrap md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 overflow-x-auto pb-6 md:pb-0 scroll-mt-32 no-scrollbar">
@@ -75,10 +75,10 @@ export default function StaySection({ accommodations }: StaySectionProps) {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-navy text-sm uppercase">{stay.name}</h3>
-                  <span className="text-[9px] font-black text-primary-orange uppercase">{stay.nights}</span>
+                  <h3 className="font-bold text-navy text-sm capitalize">{stay.name}</h3>
+                  <span className="text-[9px] font-bold text-primary-orange capitalize">{stay.nights}</span>
                 </div>
-                <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest">{stay.type} • {stay.location}</p>
+                <p className="text-[10px] text-zinc-400 font-medium capitalize tracking-widest">{stay.type} • {stay.location}</p>
               </div>
             </div>
           ))}
@@ -106,9 +106,9 @@ export default function StaySection({ accommodations }: StaySectionProps) {
               <div className="p-8 md:p-10 border-b border-zinc-100 flex flex-col md:flex-row md:items-center justify-between gap-6 shrink-0">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-2xl md:text-3xl font-black text-navy uppercase italic">{selectedStay.name}</h3>
+                    <h3 className="text-2xl md:text-3xl font-bold text-navy capitalize italic">{selectedStay.name}</h3>
                   </div>
-                  <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-zinc-400">
+                  <div className="flex items-center gap-4 text-xs font-bold capitalize tracking-widest text-zinc-400">
                     <span>{selectedStay.type}</span>
                     <span>•</span>
                     <span>{selectedStay.roomType}</span>
@@ -122,7 +122,7 @@ export default function StaySection({ accommodations }: StaySectionProps) {
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
-                      className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                      className={`px-6 py-2.5 rounded-full text-[10px] font-bold capitalize tracking-widest transition-all whitespace-nowrap ${
                         activeCategory === cat 
                           ? "bg-primary-orange text-white shadow-lg shadow-primary-orange/20" 
                           : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
@@ -159,7 +159,7 @@ export default function StaySection({ accommodations }: StaySectionProps) {
                           className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-navy/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-                           <span className="text-[10px] font-black text-white uppercase tracking-widest bg-primary-orange px-3 py-1.5 rounded-full">
+                           <span className="text-[10px] font-bold text-white capitalize tracking-widest bg-primary-orange px-3 py-1.5 rounded-full">
                               {img.category}
                            </span>
                         </div>
@@ -171,7 +171,7 @@ export default function StaySection({ accommodations }: StaySectionProps) {
                     <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center">
                       <Maximize2 className="w-8 h-8 text-zinc-300" />
                     </div>
-                    <p className="text-zinc-400 font-black uppercase text-xs tracking-widest">No photos in this category</p>
+                    <p className="text-zinc-400 font-bold capitalize text-xs tracking-widest">No photos in this category</p>
                   </div>
                 )}
               </div>

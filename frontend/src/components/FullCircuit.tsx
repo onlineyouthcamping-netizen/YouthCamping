@@ -12,7 +12,7 @@ export default function FullCircuit({ route }: FullCircuitProps) {
 
   return (
     <section className="mb-24 p-8 md:p-12 border border-zinc-100 rounded-[32px] bg-white shadow-xl overflow-hidden">
-      <h2 className="text-xl font-black text-navy mb-12 uppercase tracking-tight">Travelling</h2>
+      <h2 className="text-xl font-bold text-navy mb-12 capitalize tracking-tight">Travelling</h2>
       
       <div className="relative overflow-x-auto no-scrollbar pb-4">
         <div className="flex items-start gap-8 md:justify-between min-w-max md:min-w-0 px-4">
@@ -32,7 +32,7 @@ export default function FullCircuit({ route }: FullCircuitProps) {
                   <Train className="w-6 h-6 text-navy" />
                 )}
               </div>
-              <p className="text-[10px] md:text-xs font-black text-navy leading-tight uppercase tracking-widest">
+              <p className="text-[10px] md:text-xs font-bold text-navy leading-tight capitalize tracking-widest">
                 {step.label}
               </p>
             </div>

@@ -45,25 +45,25 @@ export default function TripCard({ trip, index }: TripCardProps) {
       </div>
 
       <div className="p-8">
-        <div className="flex items-center gap-2 text-primary-orange text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-          <MapPin className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 text-primary-orange text-xs font-semibold uppercase tracking-wide mb-4">
+          <MapPin className="w-4 h-4" />
           {trip.location}
         </div>
         
-        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-navy mb-4 md:mb-8 leading-[1.1] tracking-tight group-hover:text-primary-orange transition-colors break-words">
+        <h3 className="text-xl font-semibold text-navy mb-4 md:mb-6 leading-tight tracking-tight group-hover:text-primary-orange transition-colors break-words">
           {trip.title}
         </h3>
 
         <div className="space-y-4 pt-6 border-t border-zinc-50">
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-widest">
-              <Clock className="w-4 h-4 text-primary-orange" />
+            <div className="flex items-center gap-2 text-zinc-400 text-xs font-semibold uppercase tracking-wide">
+              <Clock className="w-5 h-5 text-primary-orange" />
               {trip.duration}
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-1">Starts at</p>
-              <p className="text-2xl font-black text-navy tracking-tighter">₹{trip.price.toLocaleString()}</p>
+              <p className="text-xs text-zinc-400 font-normal uppercase tracking-wide mb-1">Starts at</p>
+              <p className="text-xl font-semibold tracking-wide text-navy">₹{trip.price.toLocaleString()}</p>
             </div>
           </div>
         </div>

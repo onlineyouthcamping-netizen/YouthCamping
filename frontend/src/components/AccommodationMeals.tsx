@@ -31,7 +31,7 @@ export default function AccommodationMeals() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary-orange/10 blur-[100px] -z-0" />
         
         <div className="relative z-10">
-          <h3 className="text-3xl font-black mb-12 flex items-center gap-4">
+          <h3 className="text-3xl font-semibold mb-12 flex items-center gap-4">
              <Utensils className="w-8 h-8 text-primary-orange" />
              Meals & Dining
           </h3>
@@ -43,21 +43,21 @@ export default function AccommodationMeals() {
                   <div className="w-12 h-12 bg-primary-orange rounded-2xl flex items-center justify-center text-white">
                      <m.icon className="w-6 h-6" />
                   </div>
-                  <span className="text-xl font-bold">{m.label}</span>
+                  <span className="text-xl font-semibold">{m.label}</span>
                </div>
              ))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
              <div>
-                <h4 className="text-primary-orange font-black uppercase tracking-widest text-xs mb-6">Breakfast Menu</h4>
-                <p className="text-white/60 font-medium leading-relaxed italic">
+                <h4 className="text-primary-orange font-semibold uppercase tracking-wide text-xs mb-6">Breakfast Menu</h4>
+                <p className="text-white/60 font-normal leading-relaxed italic">
                    Start your day with Hot Parathas, Poha, Sandwich, Omelettes, Bread-Jam, and local Himalayan Tea.
                 </p>
              </div>
              <div>
-                <h4 className="text-primary-orange font-black uppercase tracking-widest text-xs mb-6">Dinner Menu</h4>
-                <p className="text-white/60 font-medium leading-relaxed italic">
+                <h4 className="text-primary-orange font-semibold uppercase tracking-wide text-xs mb-6">Dinner Menu</h4>
+                <p className="text-white/60 font-normal leading-relaxed italic">
                    A hearty spread featuring Paneer/Chicken Sabzi, Dal Tadka, Seasonal Veggies, Jeera Rice, Chapati, and a Sweet dish.
                 </p>
              </div>
@@ -67,7 +67,7 @@ export default function AccommodationMeals() {
              <div className="w-10 h-10 bg-rose-500/20 rounded-xl flex items-center justify-center text-rose-500 shrink-0">
                 <Info className="w-5 h-5" />
              </div>
-             <p className="font-bold text-white/80">Important: Lunch is not included to allow exploration of local cafes.</p>
+             <p className="font-semibold text-white/80">Important: Lunch is not included to allow exploration of local cafes.</p>
           </div>
         </div>
       </section>

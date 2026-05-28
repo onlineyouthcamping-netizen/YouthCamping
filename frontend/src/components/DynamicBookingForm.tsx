@@ -127,9 +127,9 @@ const DynamicBookingForm: React.FC<DynamicBookingFormProps> = ({ formId }) => {
         <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle size={40} />
         </div>
-        <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">Booking Saved!</h2>
+        <h2 className="text-4xl font-bold capitalize tracking-tighter mb-4">Booking Saved!</h2>
         <p className="text-muted-foreground mb-8 font-medium">Your data has been successfully pushed to the Master Sheet.</p>
-        <button onClick={() => setSuccess(false)} className="w-full bg-primary py-5 rounded-2xl text-white font-black uppercase tracking-widest text-xs hover:bg-primary/90 transition-all shadow-xl shadow-primary/20">Create New Booking</button>
+        <button onClick={() => setSuccess(false)} className="w-full bg-primary py-5 rounded-2xl text-white font-bold capitalize tracking-widest text-xs hover:bg-primary/90 transition-all shadow-xl shadow-primary/20">Create New Booking</button>
       </div>
     );
   }
@@ -169,7 +169,7 @@ const DynamicBookingForm: React.FC<DynamicBookingFormProps> = ({ formId }) => {
         {/* --- OTHER --- */}
         <Section title="Other">
           <div className="md:col-span-2 lg:col-span-3">
-            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 block">Remark</label>
+            <label className="text-[10px] font-bold capitalize tracking-widest text-muted-foreground mb-2 block">Remark</label>
             <textarea 
               className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-4 min-h-[100px] outline-none focus:border-primary transition-all font-medium text-sm"
               value={formData.remark}
@@ -192,25 +192,25 @@ const DynamicBookingForm: React.FC<DynamicBookingFormProps> = ({ formId }) => {
               />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-widest">Apply 5% GST</p>
+              <p className="text-xs font-bold capitalize tracking-widest">Apply 5% GST</p>
               <p className="text-[10px] text-zinc-500 font-bold">Automatic Tax Calculation</p>
             </div>
           </div>
 
           <div className="flex gap-8 items-center text-right">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Subtotal</p>
+              <p className="text-[10px] font-bold capitalize tracking-widest text-zinc-500">Subtotal</p>
               <p className="text-xl font-bold">₹{subtotal.toLocaleString()}</p>
             </div>
             {applyGST && (
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary">GST (5%)</p>
+                <p className="text-[10px] font-bold capitalize tracking-widest text-primary">GST (5%)</p>
                 <p className="text-xl font-bold">₹{gstAmount.toLocaleString()}</p>
               </div>
             )}
             <div className="bg-white/10 px-6 py-3 rounded-2xl border border-white/10">
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Grand Total</p>
-              <p className="text-3xl font-black text-primary">₹{totalAmount.toLocaleString()}</p>
+              <p className="text-[10px] font-bold capitalize tracking-widest text-primary">Grand Total</p>
+              <p className="text-3xl font-bold text-primary">₹{totalAmount.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -224,7 +224,7 @@ const DynamicBookingForm: React.FC<DynamicBookingFormProps> = ({ formId }) => {
         {/* --- SUBMIT --- */}
         <button 
           disabled={loading}
-          className="w-full bg-primary hover:bg-primary/90 text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-primary/30 flex items-center justify-center gap-4 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 uppercase tracking-[0.2em] text-xs"
+          className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-[2rem] shadow-2xl shadow-primary/30 flex items-center justify-center gap-4 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 capitalize tracking-[0.2em] text-xs"
         >
           {loading ? <Loader2 className="animate-spin" /> : <><Send size={18}/> Sync to Master Sheet</>}
         </button>
@@ -239,7 +239,7 @@ const DynamicBookingForm: React.FC<DynamicBookingFormProps> = ({ formId }) => {
 const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
   <div className="space-y-4">
     <div className="flex items-center gap-4">
-      <h3 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-400 whitespace-nowrap">{title}</h3>
+      <h3 className="text-xs font-bold capitalize tracking-[0.3em] text-zinc-400 whitespace-nowrap">{title}</h3>
       <div className="h-px bg-zinc-100 w-full" />
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -257,7 +257,7 @@ const Input = ({ label, icon, value, onChange, placeholder, type = "text" }: {
   type?: string;
 }) => (
   <div className="space-y-2">
-    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{label}</label>
+    <label className="text-[10px] font-bold capitalize tracking-widest text-muted-foreground ml-1">{label}</label>
     <div className="relative group">
       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-primary transition-colors">
         {icon}
@@ -281,7 +281,7 @@ const Select = ({ label, icon, value, onChange, options }: {
   options: string[];
 }) => (
   <div className="space-y-2">
-    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{label}</label>
+    <label className="text-[10px] font-bold capitalize tracking-widest text-muted-foreground ml-1">{label}</label>
     <div className="relative group">
       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-primary transition-colors z-10 pointer-events-none">
         {icon}

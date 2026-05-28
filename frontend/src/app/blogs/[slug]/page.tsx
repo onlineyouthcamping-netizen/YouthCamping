@@ -43,7 +43,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
               {blog.title}
             </h1>
             
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-bold uppercase tracking-widest text-white/90">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-bold capitalize tracking-widest text-white/90">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-primary-orange" />
                 {blog.author || 'YouthCamping'}
@@ -75,7 +75,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
             <div className="mt-20 pt-10 border-t border-zinc-100">
               <div className="bg-zinc-50 rounded-[30px] p-8 flex flex-col md:flex-row items-center gap-8 border border-zinc-100">
                 <div className="w-24 h-24 rounded-full bg-primary-orange/10 flex items-center justify-center shrink-0 border border-primary-orange/20">
-                  <span className="text-4xl font-black text-primary-orange">{blog.author ? blog.author[0] : 'Y'}</span>
+                  <span className="text-4xl font-bold text-primary-orange">{blog.author ? blog.author[0] : 'Y'}</span>
                 </div>
                 <div className="text-center md:text-left">
                   <h3 className="text-xl font-bold text-navy mb-2">Written by {blog.author || 'YouthCamping Team'}</h3>

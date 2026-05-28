@@ -28,7 +28,7 @@ export default function TripReviews({ reviews }: TripReviewsProps) {
     <section className="py-16 bg-zinc-50/50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-10">
-          <h2 className="text-3xl font-black text-navy uppercase tracking-tighter">Reviews</h2>
+          <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter">Reviews</h2>
         </div>
 
         <div className="flex overflow-x-auto no-scrollbar gap-5 pb-8 snap-x">

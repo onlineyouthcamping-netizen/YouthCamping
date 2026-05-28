@@ -101,7 +101,7 @@ export default function CinematicBanner({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="text-primary-orange font-black tracking-[0.4em] text-[10px] md:text-xs mb-3"
+                    className="text-primary-orange font-bold tracking-[0.4em] text-[10px] md:text-xs mb-3"
                   >
                     {current.subtitle}
                   </motion.p>
@@ -128,9 +128,9 @@ export default function CinematicBanner({
                   >
                     <Link 
                       href={current.link}
-                      className="bg-white text-charcoal px-10 py-5 rounded-2xl font-black text-xs tracking-widest flex items-center gap-3 hover:bg-primary-orange hover:text-white transition-all shadow-xl group"
+                      className="bg-white text-charcoal px-10 py-5 rounded-2xl font-bold text-xs tracking-widest flex items-center gap-3 hover:bg-primary-orange hover:text-white transition-all shadow-xl group"
                     >
-                      EXPLORE NOW
+                      Explore Now
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </motion.div>

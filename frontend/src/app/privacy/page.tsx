@@ -28,9 +28,9 @@ export default async function PrivacyPage() {
     <div className="bg-white min-h-screen pt-32 pb-24">
       <div className="max-w-4xl mx-auto px-6">
         <div className="mb-16">
-          <span className="text-[#FF5722] font-bold tracking-widest uppercase text-xs mb-4 block">Legal Information</span>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-zinc-900 leading-tight">
-            PRIVACY <br />
+          <span className="text-[#FF5722] font-bold tracking-widest capitalize text-xs mb-4 block">Legal Information</span>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-zinc-900 leading-tight">
+            Privacy <br />
             <span className="italic font-serif font-normal text-zinc-400">Policy</span>
           </h1>
           <div className="h-1.5 w-24 bg-[#FF5722] mt-8 rounded-full"></div>

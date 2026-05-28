@@ -73,7 +73,7 @@ export default function RealitySection({
             {title}
           </h2>
         </div>
-        <p className="text-zinc-500 font-bold mb-12 tracking-widest text-[11px] md:text-sm uppercase">
+        <p className="text-zinc-500 font-bold mb-12 tracking-widest text-[11px] md:text-sm capitalize">
           {subtitle}
         </p>
         
@@ -104,7 +104,7 @@ export default function RealitySection({
                 <h3 className="text-2xl md:text-3xl font-bold text-white mb-1 drop-shadow-2xl tracking-tight">
                   {vid.title}
                 </h3>
-                <p className="text-white/80 text-[10px] font-black tracking-[0.3em] drop-shadow-lg">
+                <p className="text-white/80 text-[10px] font-bold tracking-[0.3em] drop-shadow-lg">
                   {vid.sub}
                 </p>
               </div>

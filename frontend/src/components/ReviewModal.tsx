@@ -71,13 +71,13 @@ export default function ReviewModal({ isOpen, onClose, review }: ReviewModalProp
             {/* Right Side: Review Details */}
             <div className="flex-1 p-6 sm:p-10 md:p-16 flex flex-col overflow-y-auto custom-scrollbar">
               <div className="flex items-center gap-4 mb-8 sm:mb-12">
-                 <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-[20px] sm:rounded-[32px] overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-black text-xl sm:text-3xl border-2 border-white shadow-xl">
+                 <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-[20px] sm:rounded-[32px] overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold text-xl sm:text-3xl border-2 border-white shadow-xl">
                    {review.userImage ? (
                      <OptimizedImage src={normalizeImageUrl(review.userImage)} alt={review.userName} className="w-full h-full object-cover" />
                    ) : initials}
                  </div>
                  <div>
-                   <h2 className="text-2xl sm:text-4xl font-black text-navy uppercase tracking-tighter leading-none mb-2">{review.userName}</h2>
+                   <h2 className="text-2xl sm:text-4xl font-bold text-navy capitalize tracking-tighter leading-none mb-2">{review.userName}</h2>
                    <div className="flex flex-wrap items-center gap-3 sm:gap-6">
                       <div className="flex items-center gap-1 text-primary">
                         {[...Array(5)].map((_, i) => (
@@ -85,7 +85,7 @@ export default function ReviewModal({ isOpen, onClose, review }: ReviewModalProp
                         ))}
                       </div>
                       {review.city && (
-                        <span className="flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-400">
+                        <span className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold capitalize tracking-widest text-zinc-400">
                           <MapPin className="w-3 h-3 text-primary" /> {review.city}
                         </span>
                       )}
@@ -102,10 +102,10 @@ export default function ReviewModal({ isOpen, onClose, review }: ReviewModalProp
 
               <div className="mt-auto space-y-6 sm:space-y-8">
                 <div className="p-4 sm:p-6 bg-zinc-50 rounded-[24px] sm:rounded-[32px] border border-zinc-100">
-                   <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 block mb-3">Expedition Details</span>
+                   <span className="text-[10px] sm:text-[11px] font-bold capitalize tracking-[0.2em] text-zinc-400 block mb-3">Expedition Details</span>
                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm sm:text-lg font-black text-navy uppercase tracking-tight">{review.tripName || "Adventure Trip"}</h4>
-                      <span className="px-3 py-1 bg-white rounded-full border border-zinc-200 text-[10px] font-black uppercase text-primary tracking-widest shadow-sm">Verified Experience</span>
+                      <h4 className="text-sm sm:text-lg font-bold text-navy capitalize tracking-tight">{review.tripName || "Adventure Trip"}</h4>
+                      <span className="px-3 py-1 bg-white rounded-full border border-zinc-200 text-[10px] font-bold capitalize text-primary tracking-widest shadow-sm">Verified Experience</span>
                    </div>
                 </div>
 
@@ -122,8 +122,8 @@ export default function ReviewModal({ isOpen, onClose, review }: ReviewModalProp
                       </svg>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-0.5">Follow The Journey</span>
-                      <span className="text-sm sm:text-base font-black text-navy group-hover:text-primary transition-colors">
+                      <span className="text-[10px] font-bold capitalize tracking-widest text-zinc-400 block mb-0.5">Follow The Journey</span>
+                      <span className="text-sm sm:text-base font-bold text-navy group-hover:text-primary transition-colors">
                         {review.instagram.startsWith('@') ? review.instagram : `@${review.instagram}`}
                       </span>
                     </div>

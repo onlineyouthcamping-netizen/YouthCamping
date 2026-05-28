@@ -59,7 +59,7 @@ export default function VibeSection({
                   <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white mb-6 border border-white/30 group-hover:bg-white group-hover:text-black transition-all">
                     <Play className="w-6 h-6 -current" />
                   </div>
-                  <h4 className="text-xl font-black text-white tracking-tight leading-tight uppercase">
+                  <h4 className="text-xl font-bold text-white tracking-tight leading-tight capitalize">
                     {reel.text}
                   </h4>
                 </div>

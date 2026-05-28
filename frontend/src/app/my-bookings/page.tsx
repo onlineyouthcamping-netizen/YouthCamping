@@ -48,7 +48,7 @@ export default function MyBookingsPage() {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl font-black text-navy uppercase tracking-tighter"
+            className="text-5xl font-bold text-navy capitalize tracking-tighter"
           >
             My <span className="text-primary-orange">Bookings</span>
           </motion.h1>
@@ -75,7 +75,7 @@ export default function MyBookingsPage() {
             <button 
               disabled={loading}
               type="submit"
-              className="bg-navy text-white px-8 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+              className="bg-navy text-white px-8 rounded-2xl font-bold capitalize text-xs tracking-widest hover:bg-black transition-all active:scale-95 disabled:opacity-50"
             >
               {loading ? "Searching..." : "Track"}
             </button>
@@ -96,7 +96,7 @@ export default function MyBookingsPage() {
                 <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Hash className="w-8 h-8 text-zinc-400" />
                 </div>
-                <h3 className="text-xl font-black text-navy uppercase">No Bookings Found</h3>
+                <h3 className="text-xl font-bold text-navy capitalize">No Bookings Found</h3>
                 <p className="text-zinc-500 text-sm mt-1">We couldn't find any bookings for this number.</p>
               </motion.div>
             ) : (
@@ -121,17 +121,17 @@ export default function MyBookingsPage() {
                     {/* Main Info */}
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest bg-zinc-100 px-2 py-0.5 rounded text-zinc-500">
+                        <span className="text-[10px] font-bold capitalize tracking-widest bg-zinc-100 px-2 py-0.5 rounded text-zinc-500">
                           {booking.bookingId}
                         </span>
                         <span className={cn(
-                          "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded",
+                          "text-[10px] font-bold capitalize tracking-widest px-2 py-0.5 rounded",
                           booking.paymentStatus === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                         )}>
                           {booking.paymentStatus}
                         </span>
                       </div>
-                      <h3 className="text-xl font-black text-navy uppercase tracking-tight">{booking.tripName || "Adventure Trip"}</h3>
+                      <h3 className="text-xl font-bold text-navy capitalize tracking-tight">{booking.tripName || "Adventure Trip"}</h3>
                       <div className="flex flex-wrap gap-4 text-xs font-bold text-zinc-400">
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {booking.pickupCity || "Departure TBD"}</span>
                         <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {booking.departureDate ? new Date(booking.departureDate).toLocaleDateString() : 'Date TBD'}</span>
@@ -140,8 +140,8 @@ export default function MyBookingsPage() {
 
                     {/* Financial Info */}
                     <div className="w-full md:w-auto text-left md:text-right space-y-1 pr-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Amount Paid</p>
-                      <p className="text-2xl font-black text-navy tracking-tighter">₹{booking.advancePaid?.toLocaleString() || 0}</p>
+                      <p className="text-[10px] font-bold capitalize tracking-widest text-zinc-400">Amount Paid</p>
+                      <p className="text-2xl font-bold text-navy tracking-tighter">₹{booking.advancePaid?.toLocaleString() || 0}</p>
                       <p className="text-[10px] font-bold text-zinc-400">Total: ₹{booking.totalAmount?.toLocaleString() || 0}</p>
                     </div>
 
@@ -175,12 +175,12 @@ export default function MyBookingsPage() {
                 {/* Modal Header */}
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-orange">{selectedBooking.bookingId}</span>
-                    <h2 className="text-3xl font-black text-navy uppercase tracking-tighter leading-none">{selectedBooking.tripName}</h2>
+                    <span className="text-[10px] font-bold capitalize tracking-[0.3em] text-primary-orange">{selectedBooking.bookingId}</span>
+                    <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter leading-none">{selectedBooking.tripName}</h2>
                     <p className="text-zinc-500 text-sm font-medium">{selectedBooking.departureDate ? new Date(selectedBooking.departureDate).toLocaleDateString('en-IN', { dateStyle: 'full' }) : 'Date to be announced'}</p>
                   </div>
                   <div className={cn(
-                    "px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest",
+                    "px-4 py-2 rounded-2xl text-xs font-bold capitalize tracking-widest",
                     selectedBooking.status === 'confirmed' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                   )}>
                     {selectedBooking.status}
@@ -190,37 +190,37 @@ export default function MyBookingsPage() {
                 {/* Financial Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-zinc-50 p-6 rounded-[32px] border border-zinc-100">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Total Bill</p>
-                    <p className="text-2xl font-black text-navy tracking-tight">₹{selectedBooking.totalAmount?.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold capitalize tracking-widest text-zinc-400 mb-1">Total Bill</p>
+                    <p className="text-2xl font-bold text-navy tracking-tight">₹{selectedBooking.totalAmount?.toLocaleString()}</p>
                   </div>
                   <div className="bg-emerald-50/50 p-6 rounded-[32px] border border-emerald-100/50">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">Paid</p>
-                    <p className="text-2xl font-black text-emerald-700 tracking-tight">₹{selectedBooking.advancePaid?.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold capitalize tracking-widest text-emerald-600 mb-1">Paid</p>
+                    <p className="text-2xl font-bold text-emerald-700 tracking-tight">₹{selectedBooking.advancePaid?.toLocaleString()}</p>
                   </div>
                   <div className="bg-red-50/50 p-6 rounded-[32px] border border-red-100/50">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-red-600 mb-1">Remaining</p>
-                    <p className="text-2xl font-black text-red-700 tracking-tight">₹{(selectedBooking.totalAmount - selectedBooking.advancePaid).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold capitalize tracking-widest text-red-600 mb-1">Remaining</p>
+                    <p className="text-2xl font-bold text-red-700 tracking-tight">₹{(selectedBooking.totalAmount - selectedBooking.advancePaid).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* Primary Guest */}
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Primary Guest Details</h4>
+                  <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Primary Guest Details</h4>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-zinc-400">Name</p>
+                      <p className="text-[10px] font-bold capitalize text-zinc-400">Name</p>
                       <p className="font-bold text-navy">{selectedBooking.name}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-zinc-400">Phone</p>
+                      <p className="text-[10px] font-bold capitalize text-zinc-400">Phone</p>
                       <p className="font-bold text-navy">{selectedBooking.phone}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-zinc-400">Email</p>
+                      <p className="text-[10px] font-bold capitalize text-zinc-400">Email</p>
                       <p className="font-bold text-navy">{selectedBooking.email || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-zinc-400">Pickup</p>
+                      <p className="text-[10px] font-bold capitalize text-zinc-400">Pickup</p>
                       <p className="font-bold text-navy">{selectedBooking.pickupCity || 'N/A'}</p>
                     </div>
                   </div>
@@ -229,13 +229,13 @@ export default function MyBookingsPage() {
                 {/* Travelers */}
                 {selectedBooking.passengers && selectedBooking.passengers.length > 0 && (
                   <div className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Co-Travelers ({selectedBooking.passengers.length})</h4>
+                    <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Co-Travelers ({selectedBooking.passengers.length})</h4>
                     <div className="space-y-2">
                       {selectedBooking.passengers.map((p: any, i: number) => (
                         <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[10px] font-black text-zinc-400 border border-zinc-100">{i + 1}</div>
-                            <span className="font-bold text-navy uppercase text-sm">{p.name}</span>
+                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[10px] font-bold text-zinc-400 border border-zinc-100">{i + 1}</div>
+                            <span className="font-bold text-navy capitalize text-sm">{p.name}</span>
                           </div>
                           <span className="text-xs font-medium text-zinc-500">{p.phone}</span>
                         </div>
@@ -246,19 +246,19 @@ export default function MyBookingsPage() {
 
                 {/* Trip Details */}
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Preferences</h4>
+                  <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Preferences</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 flex items-center gap-3">
                       <CreditCard className="w-4 h-4 text-zinc-400" />
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase text-zinc-400">Payment Mode</span>
+                        <span className="text-[9px] font-bold capitalize text-zinc-400">Payment Mode</span>
                         <span className="text-xs font-bold text-navy">{selectedBooking.paymentMode || 'UPI'}</span>
                       </div>
                     </div>
                     <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 flex items-center gap-3">
                       <MapPin className="w-4 h-4 text-zinc-400" />
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase text-zinc-400">Room Type</span>
+                        <span className="text-[9px] font-bold capitalize text-zinc-400">Room Type</span>
                         <span className="text-xs font-bold text-navy">{selectedBooking.roomType || 'Standard'}</span>
                       </div>
                     </div>
@@ -268,7 +268,7 @@ export default function MyBookingsPage() {
                 {/* Notes */}
                 {selectedBooking.notes && (
                   <div className="space-y-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Important Notes</h4>
+                    <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400">Important Notes</h4>
                     <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-xs font-medium text-amber-900 italic leading-relaxed">
                       "{selectedBooking.notes}"
                     </div>
@@ -280,13 +280,13 @@ export default function MyBookingsPage() {
               <div className="p-6 border-t border-zinc-100 bg-zinc-50 flex gap-3">
                 <Button 
                   onClick={() => window.print()}
-                  className="flex-1 bg-white border border-zinc-200 text-navy hover:bg-zinc-100 h-14 rounded-2xl font-black uppercase text-xs tracking-widest"
+                  className="flex-1 bg-white border border-zinc-200 text-navy hover:bg-zinc-100 h-14 rounded-2xl font-bold capitalize text-xs tracking-widest"
                 >
                   Download Receipt
                 </Button>
                 <Button 
                   onClick={() => setSelectedBooking(null)}
-                  className="flex-1 bg-navy text-white hover:bg-black h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-navy/20"
+                  className="flex-1 bg-navy text-white hover:bg-black h-14 rounded-2xl font-bold capitalize text-xs tracking-widest shadow-xl shadow-navy/20"
                 >
                   Close View
                 </Button>

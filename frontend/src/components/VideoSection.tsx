@@ -47,8 +47,8 @@ export default function VideoSection({
       <section className="py-16 bg-[#E5E8EB] overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
-            <h2 className="text-3xl font-black text-navy uppercase tracking-tighter">{title}</h2>
-            <p className="text-zinc-500 font-bold mt-2 tracking-widest text-[10px] uppercase">{subtitle}</p>
+            <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter">{title}</h2>
+            <p className="text-zinc-500 font-bold mt-2 tracking-widest text-[10px] capitalize">{subtitle}</p>
           </div>
 
           <div className="relative group">

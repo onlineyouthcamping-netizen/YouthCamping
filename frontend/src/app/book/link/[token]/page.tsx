@@ -52,12 +52,12 @@ export default function BookingLinkResolvePage({ params }: { params: { token: st
       <div className="max-w-md w-full bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
         {error ? (
           <>
-            <h1 className="text-lg font-black uppercase tracking-tight text-red-600">Booking Link Unavailable</h1>
+            <h1 className="text-lg font-bold capitalize tracking-tight text-red-600">Booking Link Unavailable</h1>
             <p className="mt-2 text-sm text-slate-600 font-medium">{error}</p>
           </>
         ) : (
           <>
-            <h1 className="text-lg font-black uppercase tracking-tight text-slate-900">Opening your booking link...</h1>
+            <h1 className="text-lg font-bold capitalize tracking-tight text-slate-900">Opening your booking link...</h1>
             <p className="mt-2 text-sm text-slate-600 font-medium">Please wait.</p>
           </>
         )}

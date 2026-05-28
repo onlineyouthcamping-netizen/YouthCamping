@@ -67,7 +67,7 @@ export default function BlogSection({
             titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
           )}>
             <h2 
-              className="section-heading text-[#ff4e00]"
+              className="section-heading text-navy capitalize"
               style={{ 
                 fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
                 fontWeight: titleWeight || undefined
@@ -156,7 +156,7 @@ function BlogCard({ art, i }: { art: BlogItem, i: number }) {
         <div className="p-5 flex flex-col flex-1">
           <div className="flex gap-3 items-start flex-1">
              <div 
-              className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-black text-[12px] shadow-sm mt-0.5"
+              className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-[12px] shadow-sm mt-0.5"
               style={{ backgroundColor: avatarBg }}
             >
               {art.authorImage ? (
@@ -171,7 +171,7 @@ function BlogCard({ art, i }: { art: BlogItem, i: number }) {
             </div>
 
             <div className="flex-1 min-w-0 flex flex-col h-full">
-              <h3 className="text-sm md:text-base font-black text-navy leading-[1.4] mb-2 line-clamp-1 group-hover/card:text-primary transition-colors">
+              <h3 className="text-sm md:text-base font-bold text-navy leading-[1.4] mb-2 line-clamp-1 group-hover/card:text-primary transition-colors">
                 {art.title}
               </h3>
               
@@ -181,12 +181,12 @@ function BlogCard({ art, i }: { art: BlogItem, i: number }) {
               
               <div className="mt-auto flex items-center justify-between gap-2 border-t border-zinc-50 pt-3">
                 <div className="flex flex-col">
-                   <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest leading-none mb-0.5">Author</span>
-                   <span className="text-[10px] text-navy font-black truncate">{art.author}</span>
+                   <span className="text-[9px] text-zinc-400 font-bold capitalize tracking-widest leading-none mb-0.5">Author</span>
+                   <span className="text-[10px] text-navy font-bold truncate">{art.author}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                   <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest leading-none mb-0.5">Time</span>
-                   <span className="text-[10px] text-navy font-black shrink-0">{art.readTime}</span>
+                   <span className="text-[9px] text-zinc-400 font-bold capitalize tracking-widest leading-none mb-0.5">Time</span>
+                   <span className="text-[10px] text-navy font-bold shrink-0">{art.readTime}</span>
                 </div>
               </div>
             </div>

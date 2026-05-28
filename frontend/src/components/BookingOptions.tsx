@@ -119,11 +119,11 @@ export default function BookingOptions({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-base md:text-lg font-bold text-navy">{v.location}</h3>
+                  <h3 className="text-base md:text-lg font-semibold text-navy">{v.location}</h3>
                   <div className="flex items-center justify-between mt-1">
                     <div className="flex flex-col">
                        <span className="text-[10px] text-zinc-400 line-through">₹{v.originalPrice?.toLocaleString()}</span>
-                       <span className="text-sm font-bold text-navy leading-none">₹{v.discountedPrice?.toLocaleString()}/-</span>
+                       <span className="text-sm font-semibold tracking-wide text-navy leading-none">₹{v.discountedPrice?.toLocaleString()}/-</span>
                     </div>
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-zinc-50 rounded-full border border-zinc-100">
                       <svg viewBox="0 0 24 24" className="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -132,7 +132,7 @@ export default function BookingOptions({
                         <line x1="8" y1="2" x2="8" y2="6" />
                         <line x1="3" y1="10" x2="21" y2="10" />
                       </svg>
-                      <span className="text-[10px] font-bold text-zinc-500 whitespace-nowrap">{v.duration}</span>
+                      <span className="text-[10px] font-semibold text-zinc-500 whitespace-nowrap">{v.duration}</span>
                     </div>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default function BookingOptions({
         {/* Travelling & Room Options Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
-            <h3 className="text-base font-bold text-navy">Travelling Options</h3>
+            <h3 className="text-base font-semibold text-navy">Travelling Options</h3>
             <div className="flex flex-wrap gap-2">
               {travelOptions.map((opt, i) => (
                 <button
@@ -156,7 +156,7 @@ export default function BookingOptions({
                     onTravelSelect?.(i);
                   }}
                   className={cn(
-                    "relative px-4 py-2 rounded-lg border-2 text-xs font-bold transition-all",
+                    "relative px-4 py-2 rounded-lg border-2 text-xs font-medium transition-all",
                     selectedTravel === i 
                       ? "border-primary-orange text-primary-orange bg-primary-orange/5" 
                       : "border-zinc-100 text-zinc-400 hover:border-zinc-200"
@@ -174,7 +174,7 @@ export default function BookingOptions({
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-base font-bold text-navy">Room Sharing</h3>
+            <h3 className="text-base font-semibold text-navy">Room Sharing</h3>
             <div className="flex flex-wrap gap-2">
               {roomOptions.map((opt, i) => (
                 <button
@@ -184,7 +184,7 @@ export default function BookingOptions({
                     onRoomSelect?.(i);
                   }}
                   className={cn(
-                    "relative px-4 py-2 rounded-lg border-2 text-xs font-bold transition-all",
+                    "relative px-4 py-2 rounded-lg border-2 text-xs font-medium transition-all",
                     selectedRoom === i 
                       ? "border-primary-orange text-primary-orange bg-primary-orange/5" 
                       : "border-zinc-100 text-zinc-400 hover:border-zinc-200"
@@ -206,7 +206,7 @@ export default function BookingOptions({
 
         {/* Dates Section */}
         <div className="space-y-6">
-          <h2 className="text-base font-bold text-navy">Departure Dates</h2>
+          <h2 className="text-base font-semibold text-navy">Departure Dates</h2>
           
           <div className="flex flex-wrap gap-2">
             {months.map((month) => (
@@ -214,7 +214,7 @@ export default function BookingOptions({
                 key={month}
                 onClick={() => setActiveMonth(month)}
                 className={cn(
-                  "relative px-4 py-2 rounded-lg border-2 text-xs font-bold transition-all",
+                  "relative px-4 py-2 rounded-lg border-2 text-xs font-medium transition-all",
                   activeMonth === month 
                     ? "border-primary-orange text-primary-orange bg-primary-orange/5" 
                     : "border-zinc-100 text-zinc-400 hover:border-zinc-200"
@@ -241,7 +241,7 @@ export default function BookingOptions({
                     onDateSelect?.(ad.date);
                   }}
                   className={cn(
-                    "w-9 h-9 rounded-full border flex items-center justify-center font-bold text-xs transition-all shadow-sm",
+                    "w-9 h-9 rounded-full border flex items-center justify-center font-medium text-xs transition-all shadow-sm",
                     selectedDate === ad.date 
                       ? "border-primary-orange text-primary-orange bg-white scale-105" 
                       : "border-zinc-200 text-navy bg-white hover:border-zinc-300"
@@ -255,7 +255,7 @@ export default function BookingOptions({
 
           <button 
             onClick={handleWhatsAppBooking}
-            className="hidden md:block w-full py-3.5 bg-primary-orange text-white rounded-xl font-bold text-sm hover:bg-[#FF5B00]/90 transition-all shadow-lg shadow-orange-100 uppercase tracking-widest"
+            className="hidden md:block w-full py-3.5 bg-primary-orange text-white rounded-xl font-medium text-sm hover:bg-[#FF5B00]/90 transition-all shadow-lg shadow-orange-100 uppercase tracking-widest"
           >
              Book My Spot
           </button>

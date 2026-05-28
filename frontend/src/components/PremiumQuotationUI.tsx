@@ -99,18 +99,18 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                         <Clock size={40} />
                     </div>
                     <div className="space-y-2">
-                        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Proposal Expired</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 capitalize tracking-tighter">Proposal Expired</h1>
                         <p className="text-slate-500 font-medium">This quotation for <span className="text-slate-900 font-bold">{q.tripTitle}</span> is no longer valid. Please contact your travel expert for an updated proposal.</p>
                     </div>
                     <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center gap-4 text-left">
                         <img src={normalizeImageUrl(q.expert?.photo)} className="w-16 h-16 rounded-2xl object-cover shadow-md" />
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Your Expert</p>
-                            <h4 className="text-lg font-black text-slate-900 leading-tight">{q.expert?.name}</h4>
+                            <p className="text-[10px] font-bold text-slate-400 capitalize tracking-widest leading-none mb-1">Your Expert</p>
+                            <h4 className="text-lg font-bold text-slate-900 leading-tight">{q.expert?.name}</h4>
                         </div>
                     </div>
                     <a href={`https://wa.me/${q.expert?.whatsapp?.replace(/\D/g, '')}?text=Hi ${q.expert?.name}, my quote for ${q.tripTitle} has expired. Can you please refresh it?`} className="block">
-                        <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-xl shadow-emerald-100">
+                        <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 rounded-2xl font-bold capitalize text-xs tracking-widest text-white shadow-xl shadow-emerald-100">
                             <MessageCircle size={18} className="mr-2" /> Request Refresh
                         </Button>
                     </a>
@@ -129,7 +129,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                     <motion.div 
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
-                        className="bg-orange-500 text-white py-3 text-center sticky top-0 z-[100] font-black uppercase text-[10px] tracking-[0.2em] shadow-lg"
+                        className="bg-orange-500 text-white py-3 text-center sticky top-0 z-[100] font-bold capitalize text-[10px] tracking-[0.2em] shadow-lg"
                     >
                         ⏳ Urgency: This quotation expires in {timeLeft}
                     </motion.div>
@@ -152,7 +152,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="inline-flex items-center gap-2 px-3 py-1 bg-orange-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg"
+                                className="inline-flex items-center gap-2 px-3 py-1 bg-orange-500 text-white rounded-full text-[10px] font-bold capitalize tracking-widest shadow-lg"
                             >
                                 <Users size={12} /> Prepared for {q.customerName}
                             </motion.div>
@@ -160,7 +160,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="text-3xl md:text-6xl font-black text-white leading-tight uppercase tracking-tighter"
+                                className="text-3xl md:text-6xl font-bold text-white leading-tight capitalize tracking-tighter"
                             >
                                 {q.tripTitle}
                             </motion.h1>
@@ -189,8 +189,8 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                             transition={{ delay: 0.3 }}
                             className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl text-left md:text-right md:min-w-[200px]"
                         >
-                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Final Price</p>
-                            <p className="text-4xl font-black text-white">₹ {q.finalPrice?.toLocaleString()}</p>
+                            <p className="text-[10px] font-bold text-white/60 capitalize tracking-widest mb-1">Final Price</p>
+                            <p className="text-4xl font-bold text-white">₹ {q.finalPrice?.toLocaleString()}</p>
                             {q.discount > 0 && (
                                 <p className="text-xs font-bold text-orange-400 line-through opacity-80">₹ {q.totalPrice?.toLocaleString()}</p>
                             )}
@@ -212,7 +212,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                         viewport={{ once: true }}
                         className="bg-white rounded-[2rem] p-6 md:p-12 shadow-xl shadow-slate-200/50 border border-slate-100"
                     >
-                        <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
                             <div className="w-1.5 h-6 md:h-8 bg-orange-500 rounded-full" />
                             Overview
                         </h2>
@@ -223,7 +223,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
 
                     {/* Itinerary Card */}
                     <div className="space-y-6">
-                        <h2 className="text-2xl font-black text-slate-900 px-4 flex items-center gap-3">
+                        <h2 className="text-2xl font-bold text-slate-900 px-4 flex items-center gap-3">
                             <div className="w-1.5 h-8 bg-orange-500 rounded-full" />
                             Planned Itinerary
                         </h2>
@@ -241,12 +241,12 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                                         className="w-full flex items-center justify-between p-4 md:p-6 hover:bg-slate-50/50 transition-all text-left"
                                     >
                                         <div className="flex items-center gap-4 md:gap-6">
-                                            <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center font-black shrink-0 shadow-lg text-sm md:text-base">
+                                            <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-lg text-sm md:text-base">
                                                 {i + 1}
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Day {i + 1}</p>
-                                                <h3 className="text-base md:text-lg font-black text-slate-800 leading-tight">{day.title}</h3>
+                                                <p className="text-[10px] font-bold text-slate-400 capitalize tracking-widest leading-none mb-1">Day {i + 1}</p>
+                                                <h3 className="text-base md:text-lg font-bold text-slate-800 leading-tight">{day.title}</h3>
                                             </div>
                                         </div>
                                         <ChevronDown className={`text-slate-400 transition-transform duration-300 ${expandedDays.includes(i) ? 'rotate-180' : ''}`} />
@@ -293,7 +293,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                             viewport={{ once: true }}
                             className="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50"
                         >
-                            <h3 className="text-base md:text-lg font-black text-emerald-600 uppercase tracking-widest flex items-center gap-3 mb-6 md:mb-8">
+                            <h3 className="text-base md:text-lg font-bold text-emerald-600 capitalize tracking-widest flex items-center gap-3 mb-6 md:mb-8">
                                 <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" /> Inclusions
                             </h3>
                             <ul className="space-y-4">
@@ -314,7 +314,7 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                             viewport={{ once: true }}
                             className="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50"
                         >
-                            <h3 className="text-base md:text-lg font-black text-rose-500 uppercase tracking-widest flex items-center gap-3 mb-6 md:mb-8">
+                            <h3 className="text-base md:text-lg font-bold text-rose-500 capitalize tracking-widest flex items-center gap-3 mb-6 md:mb-8">
                                 <XCircle className="w-5 h-5 md:w-6 md:h-6" /> Exclusions
                             </h3>
                             <ul className="space-y-4">
@@ -345,12 +345,12 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                             
                             <div className="relative z-10 space-y-8">
                                 <div>
-                                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em] mb-2">Package Investment</p>
-                                    <h3 className="text-4xl md:text-5xl font-black">₹ {q.finalPrice?.toLocaleString()}</h3>
+                                    <p className="text-[10px] font-bold text-orange-400 capitalize tracking-[0.2em] mb-2">Package Investment</p>
+                                    <h3 className="text-4xl md:text-5xl font-bold">₹ {q.finalPrice?.toLocaleString()}</h3>
                                     {q.discount > 0 && (
                                         <div className="flex items-center gap-3 mt-2">
                                             <span className="text-sm font-bold text-slate-400 line-through">₹ {q.totalPrice?.toLocaleString()}</span>
-                                            <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg">Save ₹ {q.discount?.toLocaleString()}</span>
+                                            <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">Save ₹ {q.discount?.toLocaleString()}</span>
                                         </div>
                                     )}
                                 </div>
@@ -358,22 +358,22 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between py-3 border-b border-white/10">
                                         <span className="text-xs font-bold text-slate-400">Travelers</span>
-                                        <span className="text-sm font-black">{q.pax} Persons</span>
+                                        <span className="text-sm font-bold">{q.pax} Persons</span>
                                     </div>
                                     <div className="flex items-center justify-between py-3 border-b border-white/10">
                                         <span className="text-xs font-bold text-slate-400">Duration</span>
-                                        <span className="text-sm font-black">{q.duration}</span>
+                                        <span className="text-sm font-bold">{q.duration}</span>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4 pt-4">
                                     <Button 
                                         onClick={handleWhatsAppBooking}
-                                        className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl font-black uppercase text-xs tracking-widest transition-all text-white"
+                                        className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl font-bold capitalize text-xs tracking-widest transition-all text-white"
                                     >
                                         Pay Advance Now
                                     </Button>
-                                    <Button variant="outline" className="w-full h-14 border-white/10 hover:bg-white/5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all text-white">
+                                    <Button variant="outline" className="w-full h-14 border-white/10 hover:bg-white/5 rounded-2xl font-bold capitalize text-xs tracking-widest transition-all text-white">
                                         <Download size={16} className="mr-2" /> Download PDF
                                     </Button>
                                 </div>
@@ -382,23 +382,23 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
 
                         {/* Expert Contact */}
                         <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 space-y-6">
-                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest text-center border-b pb-4 mb-4">Your Travel Expert</h4>
+                            <h4 className="text-sm font-bold text-slate-400 capitalize tracking-widest text-center border-b pb-4 mb-4">Your Travel Expert</h4>
                             <div className="flex flex-col items-center text-center space-y-4">
                                 <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-slate-50 shadow-lg">
                                     <img src={normalizeImageUrl(q.expert?.photo) || "https://images.unsplash.com/photo-1560250097-0b93528c311a"} alt={q.expert?.name} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
-                                    <h5 className="text-xl font-black text-slate-900">{q.expert?.name || "Bhautik Bhut"}</h5>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{q.expert?.designation || "Destination Expert"}</p>
+                                    <h5 className="text-xl font-bold text-slate-900">{q.expert?.name || "Bhautik Bhut"}</h5>
+                                    <p className="text-[10px] font-bold text-slate-400 capitalize tracking-widest">{q.expert?.designation || "Destination Expert"}</p>
                                 </div>
                                 <div className="w-full grid grid-cols-2 gap-4 pt-4">
                                     <a href={whatsappLink} target="_blank" className="bg-emerald-500 text-white p-4 rounded-2xl flex flex-col items-center gap-2 hover:scale-[1.02] transition-transform">
                                         <MessageCircle size={20} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">WhatsApp</span>
+                                        <span className="text-[10px] font-bold capitalize tracking-widest">WhatsApp</span>
                                     </a>
                                     <a href={`tel:${q.expert?.whatsapp}`} className="bg-slate-900 text-white p-4 rounded-2xl flex flex-col items-center gap-2 hover:scale-[1.02] transition-transform">
                                         <Phone size={20} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Call Now</span>
+                                        <span className="text-[10px] font-bold capitalize tracking-widest">Call Now</span>
                                     </a>
                                 </div>
                             </div>
@@ -415,13 +415,13 @@ export default function PremiumQuotationUI({ q }: { q: Quotation }) {
                 className="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 p-4 z-50 lg:hidden flex gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]"
             >
                 <a href={whatsappLink} target="_blank" className="flex-1">
-                    <Button variant="outline" className="w-full h-12 rounded-xl border-emerald-100 text-emerald-600 font-black uppercase text-[10px] tracking-widest">
+                    <Button variant="outline" className="w-full h-12 rounded-xl border-emerald-100 text-emerald-600 font-bold capitalize text-[10px] tracking-widest">
                         <MessageCircle size={16} className="mr-2" /> WhatsApp
                     </Button>
                 </a>
                 <Button 
                     onClick={handleWhatsAppBooking}
-                    className="flex-1 h-12 bg-orange-500 hover:bg-orange-600 rounded-xl font-black uppercase text-[10px] tracking-widest text-white"
+                    className="flex-1 h-12 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold capitalize text-[10px] tracking-widest text-white"
                 >
                     Book Now
                 </Button>

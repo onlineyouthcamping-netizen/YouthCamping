@@ -31,9 +31,9 @@ export default function AboutPage() {
       {/* Editorial Header */}
       <section className="py-24 px-6 border-b border-zinc-100">
         <div className="max-w-7xl mx-auto text-center">
-          <span className="text-emerald-600 font-bold tracking-widest uppercase text-xs mb-6 block">Our Story</span>
+          <span className="text-emerald-600 font-bold tracking-widest capitalize text-xs mb-6 block">Our Story</span>
           <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-zinc-900 mb-12 leading-[0.9]">
-            REDEFINING <br />
+            Redefining <br />
             <span className="italic font-serif font-normal text-zinc-400">The Journey</span>
           </h1>
           <p className="text-2xl md:text-3xl text-zinc-500 font-light max-w-4xl mx-auto leading-relaxed">
@@ -52,7 +52,7 @@ export default function AboutPage() {
             />
           </div>
           <div>
-            <h2 className="text-4xl font-bold tracking-tighter mb-8">NOT JUST A TRAVEL COMPANY, <br />BUT A CURATOR OF MOMENTS</h2>
+            <h2 className="text-4xl font-bold tracking-tighter mb-8">Not Just A Travel Company, <br />But A Curator Of Moments</h2>
             <div className="space-y-6 text-lg text-zinc-600 font-light leading-relaxed">
               <p>
                 Founded in 2018, YouthCamping started as a group of friends exploring the Himalayas. Today, we are a boutique travel platform specializing in high-end, editorial-style expeditions across the Indian subcontinent.
@@ -71,7 +71,7 @@ export default function AboutPage() {
       {/* Values Grid */}
       <section className="py-24 px-6 bg-zinc-50">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold tracking-tighter mb-16 text-center">OUR CORE VALUES</h2>
+          <h2 className="text-4xl font-bold tracking-tighter mb-16 text-center">Our Core Values</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((v, i) => (
               <div key={i} className="p-10 bg-white rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-zinc-100 group">

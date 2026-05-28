@@ -31,7 +31,7 @@ export default function TravelTimeline() {
                 <Car className="w-7 h-7 text-navy" />
               )}
             </div>
-            <p className="text-xs font-black text-navy uppercase leading-tight">
+            <p className="text-xs font-bold text-navy capitalize leading-tight">
               {step.label}
             </p>
           </div>

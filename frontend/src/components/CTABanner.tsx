@@ -47,7 +47,7 @@ export default function CTABanner({
               viewport={{ once: true }}
               className="bg-white/95 backdrop-blur-md px-10 py-4 rounded-full mb-8 shadow-2xl"
             >
-              <span className="text-navy font-black text-sm md:text-base uppercase tracking-tight">{ctaText}</span>
+              <span className="text-navy font-medium text-xs md:text-sm uppercase tracking-widest">{ctaText}</span>
             </motion.div>
             
             <motion.h2
@@ -55,7 +55,7 @@ export default function CTABanner({
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-6xl md:text-[14rem] font-black text-white uppercase leading-[0.75] tracking-tighter drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+              className="text-6xl md:text-[14rem] font-semibold text-white capitalize leading-[0.75] tracking-tighter drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
               style={{ 
                 fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
                 fontWeight: titleWeight || undefined
@@ -69,7 +69,7 @@ export default function CTABanner({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="text-white font-black uppercase tracking-[0.2em] text-sm md:text-base mt-8 opacity-95"
+              className="text-white font-normal capitalize tracking-[0.2em] text-sm md:text-base mt-8 opacity-95"
             >
               {tagline}
             </motion.p>
@@ -77,12 +77,12 @@ export default function CTABanner({
             {/* Bottom Labels (Ba Na Hills, etc.) - Decorative */}
             <div className="absolute inset-x-0 bottom-10 px-12 flex justify-between items-end opacity-0 md:opacity-60 pointer-events-none">
               <div className="text-left">
-                <p className="text-white font-black text-sm uppercase leading-none">Ba Na Hills</p>
-                <p className="text-white/70 text-[10px] uppercase font-bold">Vietnam</p>
+                <p className="text-white font-semibold text-sm capitalize leading-none">Ba Na Hills</p>
+                <p className="text-white/70 text-[10px] capitalize font-normal">Vietnam</p>
               </div>
               <div className="text-right">
-                <p className="text-white font-black text-sm uppercase leading-none">Chandra Taal Lake</p>
-                <p className="text-white/70 text-[10px] uppercase font-bold">Spiti Valley</p>
+                <p className="text-white font-semibold text-sm capitalize leading-none">Chandra Taal Lake</p>
+                <p className="text-white/70 text-[10px] capitalize font-normal">Spiti Valley</p>
               </div>
             </div>
           </div>

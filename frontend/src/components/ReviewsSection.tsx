@@ -59,7 +59,7 @@ export default function ReviewsSection({
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-[#ff4e00]"
+                className="section-heading text-navy"
                 style={{ 
                   fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
                   fontWeight: titleWeight || undefined
@@ -69,7 +69,7 @@ export default function ReviewsSection({
               </h2>
             </div>
           </div>
-          <Link href="/reviews" className="flex items-center gap-2 text-navy font-bold hover:text-primary transition-all uppercase text-sm tracking-tight pb-2 mr-1">
+          <Link href="/reviews" className="flex items-center gap-2 text-navy font-bold hover:text-primary transition-all capitalize text-sm tracking-tight pb-2 mr-1">
             View All
             <ChevronRight className="w-5 h-5" />
           </Link>
@@ -81,7 +81,7 @@ export default function ReviewsSection({
           ))}
           {reviews.length === 0 && (
             <div className="w-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-[40px]">
-              <p className="text-zinc-400 font-black uppercase tracking-widest">No verified reviews yet.</p>
+              <p className="text-zinc-400 font-bold capitalize tracking-widest">No verified reviews yet.</p>
             </div>
           )}
         </div>
@@ -171,7 +171,7 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
         {/* Profile Section */}
         <div className="flex items-center gap-4 pt-6 border-t border-zinc-50 mt-auto">
           <div 
-            className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center text-white font-black text-lg shadow-inner border-2 border-white"
+            className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-lg shadow-inner border-2 border-white"
             style={{ backgroundColor: avatarBg }}
           >
             {profileImage ? (
@@ -185,7 +185,7 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <h4 className="text-sm md:text-base font-black text-navy leading-tight truncate">{rev.userName}</h4>
+            <h4 className="text-sm md:text-base font-bold text-navy leading-tight truncate">{rev.userName}</h4>
             {rev.instagram && (
               <a 
                 href={rev.instagram.startsWith('http') ? rev.instagram : `https://instagram.com/${rev.instagram.replace('@', '')}`}
@@ -193,7 +193,7 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 group/insta mt-0.5"
               >
-                <span className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline truncate">
+                <span className="text-[10px] text-primary font-bold capitalize tracking-widest hover:underline truncate">
                   {rev.instagram.includes('instagram.com/') 
                     ? `@${rev.instagram.split('instagram.com/').pop()?.split('/')[0].split('?')[0]}` 
                     : (rev.instagram.startsWith('@') ? rev.instagram : `@${rev.instagram}`)
@@ -204,7 +204,7 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
                 </div>
               </a>
             )}
-            <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest mt-1 truncate">
+            <span className="text-[10px] text-zinc-400 font-medium capitalize tracking-widest mt-1 truncate">
               {rev.tripName && rev.city ? `${rev.tripName} • ${rev.city}` : (rev.tripName || rev.city || "Adventure Trip")}
             </span>
           </div>

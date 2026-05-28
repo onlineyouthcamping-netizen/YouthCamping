@@ -89,13 +89,13 @@ export default function StayDetails() {
       <div className="bg-zinc-50 rounded-[40px] p-8 md:p-12 flex flex-col md:flex-row gap-10 items-center">
         <div className="w-full md:w-80 aspect-video relative rounded-[30px] overflow-hidden shadow-xl">
            <OptimizedImage src={stay.image} alt={stay.hotelName} className="object-cover" />
-           <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-lg text-[10px] font-black uppercase">
+           <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-lg text-[10px] font-bold capitalize">
               Gallery
            </div>
         </div>
         
         <div className="flex-1 text-left">
-           <h3 className="text-2xl font-black text-navy mb-2">{stay.hotelName}</h3>
+           <h3 className="text-2xl font-bold text-navy mb-2">{stay.hotelName}</h3>
            <p className="text-zinc-500 font-bold mb-8">{stay.rating}</p>
            
            <div className="space-y-4">

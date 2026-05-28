@@ -96,7 +96,7 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
               return (
                 <div key={index} className="max-w-4xl mx-auto px-6 py-20">
                   {data.title && (
-                    <h2 className="text-3xl md:text-4xl font-black mb-12 uppercase tracking-tighter text-[#ff4e00]">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-12 capitalize tracking-tighter text-[#ff4e00]">
                       {data.title}
                     </h2>
                   )}

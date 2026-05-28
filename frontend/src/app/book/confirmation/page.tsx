@@ -62,7 +62,7 @@ function ConfirmationContent() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-[#FF5B00]" />
-        <p className="text-xs uppercase tracking-widest text-slate-400 font-black">Loading Booking Details...</p>
+        <p className="text-xs capitalize tracking-widest text-slate-400 font-bold">Loading Booking Details...</p>
       </div>
     );
   }
@@ -72,13 +72,13 @@ function ConfirmationContent() {
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-6">
         <div className="text-center max-w-md bg-white/5 border border-white/10 rounded-[2.5rem] p-10 space-y-6">
           <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto" />
-          <h1 className="text-2xl font-black uppercase tracking-tight">Booking Not Found</h1>
+          <h1 className="text-2xl font-bold capitalize tracking-tight">Booking Not Found</h1>
           <p className="text-slate-400 text-sm leading-relaxed">
             {error || 'We could not load your booking details. Please verify your booking link or contact support.'}
           </p>
           <button
             onClick={() => router.push('/')}
-            className="w-full bg-[#FF5B00] hover:bg-[#E65200] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-[#FF5B00]/20"
+            className="w-full bg-[#FF5B00] hover:bg-[#E65200] text-white py-4 rounded-2xl font-bold capitalize tracking-widest text-xs transition-all shadow-xl shadow-[#FF5B00]/20"
           >
             Go to Homepage
           </button>
@@ -103,10 +103,10 @@ function ConfirmationContent() {
           </motion.div>
           
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold capitalize tracking-widest text-amber-400">
               <Sparkles size={10} /> Booking Success
             </span>
-            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-none pt-2">
+            <h1 className="text-3xl md:text-5xl font-bold capitalize tracking-tight leading-none pt-2">
               Your Spot is Reserved!
             </h1>
             <p className="text-slate-400 text-xs md:text-sm font-medium tracking-wide">
@@ -120,22 +120,22 @@ function ConfirmationContent() {
           {/* Header ID Strip */}
           <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-5 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Booking ID</span>
-              <p className="text-xl font-black font-mono text-[#FF5B00]">{booking.bookingId}</p>
+              <span className="text-[10px] text-slate-500 font-bold capitalize tracking-wider">Booking ID</span>
+              <p className="text-xl font-bold font-mono text-[#FF5B00]">{booking.bookingId}</p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status</span>
-              <p className="text-sm font-black uppercase text-amber-400">{booking.status || 'Pending'}</p>
+              <span className="text-[10px] text-slate-500 font-bold capitalize tracking-wider">Status</span>
+              <p className="text-sm font-bold capitalize text-amber-400">{booking.status || 'Pending'}</p>
             </div>
           </div>
 
           <div className="p-8 md:p-10 space-y-8">
             {/* Trip Info */}
             <div className="space-y-2">
-              <span className="bg-white/5 border border-white/10 px-3 py-1 rounded text-[9px] font-black uppercase text-slate-300">
+              <span className="bg-white/5 border border-white/10 px-3 py-1 rounded text-[9px] font-bold capitalize text-slate-300">
                 {booking.tripId || 'Expedition'}
               </span>
-              <h2 className="text-2xl font-black uppercase tracking-tight text-white">{booking.tripName}</h2>
+              <h2 className="text-2xl font-bold capitalize tracking-tight text-white">{booking.tripName}</h2>
               <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400 pt-1">
                 <div className="flex items-center gap-1.5"><Calendar size={14} className="text-[#FF5B00]" /> {booking.departureDate ? new Date(booking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</div>
                 <div className="flex items-center gap-1.5"><MapPin size={14} className="text-[#FF5B00]" /> {booking.pickupCity || 'Delhi (Direct Join)'}</div>
@@ -147,18 +147,18 @@ function ConfirmationContent() {
 
             {/* Travelers list */}
             <div className="space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Travelers Manifest</h3>
+              <h3 className="text-xs font-bold capitalize tracking-widest text-slate-400">Travelers Manifest</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {booking.passengers && booking.passengers.length > 0 ? (
                   booking.passengers.map((traveler: any, index: number) => (
                     <div key={index} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-white uppercase">{traveler.name}</p>
+                        <p className="text-xs font-bold text-white capitalize">{traveler.name}</p>
                         <p className="text-[10px] text-slate-400 font-medium">
                           {traveler.gender} • Age {traveler.age || 'N/A'}
                         </p>
                       </div>
-                      <span className="text-[9px] font-black bg-white/5 text-slate-400 px-2 py-0.5 rounded uppercase">
+                      <span className="text-[9px] font-bold bg-white/5 text-slate-400 px-2 py-0.5 rounded capitalize">
                         Traveler {index + 1}
                       </span>
                     </div>
@@ -166,12 +166,12 @@ function ConfirmationContent() {
                 ) : (
                   <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-white uppercase">{booking.name}</p>
+                      <p className="text-xs font-bold text-white capitalize">{booking.name}</p>
                       <p className="text-[10px] text-slate-400 font-medium">
                         {booking.gender || 'Male'} • Age {booking.age || 'N/A'}
                       </p>
                     </div>
-                    <span className="text-[9px] font-black bg-[#FF5B00]/10 text-[#FF5B00] px-2 py-0.5 rounded uppercase">
+                    <span className="text-[9px] font-bold bg-[#FF5B00]/10 text-[#FF5B00] px-2 py-0.5 rounded capitalize">
                       Lead
                     </span>
                   </div>
@@ -183,7 +183,7 @@ function ConfirmationContent() {
 
             {/* Price breakdown */}
             <div className="space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Payment Breakdown</h3>
+              <h3 className="text-xs font-bold capitalize tracking-widest text-slate-400">Payment Breakdown</h3>
               <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-3">
                 <div className="flex justify-between items-center text-xs text-slate-400">
                   <span>Package Base Subtotal</span>
@@ -195,10 +195,10 @@ function ConfirmationContent() {
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-400">
                   <span>Payment Mode Selection</span>
-                  <span className="font-black text-amber-400 uppercase text-[10px]">{booking.paymentMode || 'UPI'}</span>
+                  <span className="font-bold text-amber-400 capitalize text-[10px]">{booking.paymentMode || 'UPI'}</span>
                 </div>
                 <div className="h-px bg-white/5 my-2" />
-                <div className="flex justify-between items-center text-sm font-black uppercase tracking-wider">
+                <div className="flex justify-between items-center text-sm font-bold capitalize tracking-wider">
                   <span className="text-[#FF5B00]">Remaining Balance</span>
                   <span className="text-xl text-white">₹{(booking.remainingAmount ?? (booking.totalAmount - booking.advancePaid))?.toLocaleString()}</span>
                 </div>
@@ -211,14 +211,14 @@ function ConfirmationContent() {
                 href={`https://wa.me/9174374374783?text=Hi%2C%20I%20just%20completed%20booking%20${booking.bookingId}%20for%20${encodeURIComponent(booking.tripName)}.%20Please%20verify%20my%20details.`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-center py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-2"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-center py-5 rounded-2xl font-bold capitalize tracking-widest text-xs transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-2"
               >
                 <Phone size={14} /> Connect on WhatsApp
               </a>
               
               <button
                 onClick={() => window.print()}
-                className="flex-1 bg-white/5 hover:bg-white/10 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs border border-white/10 transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-white/5 hover:bg-white/10 text-white py-5 rounded-2xl font-bold capitalize tracking-widest text-xs border border-white/10 transition-all flex items-center justify-center gap-2"
               >
                 Print Receipt
               </button>
@@ -230,7 +230,7 @@ function ConfirmationContent() {
         <div className="text-center">
           <button
             onClick={() => router.push('/')}
-            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold capitalize tracking-widest text-slate-500 hover:text-white transition-colors"
           >
             <ArrowLeft size={12} /> Return to Expeditions
           </button>

@@ -31,7 +31,7 @@ export default function PhotoGrid({
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-primary-orange tracking-[0.3em] font-black text-xs mb-4"
+              className="text-primary-orange tracking-[0.3em] font-bold text-xs mb-4"
             >
               {subtitle}
             </motion.p>
@@ -71,7 +71,7 @@ export default function PhotoGrid({
           ))}
           {images.length === 0 && (
             <div className="col-span-full py-20 text-center border-4 border-dashed border-charcoal/10 rounded-[40px]">
-              <p className="text-charcoal/30 font-black uppercase tracking-widest">No photos added to this grid yet.</p>
+              <p className="text-charcoal/30 font-bold capitalize tracking-widest">No photos added to this grid yet.</p>
             </div>
           )}
         </div>

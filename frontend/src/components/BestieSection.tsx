@@ -91,7 +91,7 @@ export default function BestieSection({
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              className="text-zinc-600 font-bold mt-4 tracking-widest text-[11px] md:text-sm uppercase"
+              className="text-zinc-600 font-bold mt-4 tracking-widest text-[11px] md:text-sm capitalize"
             >
               {subtitle}
             </motion.p>
@@ -119,12 +119,12 @@ export default function BestieSection({
                     />
                   ) : (
                     <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary">
-                      <span className="font-black text-lg">{i+1}</span>
+                      <span className="font-bold text-lg">{i+1}</span>
                     </div>
                   )}
                 </div>
                 <div className="flex-1 text-left pt-1">
-                  <h3 className="text-[16px] md:text-lg font-black text-[#1B2A4A] mb-2 tracking-tight">{reason.title}</h3>
+                  <h3 className="text-[16px] md:text-lg font-bold text-[#1B2A4A] mb-2 tracking-tight">{reason.title}</h3>
                   <p className="text-zinc-500 text-[12px] md:text-sm font-medium leading-relaxed">
                     {reason.desc}
                   </p>

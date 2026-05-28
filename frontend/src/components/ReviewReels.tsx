@@ -25,7 +25,7 @@ export default function ReviewReels({ reels = [] }: ReviewReelsProps) {
     <section className="mb-24 overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
         <h2 className="section-heading text-navy">Traveller Videos</h2>
-        <div className="flex items-center gap-2 text-primary-orange font-black text-[10px] uppercase tracking-widest">
+        <div className="flex items-center gap-2 text-primary-orange font-bold text-[10px] capitalize tracking-widest">
            <Camera className="w-5 h-5" />
            Experience the Magic
         </div>

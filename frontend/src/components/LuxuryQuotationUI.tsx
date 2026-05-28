@@ -142,7 +142,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                     >
-                        <p className="text-base md:text-xl font-black uppercase tracking-[0.3em] mb-4 text-[#FF5400]/90 drop-shadow-lg">
+                        <p className="text-base md:text-xl font-bold capitalize tracking-[0.3em] mb-4 text-[#FF5400]/90 drop-shadow-lg">
                             {q.customerName}&apos;s
                         </p>
                         <h1 className="text-5xl md:text-8xl lg:text-9xl font-serif mb-6 drop-shadow-2xl leading-[0.9] tracking-tighter">
@@ -157,7 +157,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         </div>
                         
                         <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-                            <div className="px-10 py-4 rounded-full border border-white/30 bg-white/10 backdrop-blur-xl text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl">
+                            <div className="px-10 py-4 rounded-full border border-white/30 bg-white/10 backdrop-blur-xl text-white font-bold capitalize text-xs tracking-[0.2em] shadow-2xl">
                                 {q.duration || "6 Days & 5 Nights"}
                             </div>
                             <button className="w-14 h-14 rounded-full border border-white/30 bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white hover:text-black transition-all group shadow-2xl">
@@ -181,7 +181,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         We have Curated
                     </p>
                     <div className="flex items-center justify-center gap-3">
-                        <h2 className="text-2xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">
+                        <h2 className="text-2xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">
                             The Best Itinerary For You
                         </h2>
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="#FF5400" className="mb-2">
@@ -204,8 +204,8 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF5400" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                             </div>
                             <div>
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{q.customerName}&apos;s</p>
-                                <h2 className="text-2xl font-black text-[#FF5400] uppercase tracking-tighter">{q.tripTitle}</h2>
+                                <p className="text-xs font-bold text-slate-400 capitalize tracking-widest leading-none mb-1">{q.customerName}&apos;s</p>
+                                <h2 className="text-2xl font-bold text-[#FF5400] capitalize tracking-tighter">{q.tripTitle}</h2>
                             </div>
                         </div>
 
@@ -221,8 +221,8 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         <item.icon size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{item.label}</p>
-                                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">{item.val}</p>
+                                        <p className="text-[9px] md:text-[10px] font-bold text-slate-400 capitalize tracking-widest mb-0.5">{item.label}</p>
+                                        <p className="text-xs font-bold text-slate-800 capitalize tracking-tight">{item.val}</p>
                                     </div>
                                 </div>
                             ))}
@@ -230,15 +230,15 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
 
                         {/* Stay & Meals Card */}
                         <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-10 space-y-10 shadow-sm relative overflow-hidden">
-                            <h4 className="text-xs font-black uppercase tracking-[0.3em] text-slate-800">Stay & Meals</h4>
+                            <h4 className="text-xs font-bold capitalize tracking-[0.3em] text-slate-800">Stay & Meals</h4>
                             
                             {/* Nights Breakdown */}
                             <div className="flex flex-wrap items-center gap-8">
                                 {q.staySummary && q.staySummary.length > 0 ? (
                                     q.staySummary.map((item: any, i: number) => (
                                         <div key={i} className="flex items-baseline gap-2">
-                                            <span className="text-4xl font-black text-slate-200">{item.nights}</span>
-                                            <div className="text-[10px] leading-tight font-black uppercase text-slate-500">
+                                            <span className="text-4xl font-bold text-slate-200">{item.nights}</span>
+                                            <div className="text-[10px] leading-tight font-bold capitalize text-slate-500">
                                                 Night{item.nights > 1 ? 's' : ''} in <br/><span className="text-slate-800">{item.location}</span>
                                             </div>
                                         </div>
@@ -246,8 +246,8 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 ) : (
                                     q.itinerary?.filter((_, i) => i < 4).map((day: any, i: number) => (
                                         <div key={i} className="flex items-baseline gap-2">
-                                            <span className="text-4xl font-black text-slate-200">1</span>
-                                            <div className="text-[10px] leading-tight font-black uppercase text-slate-500">
+                                            <span className="text-4xl font-bold text-slate-200">1</span>
+                                            <div className="text-[10px] leading-tight font-bold capitalize text-slate-500">
                                                 Night in <br/><span className="text-slate-800">{day.location || "Port Blair"}</span>
                                             </div>
                                         </div>
@@ -259,15 +259,15 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 <div className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-6 flex items-center gap-4">
                                     <HotelIcon size={24} className="text-slate-400" />
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rooms</p>
-                                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">{q.roomsInfo || "1 Rooms at all location"}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 capitalize tracking-widest">Rooms</p>
+                                        <p className="text-xs font-bold text-slate-800 capitalize tracking-tight">{q.roomsInfo || "1 Rooms at all location"}</p>
                                     </div>
                                 </div>
                                 <div className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-6 flex items-center gap-4">
                                     <Utensils size={24} className="text-slate-400" />
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meals</p>
-                                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">{q.mealsInfo || "Breakfast at Property"}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 capitalize tracking-widest">Meals</p>
+                                        <p className="text-xs font-bold text-slate-800 capitalize tracking-tight">{q.mealsInfo || "Breakfast at Property"}</p>
                                     </div>
                                 </div>
                             </div>
@@ -275,7 +275,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
 
                         {/* Travelling Flow Card */}
                         <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-10 space-y-10 shadow-sm">
-                            <h4 className="text-xs font-black uppercase tracking-[0.3em] text-slate-800">Travelling</h4>
+                            <h4 className="text-xs font-bold capitalize tracking-[0.3em] text-slate-800">Travelling</h4>
                             
                             <div className="flex flex-col md:flex-row items-start justify-between relative px-2 gap-6 md:gap-0">
                                 {/* Dashed Connector (Hidden on mobile) */}
@@ -292,7 +292,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-50 flex items-center justify-center text-slate-400 shadow-sm group-hover:border-[#FF5400]/30 group-hover:text-[#FF5400] transition-all duration-500 shrink-0">
                                             <TravellingIcon icon={item.icon} />
                                         </div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase leading-tight tracking-tight px-1 group-hover:text-slate-800 transition-colors">
+                                        <p className="text-[10px] font-bold text-slate-500 capitalize leading-tight tracking-tight px-1 group-hover:text-slate-800 transition-colors">
                                             {item.label}
                                         </p>
                                     </div>
@@ -305,12 +305,12 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             <div className="flex items-center justify-between">
                                 <div className="relative">
                                     <p className="font-handwritten text-[#FF5400] text-3xl md:text-4xl mb-[-12px] ml-[-10px]">Detailed</p>
-                                    <h3 className="text-3xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">Itinerary</h3>
+                                    <h3 className="text-3xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">Itinerary</h3>
                                 </div>
                                 <Button 
                                     variant="ghost" 
                                     onClick={toggleExpandAll}
-                                    className="border rounded-xl px-6 hover:bg-slate-50 text-slate-400 hover:text-slate-900 gap-2 font-bold uppercase text-[10px] tracking-widest"
+                                    className="border rounded-xl px-6 hover:bg-slate-50 text-slate-400 hover:text-slate-900 gap-2 font-bold capitalize text-[10px] tracking-widest"
                                 >
                                     <Maximize2 size={14} className={`transition-transform duration-300 ${isAllExpanded ? 'rotate-180' : ''}`} /> 
                                     {isAllExpanded ? "Collapse All" : "Expand All"}
@@ -328,13 +328,13 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                             }`}
                                         >
                                             {/* Day Badge */}
-                                            <div className="bg-[#4B5563] text-white px-3 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl font-black text-[10px] md:text-sm uppercase tracking-tight shadow-md shrink-0 min-w-[60px] md:min-w-[100px] text-center">
+                                            <div className="bg-[#4B5563] text-white px-3 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-sm capitalize tracking-tight shadow-md shrink-0 min-w-[60px] md:min-w-[100px] text-center">
                                                 Day {day.day}
                                             </div>
 
                                             {/* Title */}
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="text-xs md:text-lg font-black text-[#1E3A8A] tracking-tight truncate">
+                                                <h4 className="text-xs md:text-lg font-bold text-[#1E3A8A] tracking-tight truncate">
                                                     {day.title}
                                                 </h4>
                                             </div>
@@ -344,13 +344,13 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                                 <div className="hidden sm:flex flex-col gap-1 md:gap-2 min-w-[80px] md:min-w-[120px]">
                                                     <div className="flex items-center gap-1.5 md:gap-2.5 text-[#4B5563]">
                                                         <Utensils size={12} className="shrink-0 text-[#1E3A8A]/40" />
-                                                        <span className="text-[8px] md:text-xs font-black uppercase tracking-wider">
+                                                        <span className="text-[8px] md:text-xs font-bold capitalize tracking-wider">
                                                             {day.meals || "B, D"}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 md:gap-2.5 text-[#4B5563]">
                                                         <HotelIcon size={12} className="shrink-0 text-[#1E3A8A]/40" />
-                                                        <span className="text-[8px] md:text-xs font-black uppercase tracking-wider truncate max-w-[60px] md:max-w-[150px]">
+                                                        <span className="text-[8px] md:text-xs font-bold capitalize tracking-wider truncate max-w-[60px] md:max-w-[150px]">
                                                             {day.stay || "Luxury Stay"}
                                                         </span>
                                                     </div>
@@ -358,10 +358,10 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
 
                                                 {/* Mobile Meals/Stay Indicator (Icons only) */}
                                                 <div className="flex sm:hidden flex-col gap-1">
-                                                    <div className="flex items-center gap-1 text-[8px] font-black text-[#4B5563]">
+                                                    <div className="flex items-center gap-1 text-[8px] font-bold text-[#4B5563]">
                                                         <Utensils size={10} className="text-[#1E3A8A]/40" /> {typeof day.meals === 'string' ? day.meals.split(',')[0] : "B"}
                                                     </div>
-                                                    <div className="flex items-center gap-1 text-[8px] font-black text-[#4B5563]">
+                                                    <div className="flex items-center gap-1 text-[8px] font-bold text-[#4B5563]">
                                                         <HotelIcon size={10} className="text-[#1E3A8A]/40" /> {typeof day.stay === 'string' ? (day.stay.length > 8 ? day.stay.substring(0, 8) + '...' : day.stay) : "Stay"}
                                                     </div>
                                                 </div>
@@ -386,7 +386,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                                         </p>
                                                         {day.photos && day.photos.length > 0 && (
                                                             <div className="space-y-6">
-                                                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] flex items-center gap-4">
+                                                                <h4 className="text-xs font-bold text-slate-800 capitalize tracking-[0.2em] flex items-center gap-4">
                                                                     Sightseeing Places
                                                                     <div className="h-px flex-1 bg-slate-100" />
                                                                 </h4>
@@ -407,7 +407,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                                                                 <div className="aspect-square rounded-[2rem] md:rounded-[3rem] overflow-hidden border-4 border-white shadow-xl shadow-slate-200/50 group-hover:scale-95 transition-all duration-500">
                                                                                     <img src={normalizeImageUrl(photoUrl)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={captionText} />
                                                                                 </div>
-                                                                                <p className="text-[10px] md:text-xs font-black text-slate-800 uppercase tracking-tighter truncate px-2 text-center">
+                                                                                <p className="text-[10px] md:text-xs font-bold text-slate-800 capitalize tracking-tighter truncate px-2 text-center">
                                                                                     {captionText}
                                                                                 </p>
                                                                             </div>
@@ -430,12 +430,12 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             <div className="flex items-center justify-between">
                                 <div className="relative">
                                     <p className="font-handwritten text-[#FF5400] text-3xl md:text-4xl mb-[-12px] ml-[-10px]">Stay</p>
-                                    <h3 className="text-3xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">Details</h3>
+                                    <h3 className="text-3xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">Details</h3>
                                 </div>
                                 <div className="flex p-1.5 bg-slate-100 rounded-full">
                                     <button 
                                         onClick={() => setSelectedTier('standard')}
-                                        className={`px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        className={`px-8 py-2.5 rounded-full text-[10px] font-bold capitalize tracking-widest transition-all ${
                                             selectedTier === 'standard' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'
                                         }`}
                                     >
@@ -443,7 +443,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                     </button>
                                     <button 
                                         onClick={() => setSelectedTier('premium')}
-                                        className={`px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                                        className={`px-8 py-2.5 rounded-full text-[10px] font-bold capitalize tracking-widest transition-all flex items-center gap-2 ${
                                             selectedTier === 'premium' ? 'bg-[#FF5400] text-white shadow-lg' : 'text-slate-400'
                                         }`}
                                     >
@@ -459,7 +459,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                             <img src={normalizeImageUrl(hotel.image)} className="w-full h-full object-cover group-hover/hotel:scale-105 transition-transform duration-700" alt="" />
                                             <button 
                                                 onClick={() => setSelectedHotelForGallery(hotel)}
-                                                className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-md border border-white/40 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white hover:text-black transition-all"
+                                                className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-md border border-white/40 text-white px-4 py-2 rounded-xl text-[10px] font-bold capitalize tracking-widest flex items-center gap-2 hover:bg-white hover:text-black transition-all"
                                             >
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                                 Gallery
@@ -467,25 +467,25 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         </div>
                                         <div className="flex-1 p-8 md:p-10 space-y-6">
                                             <div className="space-y-2">
-                                                <span className="bg-slate-100 text-slate-500 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                                <span className="bg-slate-100 text-slate-500 px-4 py-1 rounded-full text-[10px] font-bold capitalize tracking-widest">
                                                     1 Night in {hotel.location || "Port Blair"}
                                                 </span>
-                                                <h4 className="text-2xl font-black text-slate-800 tracking-tight">{hotel.name}</h4>
+                                                <h4 className="text-2xl font-bold text-slate-800 tracking-tight">{hotel.name}</h4>
                                                 <div className="flex items-center gap-1">
                                                     {[...Array(hotel.stars || 4)].map((_, i) => (
                                                         <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="#FF5400"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                                                     ))}
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">{hotel.stars || 4} Star Resort</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 capitalize tracking-widest ml-2">{hotel.stars || 4} Star Resort</span>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex items-center gap-3 text-slate-500">
                                                     <HotelIcon size={18} className="text-slate-300" />
-                                                    <span className="text-xs font-bold uppercase tracking-wide">Superior Room</span>
+                                                    <span className="text-xs font-bold capitalize tracking-wide">Superior Room</span>
                                                 </div>
                                                 <div className="flex items-center gap-3 text-slate-500">
                                                     <Utensils size={18} className="text-slate-300" />
-                                                    <span className="text-xs font-bold uppercase tracking-wide">Breakfast</span>
+                                                    <span className="text-xs font-bold capitalize tracking-wide">Breakfast</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -498,7 +498,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         <div className="pt-12 space-y-8 md:space-y-10">
                             <div className="relative inline-flex flex-col">
                                 <p className="font-handwritten text-[#FF5400] text-3xl md:text-5xl mb-[-10px] md:mb-[-15px] ml-[-5px] md:ml-[-10px] relative z-10">Places &</p>
-                                <h3 className="text-3xl md:text-6xl font-black text-[#4B5563] tracking-tighter uppercase relative z-10">Activities</h3>
+                                <h3 className="text-3xl md:text-6xl font-bold text-[#4B5563] tracking-tighter capitalize relative z-10">Activities</h3>
                                 <div className="absolute -bottom-2 md:-bottom-4 left-0 w-full h-4">
                                     <svg width="100%" height="20" viewBox="0 0 200 20" fill="none" preserveAspectRatio="none">
                                         <path d="M5 15C50 5 150 5 195 15" stroke="#FF5400" strokeWidth="3" strokeLinecap="round" />
@@ -507,14 +507,14 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             </div>
 
                             <div className="pt-2 md:pt-6 flex items-center justify-between">
-                                <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 bg-white text-slate-900 rounded-full border-2 border-[#FF5400] font-black text-[10px] md:text-sm shadow-sm">
+                                <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 bg-white text-slate-900 rounded-full border-2 border-[#FF5400] font-bold text-[10px] md:text-sm shadow-sm">
                                     <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-[#FF5400] flex items-center justify-center text-white">
                                         <CheckCircle2 size={10} className="md:w-[14px] md:h-[14px]" />
                                     </div>
                                     {q.sightseeingCount || 9} Sightseeing Places
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <div className="hidden md:flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                                    <div className="hidden md:flex items-center gap-2 text-slate-400 font-bold text-[10px] capitalize tracking-widest">
                                         Slide to explore <ArrowRight size={14} className="ml-1" />
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -548,9 +548,9 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         >
                                             <img src={normalizeImageUrl(url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                                             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-transparent p-6 md:p-12">
-                                                <p className="text-white font-black text-2xl md:text-4xl tracking-tighter leading-tight capitalize">
+                                                <p className="text-white font-bold text-2xl md:text-4xl tracking-tighter leading-tight capitalize">
                                                     {name} <br/> 
-                                                    <span className="opacity-60 text-[10px] md:text-sm font-bold uppercase tracking-[0.3em] block mt-2">
+                                                    <span className="opacity-60 text-[10px] md:text-sm font-bold capitalize tracking-[0.3em] block mt-2">
                                                         Activity {i + 1}
                                                     </span>
                                                 </p>
@@ -566,13 +566,13 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         <div className="mt-12 bg-white rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100 hidden md:block">
                             {/* Top Banner: Discount info */}
                             <div className="bg-gradient-to-r from-[#FFF7ED] to-[#FFF7ED] px-4 md:px-8 py-3 md:py-4 flex items-center justify-between relative">
-                                <div className="flex items-center gap-2 md:gap-3 text-orange-900 font-black text-[10px] md:text-sm">
+                                <div className="flex items-center gap-2 md:gap-3 text-orange-900 font-bold text-[10px] md:text-sm">
                                     <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#FF5400] flex items-center justify-center text-white">
                                         <CheckCircle2 size={12} className="md:w-3.5 md:h-3.5" />
                                     </div>
                                     Save ₹ {(q.discount || 6300).toLocaleString()}
                                 </div>
-                                <div className="flex items-center gap-2 text-orange-700 font-black text-[10px] md:text-sm uppercase tracking-wider">
+                                <div className="flex items-center gap-2 text-orange-700 font-bold text-[10px] md:text-sm capitalize tracking-wider">
                                     <Sparkles size={16} className="text-orange-700" />
                                     Special Discount
                                 </div>
@@ -584,7 +584,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             <div className="p-6 md:p-8 flex items-center justify-between bg-white relative">
                                 <div className="space-y-1">
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl md:text-4xl font-black text-slate-900 tracking-tighter">
+                                        <span className="text-2xl md:text-4xl font-bold text-slate-900 tracking-tighter">
                                             ₹ {((selectedTier === 'premium' ? (q.highLevelPrice || 47800) : (q.lowLevelPrice || 32800)) - (q.discount || 0)).toLocaleString()}
                                         </span>
                                     </div>
@@ -601,13 +601,13 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         <div className="pt-12 space-y-10">
                             <div className="relative">
                                 <p className="font-handwritten text-[#FF5400] text-3xl md:text-4xl mb-[-12px] ml-[-10px]">Trip</p>
-                                <h3 className="text-3xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">Inclusions</h3>
+                                <h3 className="text-3xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">Inclusions</h3>
                             </div>
                             <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 space-y-10 shadow-sm">
-                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">What&apos;s inside the package?</h4>
+                                <h4 className="text-sm font-bold text-slate-800 capitalize tracking-widest">What&apos;s inside the package?</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                                     <div className="space-y-6">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Inclusions</p>
+                                        <p className="text-[10px] font-bold text-slate-400 capitalize tracking-[0.2em] mb-4">Inclusions</p>
                                         <div className="space-y-3">
                                             {(q.inclusions || ["Stay in Hotel/Resort as per Package", "Daily Breakfast at Property", "Airport Pickup and Drop-off", "AC Taxi Vehicle for Sightseeing"]).map((inc, i) => (
                                                 <div key={i} className="flex items-center gap-3 text-xs font-bold text-slate-600">
@@ -617,7 +617,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         </div>
                                     </div>
                                     <div className="space-y-6">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Exclusions</p>
+                                        <p className="text-[10px] font-bold text-slate-400 capitalize tracking-[0.2em] mb-4">Exclusions</p>
                                         <div className="space-y-3">
                                             {(q.exclusions || ["5% GST", "Surcharge of Peak Season", "Any Paid Activities", "Entry Fees of Any"]).map((exc, i) => (
                                                 <div key={i} className="flex items-center gap-3 text-xs font-bold text-slate-600">
@@ -637,7 +637,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         <div className="pt-12 space-y-10">
                             <div className="relative">
                                 <p className="font-handwritten text-[#FF5400] text-3xl md:text-4xl mb-[-12px] ml-[-10px]">Know Your</p>
-                                <h3 className="text-3xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">Destination Expert</h3>
+                                <h3 className="text-3xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">Destination Expert</h3>
                             </div>
                             <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 flex flex-col md:flex-row items-center gap-10 shadow-sm relative overflow-hidden">
                                 <div className="absolute top-8 right-10">
@@ -647,8 +647,8 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 </div>
                                 <img src={normalizeImageUrl(q.expert?.photo) || "https://i.pravatar.cc/150?u=bhautik"} className="w-40 h-40 rounded-3xl object-cover ring-8 ring-slate-50 shadow-xl" />
                                 <div className="flex-1 space-y-4">
-                                    <h4 className="text-xl font-black text-slate-800 uppercase tracking-widest">{q.expert?.name || "Bhautik Bhut"}</h4>
-                                    <p className="text-xs font-black text-[#FF5400] uppercase tracking-[0.3em]">Destination Expert</p>
+                                    <h4 className="text-xl font-bold text-slate-800 capitalize tracking-widest">{q.expert?.name || "Bhautik Bhut"}</h4>
+                                    <p className="text-xs font-bold text-[#FF5400] capitalize tracking-[0.3em]">Destination Expert</p>
                                     <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-xl">
                                         Experience the true essence of each destination as I uncover its hidden treasures. With my passion for travel and service, I&apos;ll create a tailor-made itinerary that reflects your travel dreams.
                                     </p>
@@ -673,7 +673,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         <div className="pt-12 space-y-12">
                             <div className="relative">
                                 <p className="font-handwritten text-[#FF5400] text-3xl md:text-4xl mb-[-12px] ml-[-10px]">Why</p>
-                                <h3 className="text-3xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">Choose YOUTHCAMPING?</h3>
+                                <h3 className="text-3xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">Choose YOUTHCAMPING?</h3>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                                 {[
@@ -684,8 +684,8 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 ].map((item: any, i: number) => (
                                     <div key={i} className="space-y-4">
                                         <div className="text-3xl">{item.icon}</div>
-                                        <h5 className="font-black text-slate-800 uppercase text-xs tracking-widest">{item.t}</h5>
-                                        <p className="text-[10px] font-medium text-slate-400 leading-relaxed uppercase tracking-tight">{item.d}</p>
+                                        <h5 className="font-bold text-slate-800 capitalize text-xs tracking-widest">{item.t}</h5>
+                                        <p className="text-[10px] font-medium text-slate-400 leading-relaxed capitalize tracking-tight">{item.d}</p>
                                     </div>
                                 ))}
                             </div>
@@ -695,7 +695,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                         <div className="pt-12 space-y-10 pb-20">
                             <div className="relative">
                                 <p className="font-handwritten text-[#FF5400] text-3xl md:text-4xl mb-[-12px] ml-[-10px]">Traveller</p>
-                                <h3 className="text-3xl md:text-5xl font-black text-[#4B5563] tracking-tighter uppercase">Reviews</h3>
+                                <h3 className="text-3xl md:text-5xl font-bold text-[#4B5563] tracking-tighter capitalize">Reviews</h3>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {(q.reviews?.length ? q.reviews : [
@@ -704,11 +704,11 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 ]).map((rev, i) => (
                                     <div key={i} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 space-y-6 shadow-sm hover:shadow-md transition-shadow">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase">
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400 capitalize">
                                                 {rev.name?.charAt(0) || "U"}
                                             </div>
                                             <div>
-                                                <p className="text-xs font-black text-slate-800 uppercase tracking-tight">{rev.name}</p>
+                                                <p className="text-xs font-bold text-slate-800 capitalize tracking-tight">{rev.name}</p>
                                                 <div className="flex gap-0.5 mt-0.5">
                                                     {[...Array(rev.rating || 5)].map((_, j) => <svg key={j} width="10" height="10" viewBox="0 0 24 24" fill="#EAB308"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>)}
                                                 </div>
@@ -732,11 +732,11 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             <div className="relative bg-gradient-to-r from-[#FFF7ED] to-[#FFF7ED] px-6 py-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-[#FF5400]">
                                     <Sparkles size={16} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Special Discount</span>
+                                    <span className="text-[10px] font-bold capitalize tracking-widest">Special Discount</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-[#FF5400]">
                                     <CheckCircle2 size={16} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Save ₹ {q.discount?.toLocaleString() || "6,300"}</span>
+                                    <span className="text-[10px] font-bold capitalize tracking-widest">Save ₹ {q.discount?.toLocaleString() || "6,300"}</span>
                                 </div>
                                 <div className="absolute -bottom-1 left-0 right-0 h-2 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDIwIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgOEM1IDggNSAwIDIwIDhWMEgwVjhaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==')] bg-repeat-x" />
                             </div>
@@ -747,28 +747,28 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         Per Person <ChevronDown size={16} />
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-4xl font-black text-[#FF5400]">
+                                        <p className="text-4xl font-bold text-[#FF5400]">
                                             ₹ {((selectedTier === 'premium' ? (q.highLevelPrice || 47800) : (q.lowLevelPrice || 32800)) - (q.discount || 0)).toLocaleString()}
                                         </p>
                                         <p className="text-sm font-bold text-slate-300 line-through">
                                             ₹ {(selectedTier === 'premium' ? (q.highLevelPrice || 47800) : (q.lowLevelPrice || 32800)).toLocaleString()}
                                         </p>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase">+ Taxes</p>
+                                        <p className="text-[10px] font-bold text-slate-400 capitalize">+ Taxes</p>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-300 uppercase mb-1">Your Choice</p>
-                                            <div className="flex items-center gap-2 text-[#06B6D4] font-black uppercase text-sm">
+                                            <p className="text-[10px] font-bold text-slate-300 capitalize mb-1">Your Choice</p>
+                                            <div className="flex items-center gap-2 text-[#06B6D4] font-bold capitalize text-sm">
                                                 <HotelIcon size={16} /> {selectedTier === 'premium' ? 'Premium' : 'Standard'}
                                             </div>
                                         </div>
-                                        <button className="text-[10px] font-black text-slate-400 uppercase underline decoration-2 underline-offset-4">View More</button>
+                                        <button className="text-[10px] font-bold text-slate-400 capitalize underline decoration-2 underline-offset-4">View More</button>
                                     </div>
                                     <div className="h-px bg-slate-100" />
-                                    <div className="flex items-center justify-between text-xs font-black text-slate-800 uppercase">
+                                    <div className="flex items-center justify-between text-xs font-bold text-slate-800 capitalize">
                                         <div className="flex items-center gap-2">
                                             <Calendar size={16} className="text-slate-300" /> {getDayDate(q.travelDates?.from, 0) || "18 Mar 2026"}
                                         </div>
@@ -784,7 +784,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         <div className="w-12 h-12 rounded-full bg-[#FF5400] flex items-center justify-center text-white">
                                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 9v4m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                                         </div>
-                                        <p className="text-[10px] font-black text-[#C2410C] uppercase leading-tight">
+                                        <p className="text-[10px] font-bold text-[#C2410C] capitalize leading-tight">
                                             This Quotation Is Expired<br/>
                                             <span className="opacity-70">Please Request A New One!</span>
                                         </p>
@@ -792,7 +792,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 ) : (
                                     <Button 
                                         onClick={handleWhatsAppBooking}
-                                        className="w-full h-16 rounded-2xl bg-[#FF5400] hover:bg-[#DC2626] text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-red-100"
+                                        className="w-full h-16 rounded-2xl bg-[#FF5400] hover:bg-[#DC2626] text-white font-bold capitalize text-xs tracking-widest shadow-xl shadow-red-100"
                                     >
                                         Book This Experience <ArrowRight size={18} className="ml-2" />
                                     </Button>
@@ -809,7 +809,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             </div>
                             
                             <div className="space-y-4">
-                                <h3 className="text-xl font-black text-slate-800">Hey, {q.customerName || "Hemal Patel"} !</h3>
+                                <h3 className="text-xl font-bold text-slate-800">Hey, {q.customerName || "Hemal Patel"} !</h3>
                                 <p className="text-sm font-medium text-slate-500 leading-relaxed">
                                     Connect with me if you got any questions regarding this package.
                                 </p>
@@ -818,8 +818,8 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                             <div className="flex items-center gap-4">
                                 <img src={normalizeImageUrl(q.expert?.photo) || "https://i.pravatar.cc/150?u=bhautik"} className="w-16 h-16 rounded-full object-cover ring-4 ring-slate-50" />
                                 <div>
-                                    <p className="font-black text-slate-800">{q.expert?.name || "Bhautik Bhut"}</p>
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Destination Expert</p>
+                                    <p className="font-bold text-slate-800">{q.expert?.name || "Bhautik Bhut"}</p>
+                                    <p className="text-[10px] font-bold capitalize text-slate-400 tracking-widest">Destination Expert</p>
                                 </div>
                             </div>
 
@@ -844,13 +844,13 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
             {/* 4. FOOTER CTA */}
             <footer className="bg-slate-900 text-white py-20 mt-20 relative overflow-hidden">
                 <div className="container mx-auto px-4 text-center relative z-10">
-                    <h2 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter uppercase leading-none">
+                    <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tighter capitalize leading-none">
                         Ready for your <br /> <span className="text-[#FF5400] italic font-serif">Legendary Trip?</span>
                     </h2>
                     <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-12">
                         <Button 
                             onClick={handleWhatsAppBooking}
-                            className="rounded-full px-12 h-16 gap-3 font-black text-sm uppercase tracking-widest bg-[#FF5400] text-white hover:bg-[#FF5400]/90 shadow-2xl"
+                            className="rounded-full px-12 h-16 gap-3 font-bold text-sm capitalize tracking-widest bg-[#FF5400] text-white hover:bg-[#FF5400]/90 shadow-2xl"
                         >
                             Confirm Booking <ArrowRight size={20} />
                         </Button>
@@ -867,13 +867,13 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                 >
                     {/* Top Banner */}
                     <div className="bg-gradient-to-r from-[#FFF7ED] to-[#FFF7ED] px-5 py-2 flex items-center justify-between relative">
-                        <div className="flex items-center gap-2 text-orange-900 font-black text-[10px]">
+                        <div className="flex items-center gap-2 text-orange-900 font-bold text-[10px]">
                             <div className="w-4 h-4 rounded-full bg-[#FF5400] flex items-center justify-center text-white">
                                 <CheckCircle2 size={10} />
                             </div>
                             Save ₹ {(q.discount || 6300).toLocaleString()}
                         </div>
-                        <div className="flex items-center gap-2 text-orange-700 font-black text-[10px] uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-orange-700 font-bold text-[10px] capitalize tracking-wider">
                             <Sparkles size={12} className="text-orange-700" />
                             Special Discount
                         </div>
@@ -883,7 +883,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                     {/* Bottom Part */}
                     <div className="px-5 py-4 flex items-center justify-between">
                         <div className="space-y-0.5">
-                            <p className="text-2xl font-black text-slate-900 tracking-tighter">
+                            <p className="text-2xl font-bold text-slate-900 tracking-tighter">
                                 ₹ {((selectedTier === 'premium' ? (q.highLevelPrice || 47800) : (q.lowLevelPrice || 32800)) - (q.discount || 0)).toLocaleString()}
                             </p>
                             <div className="flex items-center gap-2 text-slate-400 font-bold text-[9px]">
@@ -928,7 +928,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ delay: 0.2 }}
                                     >
-                                        <h2 className="text-6xl md:text-9xl font-black text-white tracking-tighter leading-none uppercase">
+                                        <h2 className="text-6xl md:text-9xl font-bold text-white tracking-tighter leading-none capitalize">
                                             {selectedPlace.title}
                                         </h2>
                                     </motion.div>
@@ -940,7 +940,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
                                     <div className="md:col-span-2 space-y-12">
                                         <div className="space-y-4">
-                                            <h4 className="text-xs font-black uppercase tracking-[0.4em] text-white/40">The Experience</h4>
+                                            <h4 className="text-xs font-bold capitalize tracking-[0.4em] text-white/40">The Experience</h4>
                                             <p className="text-2xl md:text-3xl text-white/80 leading-relaxed font-light">
                                                 {selectedPlace.description}
                                             </p>
@@ -948,7 +948,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                     </div>
                                     <div className="space-y-12">
                                         <div className="p-8 bg-white/5 border border-white/10 rounded-3xl space-y-6">
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-[#FF5400]">Key Highlights</h4>
+                                            <h4 className="text-xs font-bold capitalize tracking-widest text-[#FF5400]">Key Highlights</h4>
                                             <ul className="space-y-4">
                                                 {["Private Guided Tour", "Gourmet Lunch Included", "Premium Photo Op", "Entry Passes Pre-booked"].map((h, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-white/70 text-sm font-bold">
@@ -991,7 +991,7 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                     className="flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-colors group"
                                 >
                                     <ArrowRight size={18} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Back to Proposal</span>
+                                    <span className="text-[10px] font-bold capitalize tracking-widest">Back to Proposal</span>
                                 </button>
 
                                 {/* Header */}
@@ -999,12 +999,12 @@ export default function LuxuryQuotationUI({ q }: { q: Quotation }) {
                                     <div className="space-y-4 flex-1">
                                         <div className="space-y-1">
                                             <div className="flex flex-wrap items-center gap-3">
-                                                <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight leading-tight">{selectedHotelForGallery.name}</h2>
-                                                <span className="bg-[#FF5400] text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shrink-0">
+                                                <h2 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight leading-tight">{selectedHotelForGallery.name}</h2>
+                                                <span className="bg-[#FF5400] text-white px-3 py-1 rounded-lg text-[10px] font-bold capitalize tracking-widest shrink-0">
                                                     {selectedHotelForGallery.stars || 4} Star Resort
                                                 </span>
                                             </div>
-                                            <p className="text-xs font-black text-[#FF5400] uppercase tracking-widest">{selectedHotelForGallery.roomType || "Superior Room"}</p>
+                                            <p className="text-xs font-bold text-[#FF5400] capitalize tracking-widest">{selectedHotelForGallery.roomType || "Superior Room"}</p>
                                         </div>
                                     </div>
                                     <button 

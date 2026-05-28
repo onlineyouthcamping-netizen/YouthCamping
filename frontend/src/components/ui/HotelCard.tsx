@@ -33,7 +33,7 @@ export const HotelCard = ({ hotel, className, isRecommended }: HotelCardProps) =
             {(isRecommended || hotel.isRecommended) && (
                 <div className="absolute top-4 left-4 z-20 bg-primary px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg shadow-primary/20 border border-white/20">
                     <ShieldCheck size={12} className="text-white fill-white/20" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Recommended</span>
+                    <span className="text-[10px] font-bold text-white capitalize tracking-widest">Recommended</span>
                 </div>
             )}
 
@@ -58,7 +58,7 @@ export const HotelCard = ({ hotel, className, isRecommended }: HotelCardProps) =
                                 />
                             ))}
                         </div>
-                        <h3 className="text-xl md:text-2xl font-black text-gray-900 group-hover:text-primary transition-colors leading-tight uppercase">
+                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 group-hover:text-primary transition-colors leading-tight capitalize">
                             {hotel.name || 'Premium Accommodation'}
                         </h3>
                     </div>
@@ -66,9 +66,9 @@ export const HotelCard = ({ hotel, className, isRecommended }: HotelCardProps) =
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 text-[#6B7280]">
                             <MapPin size={14} className="text-primary" />
-                            <span className="text-xs font-bold uppercase tracking-wide">{hotel.location || 'Luxury Location'}</span>
+                            <span className="text-xs font-bold capitalize tracking-wide">{hotel.location || 'Luxury Location'}</span>
                         </div>
-                        <div className="inline-block px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[#374151] text-[10px] font-black uppercase tracking-widest">
+                        <div className="inline-block px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[#374151] text-[10px] font-bold capitalize tracking-widest">
                             {hotel.roomType || "Deluxe Room"}
                         </div>
                     </div>
@@ -83,7 +83,7 @@ export const HotelCard = ({ hotel, className, isRecommended }: HotelCardProps) =
                         {(hotel.amenities || ['Wifi', 'Breakfast', 'Pool', 'AC']).map((amenity, i) => (
                             <div key={i} className="flex items-center gap-1.5 text-[#6B7280]" title={amenity}>
                                 <AmenityIcon name={amenity} />
-                                <span className="text-[10px] font-black uppercase tracking-tighter hidden sm:inline">{amenity}</span>
+                                <span className="text-[10px] font-bold capitalize tracking-tighter hidden sm:inline">{amenity}</span>
                             </div>
                         ))}
                     </div>

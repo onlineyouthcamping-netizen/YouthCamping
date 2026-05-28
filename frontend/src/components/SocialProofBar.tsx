@@ -81,7 +81,7 @@ export default function SocialProofBar({
                 className="flex items-center gap-3 text-navy"
               >
                 <Icon className="w-5 h-5 text-primary-orange shrink-0" />
-                <span className="text-xs md:text-sm font-black tracking-widest uppercase">
+                <span className="text-xs md:text-sm font-bold tracking-widest capitalize">
                   {textContent}
                 </span>
               </motion.div>

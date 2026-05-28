@@ -31,31 +31,31 @@ interface DestinationsProps {
 
 const defaultDestinations: Destination[] = [
   { 
-    name: "MALDIVES", 
+    name: "Maldives", 
     img: "https://youthcamping.online/wp-content/uploads/2024/05/maldives.jpg",
     duration: "5 Days 4 Nights",
     subtext: "Luxury overwater villas and crystal clear lagoons"
   },
   { 
-    name: "SINGAPORE", 
+    name: "Singapore", 
     img: "https://youthcamping.online/wp-content/uploads/2024/05/singapore.jpg",
     duration: "4 Days 3 Nights",
     subtext: "City in a garden and world-class attractions"
   },
   { 
-    name: "THAILAND", 
+    name: "Thailand", 
     img: "https://youthcamping.online/wp-content/uploads/2024/05/thailand.jpg",
     duration: "6 Days 5 Nights",
     subtext: "Tropical beaches and vibrant street life"
   },
   { 
-    name: "MALAYSIA", 
+    name: "Malaysia", 
     img: "https://youthcamping.online/wp-content/uploads/2024/05/malaysia.jpg",
     duration: "5 Days 4 Nights",
     subtext: "Modern skyscrapers and ancient rainforests"
   },
   { 
-    name: "BALI", 
+    name: "Bali", 
     img: "https://youthcamping.online/wp-content/uploads/2024/05/bali.jpg",
     duration: "7 Days 6 Nights",
     subtext: "Spiritual retreats and world-famous surf breaks"
@@ -101,7 +101,7 @@ export default function Destinations({
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-primary-orange uppercase"
+                className="section-heading text-navy capitalize"
                 style={{ 
                   fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
                   fontWeight: titleWeight || undefined
@@ -139,7 +139,7 @@ export default function Destinations({
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
               <div className="absolute inset-0 flex items-center justify-center p-6">
-                <h3 className="text-3xl md:text-4xl font-bold text-white tracking-tighter drop-shadow-2xl text-center uppercase">
+                <h3 className="text-3xl md:text-4xl font-semibold text-white tracking-tighter drop-shadow-2xl text-center capitalize">
                   {dest.name}
                 </h3>
               </div>

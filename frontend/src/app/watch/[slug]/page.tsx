@@ -46,7 +46,7 @@ export default async function VideoWatchPage({ params }: PageProps) {
     <div className="min-h-screen bg-black text-white">
       {/* Cinematic Header */}
       <div className="absolute top-0 left-0 right-0 z-50 p-6 md:p-10 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-        <Link href="/" className="group flex items-center gap-3 text-white/60 hover:text-white transition-colors font-black uppercase text-[10px] tracking-widest">
+        <Link href="/" className="group flex items-center gap-3 text-white/60 hover:text-white transition-colors font-bold capitalize text-[10px] tracking-widest">
            <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-white transition-colors backdrop-blur-md">
              <ChevronLeft className="w-5 h-5" />
            </div>
@@ -72,10 +72,10 @@ export default async function VideoWatchPage({ params }: PageProps) {
            <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-10 items-end justify-between">
               <div className="max-w-3xl space-y-6">
                  <div className="flex items-center gap-4">
-                    <span className="px-3 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-md">Cinematic</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Travel Documentary</span>
+                    <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold capitalize tracking-widest rounded-md">Cinematic</span>
+                    <span className="text-[10px] font-bold capitalize tracking-widest text-white/40">Travel Documentary</span>
                  </div>
-                 <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none italic">
+                 <h1 className="text-4xl md:text-7xl font-bold capitalize tracking-tighter leading-none italic">
                    {blog.title}
                  </h1>
                  <div className="flex items-center gap-8">
@@ -84,8 +84,8 @@ export default async function VideoWatchPage({ params }: PageProps) {
                           <User className="w-5 h-5" />
                        </div>
                        <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Directed By</span>
-                          <span className="text-xs font-black uppercase">{blog.author}</span>
+                          <span className="text-[9px] font-bold capitalize tracking-widest text-white/40">Directed By</span>
+                          <span className="text-xs font-bold capitalize">{blog.author}</span>
                        </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -93,8 +93,8 @@ export default async function VideoWatchPage({ params }: PageProps) {
                           <Camera className="w-5 h-5" />
                        </div>
                        <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Gear</span>
-                          <span className="text-xs font-black uppercase">Adventure Cam</span>
+                          <span className="text-[9px] font-bold capitalize tracking-widest text-white/40">Gear</span>
+                          <span className="text-xs font-bold capitalize">Adventure Cam</span>
                        </div>
                     </div>
                  </div>

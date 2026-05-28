@@ -78,7 +78,7 @@ export const ImageSlider = ({
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-300">
                         <Camera size={20} />
                     </div>
-                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Visuals being prepared</span>
+                    <span className="text-slate-400 font-bold capitalize tracking-widest text-[10px]">Visuals being prepared</span>
                 </div>
             </div>
         );

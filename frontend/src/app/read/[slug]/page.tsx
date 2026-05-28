@@ -58,7 +58,7 @@ export default async function BlogReadPage({ params }: PageProps) {
 
       {/* Navigation Header */}
       <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-between">
-        <Link href="/" className="group flex items-center gap-2 text-zinc-400 hover:text-navy transition-colors font-bold uppercase text-[10px] tracking-widest">
+        <Link href="/" className="group flex items-center gap-2 text-zinc-400 hover:text-navy transition-colors font-bold capitalize text-[10px] tracking-widest">
            <div className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center group-hover:border-navy transition-colors">
              <ChevronLeft className="w-4 h-4" />
            </div>
@@ -72,16 +72,16 @@ export default async function BlogReadPage({ params }: PageProps) {
         {/* Hero Header */}
         <header className="mb-12">
           <div className="flex items-center gap-4 mb-6">
-            <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
+            <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold capitalize tracking-[0.2em] rounded-full">
               Verified Journal
             </span>
-            <div className="flex items-center gap-2 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-zinc-400 text-[10px] font-bold capitalize tracking-widest">
               <Clock className="w-3 h-3" />
               {blog.readTime || "5 Min Read"}
             </div>
           </div>
           
-          <h1 className="text-4xl sm:text-6xl font-black text-navy uppercase tracking-tighter leading-[0.9] mb-10">
+          <h1 className="text-4xl sm:text-6xl font-bold text-navy capitalize tracking-tighter leading-[0.9] mb-10">
             {blog.title}
           </h1>
 
@@ -90,16 +90,16 @@ export default async function BlogReadPage({ params }: PageProps) {
                 {blog.authorImage ? (
                   <OptimizedImage src={normalizeImageUrl(blog.authorImage)} alt={blog.author} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-primary font-black">{blog.author?.[0]}</div>
+                  <div className="w-full h-full flex items-center justify-center text-primary font-bold">{blog.author?.[0]}</div>
                 )}
              </div>
              <div>
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 block mb-0.5">Written By</span>
-                <h4 className="text-sm font-black text-navy uppercase">{blog.author}</h4>
+                <span className="text-[9px] font-bold capitalize tracking-[0.2em] text-zinc-400 block mb-0.5">Written By</span>
+                <h4 className="text-sm font-bold text-navy capitalize">{blog.author}</h4>
              </div>
              <div className="ml-auto flex flex-col items-end hidden sm:flex">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 block mb-0.5">Published</span>
-                <h4 className="text-sm font-black text-navy uppercase flex items-center gap-2">
+                <span className="text-[9px] font-bold capitalize tracking-[0.2em] text-zinc-400 block mb-0.5">Published</span>
+                <h4 className="text-sm font-bold text-navy capitalize flex items-center gap-2">
                   <Calendar className="w-3 h-3 text-primary" /> {date}
                 </h4>
              </div>

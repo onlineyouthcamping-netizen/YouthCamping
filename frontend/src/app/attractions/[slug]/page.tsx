@@ -49,10 +49,10 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end p-10 md:p-20 text-white">
           <div className="max-w-4xl space-y-4">
-             <div className="flex items-center gap-2 text-primary-orange font-black uppercase text-xs tracking-widest">
+             <div className="flex items-center gap-2 text-primary-orange font-bold capitalize text-xs tracking-widest">
                 <MapPin className="w-4 h-4" /> {attraction.location}
              </div>
-             <h1 className="text-5xl md:text-8xl font-black tracking-tighter italic uppercase leading-[0.8]">{attraction.name}</h1>
+             <h1 className="text-5xl md:text-8xl font-bold tracking-tighter italic capitalize leading-[0.8]">{attraction.name}</h1>
              <p className="text-lg md:text-xl font-medium opacity-80 max-w-2xl">{attraction.category} • {attraction.altitude}</p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
             <div className="space-y-8">
               <div className="flex items-center gap-3">
                  <div className="w-1 h-8 bg-primary-orange rounded-full" />
-                 <h2 className="text-3xl font-black text-navy uppercase tracking-tighter italic">Overview</h2>
+                 <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter italic">Overview</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 bg-zinc-50 p-10 rounded-[40px] border border-zinc-100">
                 {overviewItems.map((item, i) => (
@@ -78,7 +78,7 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
                       <item.icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{item.label}</p>
+                      <p className="text-[10px] font-bold capitalize tracking-widest text-zinc-400">{item.label}</p>
                       <p className="text-sm font-bold text-navy">{item.val}</p>
                     </div>
                   </div>
@@ -94,7 +94,7 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
               <div className="space-y-8">
                 <div className="flex items-center gap-3">
                    <div className="w-1 h-8 bg-primary-orange rounded-full" />
-                   <h2 className="text-3xl font-black text-navy uppercase tracking-tighter italic">Responsible Travel & Etiquette</h2>
+                   <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter italic">Responsible Travel & Etiquette</h2>
                 </div>
                 <div className="bg-navy text-white p-10 md:p-14 rounded-[40px] shadow-2xl relative overflow-hidden">
                   <ShieldCheck className="absolute -right-10 -bottom-10 w-64 h-64 text-white/5" />
@@ -117,7 +117,7 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
               <div className="space-y-8">
                 <div className="flex items-center gap-3">
                    <div className="w-1 h-8 bg-primary-orange rounded-full" />
-                   <h2 className="text-3xl font-black text-navy uppercase tracking-tighter italic">FAQs</h2>
+                   <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter italic">FAQs</h2>
                 </div>
                 <div className="space-y-4">
                   {attraction.faqs.map((faq: any, i: number) => (
@@ -142,9 +142,9 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
             <div className="sticky top-32 space-y-8">
                <div className="p-10 bg-primary-orange rounded-[40px] text-white shadow-xl shadow-orange-100 relative overflow-hidden group">
                   <div className="relative z-10 space-y-6">
-                     <h3 className="text-2xl font-black uppercase tracking-tighter leading-tight italic">Experience {attraction.name} with us</h3>
+                     <h3 className="text-2xl font-bold capitalize tracking-tighter leading-tight italic">Experience {attraction.name} with us</h3>
                      <p className="text-sm opacity-90 font-medium">Join our curated Spiti expeditions to explore this magical place and many others.</p>
-                     <Link href="/trips" className="w-full h-14 bg-white text-primary-orange rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-widest hover:bg-navy hover:text-white transition-all shadow-xl">
+                     <Link href="/trips" className="w-full h-14 bg-white text-primary-orange rounded-2xl flex items-center justify-center font-bold capitalize text-[10px] tracking-widest hover:bg-navy hover:text-white transition-all shadow-xl">
                         View Expeditions
                      </Link>
                   </div>

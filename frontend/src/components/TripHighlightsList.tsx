@@ -36,7 +36,7 @@ export default function TripHighlightsList({ title, items, defaultItems = [] }: 
           {isExpanded && (
             <button 
               onClick={() => setIsExpanded(false)}
-              className="px-6 py-2 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:bg-zinc-50 transition-all"
+              className="px-6 py-2 border border-zinc-200 rounded-xl text-[10px] font-bold capitalize tracking-widest text-zinc-400 hover:bg-zinc-50 transition-all"
             >
               Collapse All
             </button>
@@ -80,7 +80,7 @@ export default function TripHighlightsList({ title, items, defaultItems = [] }: 
           <div className="flex justify-center">
             <button 
               onClick={() => setIsExpanded(true)}
-              className="px-10 py-4 border border-zinc-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:bg-zinc-50 transition-all hover:scale-105"
+              className="px-10 py-4 border border-zinc-200 rounded-2xl text-[10px] font-bold capitalize tracking-widest text-zinc-400 hover:bg-zinc-50 transition-all hover:scale-105"
             >
               View All {title}
             </button>

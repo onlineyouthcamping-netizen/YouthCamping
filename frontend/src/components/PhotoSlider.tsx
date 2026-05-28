@@ -34,7 +34,7 @@ export default function PhotoSlider({
     <section className="py-16 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 relative">
         {title && (
-          <h2 className="text-3xl font-black text-navy uppercase tracking-tighter mb-10">{title}</h2>
+          <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter mb-10">{title}</h2>
         )}
         
         <div 

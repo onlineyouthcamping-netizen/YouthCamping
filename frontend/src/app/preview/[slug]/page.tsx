@@ -37,7 +37,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      <div className="fixed top-0 left-0 right-0 bg-primary-orange text-white text-center py-2 z-[100] font-bold text-sm uppercase tracking-widest">
+      <div className="fixed top-0 left-0 right-0 bg-primary-orange text-white text-center py-2 z-[100] font-bold text-sm capitalize tracking-widest">
         Preview Mode: Viewing Draft Version
       </div>
       <div className="pt-10">

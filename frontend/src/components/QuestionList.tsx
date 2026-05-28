@@ -56,7 +56,7 @@ export default function QuestionList() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Loading Knowledge Quest...</p>
+        <p className="text-slate-400 font-bold capitalize tracking-widest text-xs">Loading Knowledge Quest...</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default function QuestionList() {
         <p className="text-rose-600 max-w-md mx-auto">{error}</p>
         <button 
           onClick={fetchQuestions}
-          className="bg-rose-500 text-white px-6 py-2 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-rose-600 transition-colors flex items-center gap-2 mx-auto"
+          className="bg-rose-500 text-white px-6 py-2 rounded-xl font-bold text-sm capitalize tracking-widest hover:bg-rose-600 transition-colors flex items-center gap-2 mx-auto"
         >
           <RefreshCw size={14} /> Try Again
         </button>
@@ -83,7 +83,7 @@ export default function QuestionList() {
         {questions.length === 0 ? (
           <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem]">
              <HelpCircle className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No questions available yet</p>
+             <p className="text-slate-400 font-bold capitalize tracking-widest text-xs">No questions available yet</p>
           </div>
         ) : (
           questions.map((q, idx) => (
@@ -95,7 +95,7 @@ export default function QuestionList() {
               className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-100 border border-slate-50 flex flex-col h-full"
             >
               <div className="flex justify-between items-start mb-6">
-                <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold capitalize tracking-widest">
                   {q.category}
                 </span>
                 <HelpCircle className="text-primary/30" size={24} />
@@ -139,14 +139,14 @@ export default function QuestionList() {
 
               <div className="mt-8">
                 {showResults[q._id] ? (
-                  <div className={`p-4 rounded-2xl text-center font-bold text-sm uppercase tracking-widest ${selectedAnswers[q._id] === q.answer ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  <div className={`p-4 rounded-2xl text-center font-bold text-sm capitalize tracking-widest ${selectedAnswers[q._id] === q.answer ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                     {selectedAnswers[q._id] === q.answer ? 'Correct!' : 'Wrong Answer'}
                   </div>
                 ) : (
                   <button 
                     disabled={!selectedAnswers[q._id]}
                     onClick={() => handleCheck(q._id)}
-                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all ${selectedAnswers[q._id] ? 'bg-black text-white shadow-xl active:scale-95' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}
+                    className={`w-full py-4 rounded-2xl font-bold capitalize tracking-[0.2em] text-[10px] transition-all ${selectedAnswers[q._id] ? 'bg-black text-white shadow-xl active:scale-95' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}
                   >
                     Check Answer
                   </button>

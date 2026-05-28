@@ -78,7 +78,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
               </div>
               {startDate && (
                 <div className="flex flex-col items-start leading-none shrink-0">
-                  <span className="text-[10px] md:text-[11px] font-black text-[#D84E2D] uppercase tracking-wider">
+                  <span className="text-[10px] md:text-[11px] font-bold text-[#D84E2D] capitalize tracking-wider">
                     {(() => {
                         const d = new Date(startDate);
                         // Add skipDays to start date offset
@@ -86,7 +86,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
                         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
                       })()}
                     </span>
-                    <span className="text-[8px] md:text-[9px] font-medium text-navy/40 uppercase tracking-tighter">
+                    <span className="text-[8px] md:text-[9px] font-medium text-navy/40 capitalize tracking-tighter">
                       {(() => {
                         const d = new Date(startDate);
                         d.setDate(d.getDate() + day.originalDay - 1);
@@ -167,7 +167,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
                   {/* Sightseeing Places Gallery */}
                   {day.photos && day.photos.length > 0 && (
                     <div className="space-y-6">
-                      <h4 className="text-sm font-black text-navy uppercase tracking-widest flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-navy capitalize tracking-widest flex items-center gap-2">
                         Sightseeing Places
                       </h4>
                       <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
@@ -182,7 +182,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
                                   alt={displayName} className="object-cover" 
                                 />
                               </div>
-                              <p className="text-[8px] md:text-[9px] font-black text-navy uppercase tracking-widest px-1 line-clamp-1">
+                              <p className="text-[8px] md:text-[9px] font-bold text-navy capitalize tracking-widest px-1 line-clamp-1">
                                 {displayName}
                               </p>
                             </div>

@@ -36,8 +36,8 @@ export default function FloatingSocialBar({ settings }: { settings?: any }) {
             </svg>
           </a>
           <div>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Don&apos;t wait any longer, Contact us!</p>
-            <p className="text-3xl md:text-5xl font-black text-navy tracking-tighter">{phone}</p>
+            <p className="text-zinc-500 text-[10px] font-bold capitalize tracking-[0.2em] mb-1">Don&apos;t wait any longer, Contact us!</p>
+            <p className="text-3xl md:text-5xl font-bold text-navy tracking-tighter">{phone}</p>
           </div>
         </div>
 
@@ -46,7 +46,7 @@ export default function FloatingSocialBar({ settings }: { settings?: any }) {
 
         {/* Social Right */}
         <div className="flex flex-col items-center md:items-start gap-6">
-          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Be part of our Social Media Journey!</p>
+          <p className="text-zinc-500 text-[10px] font-bold capitalize tracking-[0.2em] mb-1">Be part of our Social Media Journey!</p>
           <div className="flex gap-4">
             {/* Instagram */}
             {social.instagram && (

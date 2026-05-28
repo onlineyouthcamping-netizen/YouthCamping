@@ -2,16 +2,14 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, MapPin, ChevronRight, ChevronLeft, TrendingUp, CheckCircle2 } from "lucide-react";
-
+import { Clock, MapPin, ChevronRight, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { Trip } from "@/types";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
-
 import { cn } from "@/lib/utils";
-
 import { WavyEdges } from "./ui/WavyEdges";
+import { useTheme } from "@/components/DynamicThemeProvider";
 
 interface CommunityTripsProps {
   trips: Trip[];
@@ -42,6 +40,8 @@ export default function CommunityTrips({
   topColor = "#ffffff",
   bottomColor = "#ffffff",
 }: CommunityTripsProps) {
+  const { theme } = useTheme();
+
   // Filter trips by IDs first if provided
   const baseTrips = tripIds && tripIds.length > 0 
     ? trips.filter(t => tripIds.includes(t.id))
@@ -87,6 +87,57 @@ export default function CommunityTrips({
 
   const [activeMonth, setActiveMonth] = useState(displayMonths[0]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const isDraggingRef = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsMouseDown(true);
+    isDraggingRef.current = false;
+    startXRef.current = e.pageX - scrollRef.current.offsetLeft;
+    scrollLeftRef.current = scrollRef.current.scrollLeft;
+    
+    // Disable snapping and scroll instantly during active drag
+    scrollRef.current.style.scrollSnapType = 'none';
+    scrollRef.current.style.scrollBehavior = 'auto';
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMouseDown) return;
+    setIsMouseDown(false);
+    if (scrollRef.current) {
+      scrollRef.current.style.scrollSnapType = 'x mandatory';
+      scrollRef.current.style.scrollBehavior = 'smooth';
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!isMouseDown) return;
+    setIsMouseDown(false);
+    if (scrollRef.current) {
+      scrollRef.current.style.scrollSnapType = 'x mandatory';
+      scrollRef.current.style.scrollBehavior = 'smooth';
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMouseDown || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    if (Math.abs(walk) > 5) {
+      isDraggingRef.current = true;
+    }
+    scrollRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (isDraggingRef.current) {
+      e.preventDefault();
+    }
+  };
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -96,27 +147,28 @@ export default function CommunityTrips({
     }
   };
 
+  const overlayOpacity = theme?.cardOverlayDarkness != null ? theme.cardOverlayDarkness / 100 : 0.5;
+
   return (
     <div className="overflow-hidden section-wrapper bg-transparent relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       
-      <div className="max-w-[1440px] mx-auto">
-        {/* ... (rest of component) */}
+      <div className="max-w-[1440px] mx-auto relative px-2">
         {/* Header Section */}
-        <div className="flex flex-col mb-12">
+        <div className="flex flex-col mb-8">
           {topLabel && (
             <span className="section-label">
               {topLabel}
             </span>
           )}
           
-          <div className="flex flex-row items-center justify-between gap-2 md:gap-4 mb-8 md:mb-12">
+          <div className="flex flex-row items-center justify-between gap-4 mb-2">
             <div className={cn(
               "flex-1",
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-slate-900"
+                className="section-heading text-navy"
                 style={{ 
                   fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
                   fontWeight: titleWeight || undefined
@@ -127,129 +179,204 @@ export default function CommunityTrips({
             </div>
 
             <div className="flex items-center gap-4 shrink-0">
-              <div className="hidden lg:flex items-center gap-2">
-                <button 
-                  onClick={() => scroll('left')}
-                  className="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-navy hover:bg-navy hover:text-white transition-all shadow-sm"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => scroll('right')}
-                  className="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-navy hover:bg-navy hover:text-white transition-all shadow-sm"
-                >
+              <Link href="/trips" className="flex items-center gap-3 text-navy font-semibold hover:text-primary-orange transition-all group">
+                <span className="text-[14px] md:text-[15px] capitalize tracking-wide font-semibold hidden sm:inline">View All Trips</span>
+                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-navy flex items-center justify-center text-white group-hover:bg-primary-orange shadow-md transition-colors">
                   <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-              <Link href="/trips" className="flex items-center gap-2 text-navy font-black hover:text-primary-orange transition-all group">
-                <span className="text-[10px] md:text-xs uppercase tracking-widest">View All</span>
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-navy flex items-center justify-center text-white group-hover:bg-primary-orange shadow-lg transition-colors">
-                  <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
               </Link>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto no-scrollbar mb-10 pb-2">
-          {displayMonths.map((m) => (
-            <button
-              key={m}
-              onClick={() => setActiveMonth(m)}
-              className={`px-8 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all border-2 ${
-                activeMonth === m 
-                ? "bg-navy text-white border-navy shadow-lg" 
-                : "bg-transparent text-zinc-400 border-zinc-100 hover:border-navy/20"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
+        {/* Month Pills */}
+        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-8 pb-1">
+          {displayMonths.map((m) => {
+            const isActive = activeMonth === m;
+            return (
+              <button
+                key={m}
+                onClick={() => setActiveMonth(m)}
+                className={`px-6 py-2.5 rounded-full text-xs md:text-sm font-semibold whitespace-nowrap transition-all border flex items-center gap-2 ${
+                  isActive 
+                  ? "bg-navy text-white border-navy shadow-sm" 
+                  : "bg-white text-zinc-600 border-zinc-200 hover:border-navy/20 hover:bg-zinc-50"
+                }`}
+              >
+                {isActive && (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current" strokeWidth="2.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                )}
+                {m}
+              </button>
+            );
+          })}
         </div>
 
-        <div 
-          ref={scrollRef}
-          className="flex gap-6 md:gap-8 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-8"
-        >
-          <AnimatePresence mode="wait">
-            {baseTrips.filter(trip => {
-              if (!activeMonth) return true;
-              try {
-                const dates = typeof trip.availableDates === 'string' ? JSON.parse(trip.availableDates) : trip.availableDates;
-                return (dates || []).some((d: any) => {
-                  const date = new Date(d.date || d);
-                  const mName = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
-                  const mYear = date.toLocaleString('en-US', { year: '2-digit' });
-                  const mStr = `${mName} '${mYear}`;
-                  return mStr === activeMonth;
-                });
-              } catch (e) { return false; }
-            }).map((trip, i) => {
-              return (
-                <motion.div
-                  key={trip.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex-none w-[72vw] md:w-[400px] snap-start"
-                >
-                  <div className="group relative h-[400px] md:h-[550px] rounded-[32px] overflow-hidden shadow-2xl bg-zinc-100 border border-zinc-100">
-                    <OptimizedImage 
-                      src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
-                      alt={trip.title} 
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                    />
-                    
-                    {/* Top Badge - Now Location */}
-                    <div className="absolute top-5 right-5 z-10">
-                      <div className="bg-white/90 backdrop-blur-md text-navy font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-full shadow-xl flex items-center gap-2 border border-white/20">
-                        <MapPin className="w-3.5 h-3.5 text-primary-orange" />
-                        {trip.location}
-                      </div>
-                    </div>
+        {/* Trips Slider Wrapper */}
+        <div className="relative group/slider">
+          {/* Left Arrow Button */}
+          <button 
+            onClick={() => scroll('left')}
+            className="hidden md:flex absolute -left-3 md:-left-6 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-white hover:bg-zinc-50 text-navy items-center justify-center shadow-lg border border-zinc-200/80 pointer-events-auto cursor-pointer transition-all hover:scale-105"
+            aria-label="Scroll Left"
+          >
+            <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+          </button>
 
-                    {/* Bottom Content with Cinematic Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-8 text-white">
-                      <h3 className="text-lg sm:text-xl md:text-2xl font-black mb-4 md:mb-6 leading-[1.1] tracking-tight uppercase break-words">
-                        {trip.title}
-                      </h3>
+          {/* Scroll List Container */}
+          <div 
+            ref={scrollRef}
+            className={cn(
+              "flex gap-6 md:gap-8 overflow-x-auto no-scrollbar pb-8 select-none",
+              isMouseDown ? "cursor-grabbing scroll-auto" : "cursor-grab snap-x snap-mandatory scroll-smooth"
+            )}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+          >
+            <AnimatePresence mode="wait">
+              {baseTrips.filter(trip => {
+                if (!activeMonth) return true;
+                try {
+                  const dates = typeof trip.availableDates === 'string' ? JSON.parse(trip.availableDates) : trip.availableDates;
+                  return (dates || []).some((d: any) => {
+                    const date = new Date(d.date || d);
+                    const mName = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                    const mYear = date.toLocaleString('en-US', { year: '2-digit' });
+                    const mStr = `${mName} '${mYear}`;
+                    return mStr === activeMonth;
+                  });
+                } catch (e) { return false; }
+              }).map((trip, i) => {
+                const hoverScaleClass = theme?.cardHoverAnimation === 'scale' || !theme?.cardHoverAnimation ? "group-hover:scale-105" : "";
+                
+                return (
+                  <motion.div
+                    key={trip.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex-none snap-start"
+                    style={{ width: 'var(--card-width)' }}
+                  >
+                    <div 
+                      className={cn(
+                        "group relative overflow-hidden transition-all duration-300 border border-zinc-200/50",
+                        theme?.cardHoverAnimation === 'lift' ? "hover:-translate-y-2 shadow-2xl" : "",
+                        theme?.cardHoverAnimation === 'shadow' ? "hover:shadow-2xl" : ""
+                      )}
+                      style={{
+                        height: 'var(--card-height)',
+                        borderRadius: 'var(--radius-card)',
+                        backgroundColor: 'var(--card)',
+                        boxShadow: 'var(--shadow-card)',
+                      }}
+                    >
+                      <OptimizedImage 
+                        src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
+                        alt={trip.title} 
+                        loading="lazy"
+                        className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-1000", hoverScaleClass)}
+                        style={{
+                          filter: 'brightness(var(--card-brightness))',
+                        }}
+                      />
                       
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-white/90">
-                              <Clock className="w-4 h-4 text-primary-orange" />
-                              <span className="text-[10px] font-black uppercase tracking-widest">{trip.duration}</span>
+                      {/* Top Badge - Location */}
+                      <div className="absolute top-5 right-5 z-10">
+                        <div 
+                          className="font-bold text-[10px] md:text-xs uppercase tracking-wide px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-zinc-100"
+                          style={{
+                            backgroundColor: 'var(--card-badge-bg)',
+                            color: 'var(--card-badge-text)',
+                          }}
+                        >
+                          <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
+                          {trip.location}
+                        </div>
+                      </div>
+ 
+                      {/* Bottom Content with Cinematic Gradient */}
+                      <div 
+                        className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 text-white"
+                        style={{
+                          background: `linear-gradient(to top, rgba(0,0,0,${overlayOpacity * 1.7}) 0%, rgba(0,0,0,${overlayOpacity * 0.5}) 50%, transparent 100%)`
+                        }}
+                      >
+                        <h3 
+                          className="font-semibold mb-4 leading-tight tracking-tight capitalize break-words text-white"
+                          style={{
+                            fontSize: 'var(--card-title-size)',
+                          }}
+                        >
+                          {trip.title}
+                        </h3>
+                        
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-2 text-white/90">
+                                <Clock className="w-4 h-4 text-primary-orange" style={{ color: 'var(--accent-color)' }} />
+                                <span className="text-[11px] md:text-xs font-semibold tracking-wide uppercase">{trip.duration}</span>
+                              </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <span 
+                                  className="text-lg md:text-xl font-bold tracking-wide"
+                                  style={{
+                                    color: 'var(--card-price-color)',
+                                  }}
+                                >
+                                  ₹{trip.price.toLocaleString()}
+                                </span>
+                                <span className="text-xs md:text-sm font-normal text-white/40 line-through decoration-white/60">
+                                  ₹{(trip.price + 4000).toLocaleString()}
+                                </span>
+                              </div>
                             </div>
                             
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xl font-black text-[#FF3D00] tracking-tighter">
-                                    ₹{trip.price.toLocaleString()}
-                                  </span>
-                                  <span className="text-sm font-medium text-white/40 line-through decoration-white/60">
-                                    ₹{(trip.price + 4000).toLocaleString()}
-                                  </span>
-                                </div>
-                          </div>
-                          <div className="w-14 h-14 bg-white text-navy rounded-2xl flex items-center justify-center hover:bg-primary-orange hover:text-white transition-all shadow-2xl group/btn">
-                            <ChevronRight className="w-8 h-8 group-hover/btn:translate-x-1 transition-transform" />
+                            {/* CTA/Button style */}
+                            {theme?.cardButtonStyle === 'pill' ? (
+                              <div className="px-5 py-2 bg-white text-navy hover:bg-primary-orange hover:text-white transition-all shadow-md font-semibold text-xs rounded-full flex items-center gap-1">
+                                Book Now <ChevronRight className="w-3 h-3" />
+                              </div>
+                            ) : theme?.cardButtonStyle === 'none' ? null : (
+                              <div className="w-11 h-11 bg-white text-navy rounded-full flex items-center justify-center hover:bg-primary-orange hover:text-white transition-all shadow-md group/btn">
+                                <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-0.5 transition-transform" />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Invisible Link Overlay - Moved to very end for top-layer priority */}
-                    <Link 
-                      href={`/trips/${trip.slug}`} 
-                      className="absolute inset-0 z-[50] cursor-pointer"
-                      aria-label={`View ${trip.title}`}
-                    />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                      {/* Invisible Link Overlay - Moved to very end for top-layer priority */}
+                      <Link 
+                        href={`/trips/${trip.slug}`} 
+                        className="absolute inset-0 z-[50] cursor-pointer"
+                        aria-label={`View ${trip.title}`}
+                        onClick={handleLinkClick}
+                      />
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Right Arrow Button */}
+          <button 
+            onClick={() => scroll('right')}
+            className="hidden md:flex absolute -right-3 md:-right-6 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-navy hover:bg-[#1E3A8A] text-white items-center justify-center shadow-lg pointer-events-auto cursor-pointer transition-all hover:scale-105"
+            aria-label="Scroll Right"
+          >
+            <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+          </button>
         </div>
       </div>
 

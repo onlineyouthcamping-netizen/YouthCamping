@@ -62,7 +62,7 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
             className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md border border-zinc-100"
           >
             <ImageIcon className="w-3.5 h-3.5 text-primary-orange" /> 
-            <span className="text-[10px] font-black uppercase tracking-widest text-navy">{totalPhotos}+ Photos</span>
+            <span className="text-[10px] font-bold capitalize tracking-widest text-navy">{totalPhotos}+ Photos</span>
           </button>
         </div>
 
@@ -107,7 +107,7 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
                   <div className="absolute bottom-4 right-4 z-10">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setIsGalleryOpen(true); }}
-                      className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-white transition-all border border-white/20 active:scale-95"
+                      className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl flex items-center gap-2 text-[10px] font-bold capitalize tracking-widest shadow-xl hover:bg-white transition-all border border-white/20 active:scale-95"
                     >
                       <ImageIcon className="w-4 h-4 text-primary-orange" /> 
                       Explore All

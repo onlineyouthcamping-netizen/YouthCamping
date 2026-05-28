@@ -1,0 +1,1 @@
+require('dotenv').config(); const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { console.log(await prisma.admin.findFirst({where: {email: 'admin@youthcamping.online'}})); } main().catch(console.error).finally(() => prisma.$disconnect());

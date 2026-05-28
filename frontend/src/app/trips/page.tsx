@@ -24,16 +24,16 @@ export default async function TripsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
             <div className="max-w-3xl">
-              <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-primary-orange mb-6 md:mb-8 font-bold text-xs uppercase tracking-widest transition-colors">
+              <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-primary-orange mb-6 md:mb-8 font-bold text-xs capitalize tracking-widest transition-colors">
                 <ChevronLeft className="w-4 h-4" /> Back to Home
               </Link>
               <div className="flex items-center gap-3 text-primary-orange mb-6">
                 <Compass className="w-6 h-6 animate-spin-slow" />
-                <span className="font-black tracking-[0.3em] uppercase text-xs">Curated Expeditions</span>
+                <span className="font-bold tracking-[0.3em] capitalize text-xs">Curated Expeditions</span>
               </div>
               <h1 className="text-6xl md:text-8xl font-semibold tracking-tighter text-navy mb-8 leading-[0.9]">
-                FIND YOUR <br />
-                <span className="text-primary-orange">NEXT ESCAPE</span>
+                Find Your <br />
+                <span className="text-primary-orange">Next Escape</span>
               </h1>
               <p className="text-zinc-500 text-xl font-medium max-w-xl leading-relaxed">
                 Choose from our hand-picked community adventures. From high-altitude treks to tropical escapes, your story starts here.
@@ -69,8 +69,8 @@ export default async function TripsPage() {
               <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-8">
                 <Compass className="w-10 h-10 text-zinc-300" />
               </div>
-              <h2 className="text-3xl font-black uppercase text-navy mb-4">No expeditions found</h2>
-              <p className="text-zinc-400 font-bold max-w-sm mx-auto uppercase tracking-widest text-xs">
+              <h2 className="text-3xl font-bold capitalize text-navy mb-4">No expeditions found</h2>
+              <p className="text-zinc-400 font-bold max-w-sm mx-auto capitalize tracking-widest text-xs">
                 We are currently curating new routes. Check back in a few days!
               </p>
             </div>

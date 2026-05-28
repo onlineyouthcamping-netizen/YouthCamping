@@ -129,7 +129,7 @@ export default function CTASlider({
                     <motion.h2 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-5xl md:text-7xl lg:text-[100px] font-black text-white drop-shadow-lg leading-tight mb-6 md:mb-8 uppercase tracking-tighter"
+                      className="text-5xl md:text-7xl lg:text-[100px] font-bold text-white drop-shadow-lg leading-tight mb-6 md:mb-8 capitalize tracking-tighter"
                     >
                       {current.title}
                     </motion.h2>
@@ -142,7 +142,7 @@ export default function CTASlider({
                       animate={{ opacity: 1, y: 0 }}
                       className="bg-white/95 backdrop-blur-md px-6 py-2 md:py-2.5 rounded-full shadow-xl"
                     >
-                      <span className="text-navy font-bold text-[11px] md:text-sm tracking-widest text-[#1B2A4A] uppercase">
+                      <span className="text-navy font-bold text-[11px] md:text-sm tracking-widest text-[#1B2A4A] capitalize">
                         Kashmir • Spiti Valley • Kasol Manali
                       </span>
                     </motion.div>
@@ -152,7 +152,7 @@ export default function CTASlider({
                       animate={{ opacity: 1, y: 0 }}
                       className="bg-white/95 backdrop-blur-md px-6 py-2 md:py-2.5 rounded-full shadow-xl"
                     >
-                      <span className="text-navy font-bold text-[11px] md:text-sm tracking-widest text-[#1B2A4A] uppercase">
+                      <span className="text-navy font-bold text-[11px] md:text-sm tracking-widest text-[#1B2A4A] capitalize">
                         {current.subtitle}
                       </span>
                     </motion.div>
