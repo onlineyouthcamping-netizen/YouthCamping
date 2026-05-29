@@ -127,9 +127,21 @@ export default function TripFormModal({ open, onOpenChange, editing, onSave }: T
 
   // 2. Sync Form Data when Editing state changes
   useEffect(() => {
+    const ensureArray = (val: any) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+      }
+      return [];
+    };
+
     if (editing) {
       setForm({
         ...editing,
+        itinerary: ensureArray(editing.itinerary),
         highlights: editing.highlights || [],
         inclusions: editing.inclusions || [],
         exclusions: editing.exclusions || [],
