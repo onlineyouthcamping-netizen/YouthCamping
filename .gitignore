@@ -41,3 +41,8 @@ backend/.env.production
 backend/.env
 .env
 *.env
+
+.env
+*.env
+backend/.env
+backend/.env.production
