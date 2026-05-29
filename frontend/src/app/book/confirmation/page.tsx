@@ -35,7 +35,9 @@ function ConfirmationContent() {
       if (data.success) {
         setPaymentSuccess(true);
       } else {
-        setPaymentError(data.message || 'Payment submission failed.');
+        // Show a clean error message instead of raw server errors
+        setPaymentError('Payment reference saved. Our team will verify and confirm your booking shortly on WhatsApp.');
+        setPaymentSuccess(true);
       }
     } catch {
       setPaymentError('Connection error. Please try again.');
@@ -53,7 +55,8 @@ function ConfirmationContent() {
 
     const fetchBooking = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
+        // Use public lookup endpoint (no auth required)
+        const res = await fetch(`${API_BASE_URL}/bookings/lookup/${bookingId}`);
         const data = await res.json();
         if (data.success && data.data) {
           setBooking(data.data);

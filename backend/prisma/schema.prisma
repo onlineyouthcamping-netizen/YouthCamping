@@ -387,3 +387,36 @@ model Theme {
   @@index([tenantId])
   @@index([name])
 }
+
+// ==========================================
+// FUTURE EXPANSION: STRIPE / RAZORPAY PAYMENT HARDENING SCHEMA
+// ==========================================
+// The following commented models represent highly optimized payment integrations
+// that map safe transaction lifecycle entities to the active Booking model.
+// This design supports multi-tenant Razorpay/Stripe webhooks without destructive database migrations.
+//
+// model Payment {
+//   id               String   @id @default(cuid())
+//   tenantId         String   @default("default")
+//   bookingId        String
+//   gateway          String   // "razorpay" | "stripe" | "manual"
+//   transactionId    String   @unique // Gateway charge/payment ID
+//   orderId          String?  // Gateway order ID (e.g. razorpay_order_id)
+//   signature        String?  // Webhook signature verification payload
+//   amount           Float
+//   currency         String   @default("INR")
+//   status           String   @default("captured") // "created" | "authorized" | "captured" | "failed" | "refunded"
+//   method           String?  // "card" | "netbanking" | "upi" | "wallet"
+//   errorMessage     String?
+//   rawResponse      Json?    // Full webhook payload storage for auditing
+//   createdAt        DateTime @default(now())
+//   updatedAt        DateTime @updatedAt
+//
+//   booking          Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+//
+//   @@index([tenantId])
+//   @@index([bookingId])
+//   @@index([status])
+//   @@index([transactionId])
+// }
+

@@ -83,19 +83,19 @@
   --font-heading: 'Montserrat', sans-serif;
   --font-body: 'Montserrat', sans-serif;
   
-  --h1-size: 56px;
-  --h2-size: 42px;
-  --h3-size: 30px;
+  --h1-size: clamp(2.5rem, 5vw + 1rem, 4rem);
+  --h2-size: clamp(2rem, 4vw + 1rem, 3rem);
+  --h3-size: clamp(1.5rem, 3vw + 0.5rem, 2.25rem);
   --heading-weight: 300;
-  --h2-weight: 600;
-  --heading-line-height: 1.1;
-  --heading-letter-spacing: -0.03em;
+  --h2-weight: 400;
+  --heading-line-height: 1.15;
+  --heading-letter-spacing: -0.02em;
 
-  --text-base: clamp(0.95rem, 1.2vw, 1.05rem);
+  --text-base: clamp(1rem, 1vw + 0.5rem, 1.125rem);
   --text-heading: var(--h1-size);
   --text-h2: var(--h2-size);
   --text-h3: var(--h3-size);
-  --text-h4: 16px;
+  --text-h4: clamp(1.125rem, 2vw + 0.25rem, 1.5rem);
   --navbar-font-size: 0.95rem;
   
   --container-width: 1280px;
@@ -224,28 +224,19 @@
 /* Tablet sizes (1024px) */
 @media (max-width: 1024px) {
   :root {
-    --h1-size: 44px;
-    --h2-size: 34px;
-    --h3-size: 26px;
+    --section-spacing: 64px;
   }
 }
 
 /* Mobile overrides & heavy effect disable (768px) */
 @media (max-width: 768px) {
   :root {
-    --text-base: var(--mobile-font-base);
-    --text-heading: var(--h1-size);
-    --text-h2: var(--h2-size);
-    --text-h3: var(--h3-size);
     --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
-    --section-spacing: 40px;
-    --card-width: 290px;
-    --card-height: 420px;
-    --title-size-multiplier: 0.75;
-    --h1-size: 34px;
-    --h2-size: 28px;
-    --h3-size: 22px;
+    --section-spacing: 48px;
+    --card-width: 100%;
+    --card-height: auto;
+    --title-size-multiplier: 0.85;
   }
 
   /* Disable heavy filters, glass blurs, shadow/scale effects on mobile */
@@ -283,42 +274,24 @@
 
   .hero-container {
     height: auto !important;
-    min-height: 0 !important;
-  }
-
-  .hero-container.hero-has-video {
-    height: var(--mobile-hero-video-height, auto) !important;
-    aspect-ratio: var(--mobile-hero-video-aspect, auto) !important;
+    aspect-ratio: 16 / 9 !important;
+    min-height: 280px !important;
+    overflow: hidden !important;
   }
 
   .hero-video-wrapper {
     position: absolute !important;
     inset: 0 !important;
-    transform: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   .hero-video-iframe {
     width: 100% !important;
     height: 100% !important;
-    top: 0 !important;
-    left: 0 !important;
-    transform: none !important;
-  }
-
-  /* Custom height object-fit cover emulation using container units on mobile */
-  .hero-container.hero-has-video.video-custom-size .hero-video-iframe {
-    width: 177.78cqh !important;
-    height: 100cqh !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) scale(1.02) !important;
-  }
-
-  @container (aspect-ratio >= 1.77) {
-    .hero-container.hero-has-video.video-custom-size .hero-video-iframe {
-      width: 100cqw !important;
-      height: 56.25cqw !important;
-    }
+    object-fit: cover !important;
+    pointer-events: none !important;
   }
 }
 
@@ -567,43 +540,24 @@
     -webkit-backface-visibility: hidden;
   }
 
-  /* Aspect-ratio based iframe background video wrapper with object-fit: cover behavior */
   .hero-video-wrapper {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     overflow: hidden;
-    container-type: size;
-    transform: scale(1.01);
-    will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
   }
 
   .hero-video-iframe {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(1.02);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     pointer-events: none;
     border: none;
-    will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-
-  @container (min-aspect-ratio: 16/9) {
-    .hero-video-iframe {
-      width: 100cqw;
-      height: 56.25cqw;
-    }
-  }
-
-  @container (max-aspect-ratio: 16/9) {
-    .hero-video-iframe {
-      width: 177.78cqh;
-      height: 100cqh;
-    }
+    aspect-ratio: 16 / 9;
   }
 }
 

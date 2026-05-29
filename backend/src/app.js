@@ -1,0 +1,127 @@
+/**
+ * YouthCamping Backend App Definition
+ */
+
+require('dotenv').config();
+const express = require('express');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const compression = require('compression');
+const path = require('path');
+
+// 1. App initialization
+const app = express();
+app.set('trust proxy', 1);
+
+// CORS Config
+const cors = require('cors');
+const allowedOrigins = [
+  'https://youthcamping.online',
+  'https://www.youthcamping.online'
+];
+
+if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
+if (process.env.CLIENT_URL) allowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ''));
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    if (/^https?:\/\/localhost(:\d+)?$/i.test(normalizedOrigin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/i.test(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    if (/\.vercel\.app$/i.test(normalizedOrigin) || /patelparth3315/i.test(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// Health Check (Before all other routes)
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
+// 2. Security & Middleware
+app.use(helmet({ 
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false 
+}));
+app.use(compression());
+app.use(express.json({ limit: '15mb' }));
+app.use(morgan('dev'));
+
+// Rate Limiting
+const rateLimit = require('express-rate-limit');
+
+const isTestEnv = process.env.NODE_ENV === 'test';
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isTestEnv ? 9999 : 200,
+  message: { error: 'Too many requests, try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isTestEnv ? 9999 : 5,
+  message: { error: 'Too many requests, try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', globalLimiter);
+app.use('/api/admin/login', authLimiter);
+app.use('/api/users/login', authLimiter);
+
+// 3. Import & Mount Routes
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/trips', require('./routes/tripRoutes'));
+app.use('/api/bookings', require('./routes/bookingRoutes'));
+app.use('/api/booking-links', require('./routes/bookingLinkRoutes'));
+app.use('/api/inquiries', require('./routes/inquiryRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/vendors', require('./routes/vendorRoutes'));
+app.use('/api/quotations', require('./routes/quotationRoutes'));
+app.use('/api/reviews', require('./routes/reviewRoutes'));
+app.use('/api/blogs', require('./routes/blogRoutes'));
+app.use('/api/emails', require('./routes/emailRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/attractions', require('./routes/attractionRoutes'));
+app.use('/api/seo', require('./routes/seoRoutes'));
+app.use('/api/booking-forms', require('./routes/bookingFormRoutes'));
+app.use('/api/dynamic-forms', require('./routes/dynamicFormRoutes'));
+app.use('/api/page-builder', require('./routes/pageBuilderRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/theme', require('./routes/themeRoutes'));
+
+// Serve Static Files
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
+// Revalidation Proxy
+app.post('/api/revalidate', (req, res) => {
+  console.log(`♻️ [REVALIDATE] Requested for path: ${req.body.path || 'all'}`);
+  res.json({ success: true, message: 'Revalidation request received' });
+});
+
+// 4. Global Error Handler
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
+
+// 5. 404 Handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
+});
+
+module.exports = app;

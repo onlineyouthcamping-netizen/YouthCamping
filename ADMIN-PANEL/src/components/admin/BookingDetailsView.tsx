@@ -446,13 +446,17 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
       }
 
       const activeItems = currentItems.filter(item => item.qty > 0 || item.rate < 0);
-      const subtotal = activeItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
-      const totalAmount = subtotal * 1.05;
+      const baseItems = activeItems.filter(item => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
+      const discountItems = activeItems.filter(item => item.name.toLowerCase().includes("discount") || item.rate < 0);
+
+      const calculatedBase = baseItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
+      const calculatedGst = calculatedBase * 0.05;
+      const calculatedDiscount = discountItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
+
+      const totalAmount = calculatedBase + calculatedGst - calculatedDiscount;
       const remainingAmount = totalAmount - booking.advancePaid;
       
-      const totalQty = activeItems
-        .filter(item => !item.name.toLowerCase().includes("discount") && item.rate >= 0)
-        .reduce((acc, item) => acc + item.qty, 0);
+      const totalQty = baseItems.reduce((acc, item) => acc + item.qty, 0);
 
       const meta = (booking as any)?.sourceMeta || {};
       const newMeta = {
@@ -707,11 +711,53 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     printWindow.document.close();
   };
 
-  // Math helper matching the provided VacationLabs screenshot layout values
+  // Math helpers matching correct GST + Discount Calculation Order
   const qty = booking.numberOfTravelers || 1;
   const packageAmt = booking.totalAmount / 1.05;
-  const gstAmt = booking.totalAmount - packageAmt;
   const itemRate = packageAmt / qty;
+
+  const meta = (booking as any)?.sourceMeta || {};
+  const storedItems = meta.bookingItems || [];
+  
+  let basePrice = 0;
+  let gstDiscount = 0;
+  
+  if (storedItems.length > 0) {
+    const activeItems = storedItems.filter((item: any) => item.qty > 0 || item.rate < 0);
+    const baseItems = activeItems.filter((item: any) => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
+    const discountItems = activeItems.filter((item: any) => item.name.toLowerCase().includes("discount") || item.rate < 0);
+    
+    basePrice = baseItems.reduce((acc: number, item: any) => acc + (item.rate * item.qty), 0);
+    gstDiscount = discountItems.reduce((acc: number, item: any) => acc + Math.abs(item.rate * item.qty), 0);
+  } else {
+    basePrice = booking.baseAmount || packageAmt;
+    gstDiscount = 0;
+  }
+  
+  const gstAmount = basePrice * 0.05;
+  const totalWithGST = basePrice + gstAmount;
+  const calculatedTotal = totalWithGST - gstDiscount;
+
+  // Live preview values during editing
+  const previewItems = [...bookingItems];
+  if (customDescription && customRate) {
+    previewItems.push({
+      name: customDescription,
+      rate: parseFloat(customRate) || 0,
+      qty: parseInt(customQty) || 1
+    });
+  }
+  
+  const activePreviewItems = previewItems.filter(item => item.qty > 0 || item.rate < 0);
+  const basePreviewItems = activePreviewItems.filter(item => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
+  const discountPreviewItems = activePreviewItems.filter(item => item.name.toLowerCase().includes("discount") || item.rate < 0);
+  
+  const previewBasePrice = basePreviewItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
+  const previewGstDiscount = discountPreviewItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
+  
+  const previewGstAmount = previewBasePrice * 0.05;
+  const previewTotalWithGST = previewBasePrice + previewGstAmount;
+  const previewFinalTotal = previewTotalWithGST - previewGstDiscount;
 
   return (
     <div className="space-y-4 animate-premium pb-16">
@@ -925,273 +971,307 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                     setEditDiscount("");
                     setIsEditingItems(true);
                   }}
-                  className="text-[10px] font-bold text-blue-600 hover:underline"
+                  className="text-xs font-bold text-[#C9A84C] hover:text-[#b0913b] hover:underline transition-colors duration-150"
                 >
-                  Edit
+                  Edit Items
                 </button>
               </div>
             </div>
             
             {isEditingItems ? (
               /* ─── EDIT BOOKING ITEMS MODE (VACATIONLABS STYLE) ─── */
-              <div className="p-4 space-y-4 text-xs">
+              <div className="p-5 space-y-5 text-xs bg-[#fafbfc]">
                 
                 {/* Header notes */}
-                <div className="bg-slate-50 border border-slate-200 rounded p-3 text-slate-500 leading-normal">
-                  <p className="font-semibold text-slate-700 mb-0.5">NOTE: Editing booking items will affect rates & total booking amount.</p>
-                  <p>You can manually edit a rate if you do not want it to change.</p>
+                <div className="bg-[#f8fafc] border border-slate-200/80 rounded-lg p-4 text-slate-600 shadow-sm leading-relaxed">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-amber-500 text-base mt-0.5">⚠️</span>
+                    <div>
+                      <p className="font-bold text-slate-800 mb-1">Impact Warning</p>
+                      <p className="text-[11px] text-slate-500">Editing booking items directly modifies rates & final billing amounts. You can manually adjust line items or use the presets below. Remember to click <strong>Update</strong> to preview totals before saving.</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Subactions bar */}
-                <div className="flex gap-1.5 border-b border-slate-100 pb-3 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 self-center mr-2">Select Passengers</span>
-                  <button type="button" onClick={() => toast.info("Passengers are automatically selected.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-655">Special Charge/Discount</button>
-                  <button type="button" onClick={() => toast.info("No coupons available for this trip.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-655">Coupon</button>
-                  <button type="button" onClick={() => toast.info("No addons configured for this trip.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-655">Addon (0 Available)</button>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 flex-wrap gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Select Passengers</span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => toast.info("Passengers are automatically selected.")} className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 rounded text-[11px] font-semibold text-slate-700 shadow-sm transition-all">Special Charge/Discount</button>
+                    <button type="button" onClick={() => toast.info("No coupons available for this trip.")} className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 rounded text-[11px] font-semibold text-slate-700 shadow-sm transition-all">Coupon</button>
+                    <button type="button" onClick={() => toast.info("No addons configured for this trip.")} className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 rounded text-[11px] font-semibold text-slate-700 shadow-sm transition-all">Addon (0 Available)</button>
+                  </div>
                 </div>
 
                 {/* Table for inputs */}
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-slate-250 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="px-4 py-2">Name & Description</th>
-                      <th className="px-4 py-2 w-24">Rate</th>
-                      <th className="px-4 py-2 w-16">Quantity</th>
-                      <th className="px-4 py-2 w-28 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-755">
-                    {bookingItems.map((item, index) => {
-                      const isZeroQty = item.qty === 0;
-                      return (
-                        <tr key={item.id || index}>
-                          <td className="px-4 py-3">
-                            <div className="space-y-0.5">
-                              <span className="font-semibold text-slate-800">{item.name}</span>
-                              {item.name.toLowerCase().includes("nonac") && (
-                                <p className="text-[10px] text-slate-400">Get NonAC Sleeper Train Tickets for Upward & Return Train</p>
-                              )}
-                              {item.name.toLowerCase().includes("3ac") && (
-                                <p className="text-[10px] text-slate-400">Get 3TIER AC Train Tickets for Upward & Return Both, Please</p>
-                              )}
-                              {(item.isCustom || item.name.toLowerCase().includes("sharing") || item.name.toLowerCase().includes("discount")) && (
-                                <button 
-                                  type="button" 
-                                  onClick={() => {
-                                    const updated = bookingItems.filter(x => x.id !== item.id);
-                                    setBookingItems(updated);
-                                    toast.success("Item removed");
-                                  }} 
-                                  className="text-[10px] text-red-500 hover:underline block mt-0.5"
-                                >
-                                  remove
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {!isZeroQty || item.rate < 0 ? (
-                              <div className="flex items-center gap-1.5">
-                                <Input 
-                                  type="number"
-                                  value={item.rate}
-                                  onChange={e => {
-                                    const updated = [...bookingItems];
-                                    updated[index].rate = parseFloat(e.target.value) || 0;
-                                    setBookingItems(updated);
-                                  }}
-                                  className="h-7 text-xs w-20 font-mono"
-                                />
-                                <button type="button" className="p-1 border rounded hover:bg-slate-50 text-slate-400" title="Edit Rate">
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
+                <div className="border border-slate-200/90 rounded-xl overflow-hidden bg-white shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <th className="px-5 py-3">Name & Description</th>
+                        <th className="px-5 py-3 w-32">Rate</th>
+                        <th className="px-5 py-3 w-24">Quantity</th>
+                        <th className="px-5 py-3 w-36 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {bookingItems.map((item, index) => {
+                        const isZeroQty = item.qty === 0;
+                        return (
+                          <tr key={item.id || index} className="hover:bg-slate-50/30 transition-colors duration-150">
+                            <td className="px-5 py-3.5">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-800 text-[12px]">{item.name}</span>
+                                </div>
+                                {item.name.toLowerCase().includes("nonac") && (
+                                  <p className="text-[10px] text-slate-400">Get Non-AC Sleeper Train Tickets for Upward & Return journey</p>
+                                )}
+                                {item.name.toLowerCase().includes("3ac") && (
+                                  <p className="text-[10px] text-slate-400">Get 3-Tier AC Train Tickets for Upward & Return journey</p>
+                                )}
+                                {(item.isCustom || item.name.toLowerCase().includes("sharing") || item.name.toLowerCase().includes("discount")) && (
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      const updated = bookingItems.filter(x => x.id !== item.id);
+                                      setBookingItems(updated);
+                                      toast.success("Item removed");
+                                    }} 
+                                    className="text-[10px] text-rose-500 font-bold hover:text-rose-700 hover:underline transition-colors mt-1 block"
+                                  >
+                                    Remove item
+                                  </button>
+                                )}
                               </div>
-                            ) : (
-                              <span className="text-slate-350">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
+                            </td>
+                            <td className="px-5 py-3.5">
+                              {!isZeroQty || item.rate < 0 ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-400 font-mono text-xs">₹</span>
+                                  <Input 
+                                    type="number"
+                                    value={item.rate}
+                                    onChange={e => {
+                                      const updated = [...bookingItems];
+                                      updated[index].rate = parseFloat(e.target.value) || 0;
+                                      setBookingItems(updated);
+                                    }}
+                                    className="h-8 text-xs w-24 font-mono font-semibold border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-slate-300 font-mono pl-3">—</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <Input 
+                                type="number"
+                                value={item.qty}
+                                onChange={e => {
+                                  const updated = [...bookingItems];
+                                  updated[index].qty = parseInt(e.target.value) || 0;
+                                  setBookingItems(updated);
+                                }}
+                                className="h-8 text-xs w-16 font-mono font-semibold border-slate-200 text-center focus-visible:ring-1 focus-visible:ring-slate-400"
+                              />
+                            </td>
+                            <td className="px-5 py-3.5 text-right font-bold font-mono text-[12px] text-slate-800">
+                              {!isZeroQty || item.rate < 0 ? `₹ ${(item.rate * item.qty).toLocaleString('en-IN')}` : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {/* Custom item input line */}
+                      <tr className="bg-slate-50/20">
+                        <td className="px-5 py-4">
+                          <Input 
+                            placeholder="Add custom item description (e.g. GST Discount)"
+                            value={customDescription}
+                            onChange={e => setCustomDescription(e.target.value)}
+                            className="h-8.5 text-xs w-full border-slate-200 placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-450"
+                          />
+                          {customDescription && (
+                            <button 
+                              type="button" 
+                              onClick={() => { setCustomDescription(""); setCustomRate(""); setCustomQty("1"); }}
+                              className="text-[10px] text-rose-500 font-bold hover:underline mt-1 block"
+                            >
+                              Clear custom input
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-400 font-mono text-xs">₹</span>
                             <Input 
+                              placeholder="Rate"
                               type="number"
-                              value={item.qty}
-                              onChange={e => {
-                                const updated = [...bookingItems];
-                                updated[index].qty = parseInt(e.target.value) || 0;
-                                setBookingItems(updated);
-                              }}
-                              className="h-7 text-xs w-12 font-mono"
+                              value={customRate}
+                              onChange={e => setCustomRate(e.target.value)}
+                              className="h-8.5 text-xs w-24 font-mono border-slate-200 text-slate-800 focus-visible:ring-1 focus-visible:ring-slate-450"
                             />
-                          </td>
-                          <td className="px-4 py-3 text-right font-bold font-mono">
-                            {!isZeroQty || item.rate < 0 ? `₹ ${(item.rate * item.qty).toLocaleString('en-IN')}` : ""}
-                          </td>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Input 
+                            type="number"
+                            value={customQty}
+                            onChange={e => setCustomQty(e.target.value)}
+                            className="h-8.5 text-xs w-16 font-mono border-slate-200 text-center focus-visible:ring-1 focus-visible:ring-slate-450"
+                          />
+                        </td>
+                        <td className="px-5 py-4 text-right font-bold font-mono text-[12px] text-slate-800">
+                          ₹ {((parseFloat(customRate) || 0) * (parseInt(customQty) || 1)).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+
+                      {/* Live Breakdown in Edit Mode */}
+                      <tr className="bg-slate-550/5 border-t border-slate-150">
+                        <td colSpan={3} className="px-5 py-2.5 text-right font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Base Price Preview</td>
+                        <td className="px-5 py-2.5 text-right font-mono font-bold text-slate-700">₹ {previewBasePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                      <tr className="bg-slate-550/5">
+                        <td colSpan={3} className="px-5 py-2.5 text-right font-semibold text-slate-500 text-[10px] uppercase tracking-wider">GST (5%) Preview</td>
+                        <td className="px-5 py-2.5 text-right font-mono font-bold text-slate-700">₹ {previewGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                      {previewGstDiscount > 0 && (
+                        <tr className="bg-slate-550/5">
+                          <td colSpan={3} className="px-5 py-2.5 text-right font-bold text-rose-600 text-[10px] uppercase tracking-wider">GST Discount</td>
+                          <td className="px-5 py-2.5 text-right font-mono font-bold text-rose-600">-₹ {previewGstDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         </tr>
-                      );
-                    })}
-
-                    {/* Custom item input line */}
-                    <tr>
-                      <td className="px-4 py-3">
-                        <Input 
-                          placeholder="Description"
-                          value={customDescription}
-                          onChange={e => setCustomDescription(e.target.value)}
-                          className="h-7 text-xs w-full"
-                        />
-                        {customDescription && (
-                          <button 
-                            type="button" 
-                            onClick={() => { setCustomDescription(""); setCustomRate(""); setCustomQty("1"); }}
-                            className="text-[10px] text-red-500 hover:underline block mt-1"
-                          >
-                            remove
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Input 
-                          placeholder="Rate"
-                          type="number"
-                          value={customRate}
-                          onChange={e => setCustomRate(e.target.value)}
-                          className="h-7 text-xs w-20 font-mono"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <Input 
-                          type="number"
-                          value={customQty}
-                          onChange={e => setCustomQty(e.target.value)}
-                          className="h-7 text-xs w-12 font-mono"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold font-mono">
-                        ₹ {((parseFloat(customRate) || 0) * (parseInt(customQty) || 1)).toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-
-                    {/* Total Row */}
-                    <tr className="bg-slate-50/70 font-bold">
-                      <td colSpan={3} className="px-4 py-3 text-right text-slate-800 flex items-center justify-end gap-1.5">
-                        Total 
-                        <button 
-                          type="button" 
-                          onClick={handleUpdateTotal} 
-                          className="px-2 py-0.5 border border-slate-200 bg-white hover:bg-slate-50 text-[10px] uppercase tracking-wide rounded"
-                        >
-                          Update
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-right font-black font-mono text-slate-900 bg-slate-950 text-white rounded-md text-sm pr-4">
-                        ₹ {(((bookingItems.reduce((acc, x) => acc + (x.rate * x.qty), 0) + ((parseFloat(customRate) || 0) * (parseInt(customQty) || 1)))) * 1.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      )}
+                      <tr className="bg-slate-900 text-white">
+                        <td colSpan={3} className="px-5 py-3.5 text-right text-[11px] uppercase tracking-wider text-slate-300 font-bold align-middle">
+                          <div className="flex items-center justify-end gap-3.5">
+                            <span>Final Total Preview</span>
+                            <button 
+                              type="button" 
+                              onClick={handleUpdateTotal} 
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] uppercase tracking-wider rounded font-bold transition-all shadow-sm"
+                            >
+                              Update
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-extrabold font-mono text-base text-emerald-400 align-middle">
+                          ₹ {previewFinalTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
                 {/* Dropdowns to add Room Sharing Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">
-                  <div className="flex gap-2 items-center">
-                    <Select value={selectedTravelOptionToAdd} onValueChange={setSelectedTravelOptionToAdd}>
-                      <SelectTrigger className="h-8 text-xs flex-1">
-                        <SelectValue placeholder="Select Travel Option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fullTrip?.travelOptions?.map((opt: any, idx: number) => (
-                          <SelectItem key={idx} value={JSON.stringify(opt)} className="text-xs">
-                            {opt.label} (+₹{opt.priceDelta || 0})
-                          </SelectItem>
-                        ))}
-                        {(!fullTrip?.travelOptions || fullTrip.travelOptions.length === 0) && (
-                          <>
-                            <SelectItem value={JSON.stringify({ label: "Ahmedabad/Gandhinagar NonAC Sleeper Train", priceDelta: 0 })} className="text-xs">
-                              Ahmedabad/Gandhinagar NonAC Sleeper Train
+                <div className="bg-[#f8fafc] border border-slate-200/80 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 shadow-sm">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Add Travel Options</label>
+                    <div className="flex gap-2">
+                      <Select value={selectedTravelOptionToAdd} onValueChange={setSelectedTravelOptionToAdd}>
+                        <SelectTrigger className="h-9 text-xs flex-1 bg-white border-slate-200 shadow-sm">
+                          <SelectValue placeholder="Select Travel Option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fullTrip?.travelOptions?.map((opt: any, idx: number) => (
+                            <SelectItem key={idx} value={JSON.stringify(opt)} className="text-xs">
+                              {opt.label} (+₹{opt.priceDelta || 0})
                             </SelectItem>
-                            <SelectItem value={JSON.stringify({ label: "Ahmedabad/Gandhinagar 3AC Train", priceDelta: 3000 })} className="text-xs">
-                              Ahmedabad/Gandhinagar 3AC Train
-                            </SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        if (!selectedTravelOptionToAdd) return toast.error("Select a travel option first");
-                        const opt = JSON.parse(selectedTravelOptionToAdd);
-                        const existingIdx = bookingItems.findIndex(item => item.name === opt.label);
-                        if (existingIdx > -1) {
-                          const updated = [...bookingItems];
-                          updated[existingIdx].qty += 1;
-                          setBookingItems(updated);
-                        } else {
-                          setBookingItems([...bookingItems, {
-                            id: opt.label.replace(/\s+/g, '_').toLowerCase(),
-                            name: opt.label,
-                            rate: fullTrip?.price ? (fullTrip.price + (opt.priceDelta || 0)) : 14999,
-                            qty: 1
-                          }]);
-                        }
-                        toast.success(`${opt.label} added to items`);
-                      }}
-                      className="p-2 bg-slate-100 border hover:bg-slate-200 rounded text-slate-700 h-8 flex items-center justify-center w-8 text-xs font-bold"
-                    >
-                      +
-                    </button>
+                          ))}
+                          {(!fullTrip?.travelOptions || fullTrip.travelOptions.length === 0) && (
+                            <>
+                              <SelectItem value={JSON.stringify({ label: "Ahmedabad/Gandhinagar NonAC Sleeper Train", priceDelta: 0 })} className="text-xs">
+                                Ahmedabad/Gandhinagar NonAC Sleeper Train
+                              </SelectItem>
+                              <SelectItem value={JSON.stringify({ label: "Ahmedabad/Gandhinagar 3AC Train", priceDelta: 3000 })} className="text-xs">
+                                Ahmedabad/Gandhinagar 3AC Train
+                              </SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (!selectedTravelOptionToAdd) return toast.error("Select a travel option first");
+                          const opt = JSON.parse(selectedTravelOptionToAdd);
+                          const existingIdx = bookingItems.findIndex(item => item.name === opt.label);
+                          if (existingIdx > -1) {
+                            const updated = [...bookingItems];
+                            updated[existingIdx].qty += 1;
+                            setBookingItems(updated);
+                          } else {
+                            setBookingItems([...bookingItems, {
+                              id: opt.label.replace(/\s+/g, '_').toLowerCase(),
+                              name: opt.label,
+                              rate: fullTrip?.price ? (fullTrip.price + (opt.priceDelta || 0)) : 14999,
+                              qty: 1
+                            }]);
+                          }
+                          toast.success(`${opt.label} added to items`);
+                        }}
+                        className="h-9 w-9 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex gap-2 items-center">
-                    <Select value={selectedRoomOptionToAdd} onValueChange={setSelectedRoomOptionToAdd}>
-                      <SelectTrigger className="h-8 text-xs flex-1">
-                        <SelectValue placeholder="Select Room Option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fullTrip?.roomOptions?.map((opt: any, idx: number) => (
-                          <SelectItem key={idx} value={JSON.stringify(opt)} className="text-xs">
-                            {opt.label} (+₹{opt.priceDelta || 0})
-                          </SelectItem>
-                        ))}
-                        {(!fullTrip?.roomOptions || fullTrip.roomOptions.length === 0) && (
-                          <>
-                            <SelectItem value={JSON.stringify({ label: "Triple Sharing Room", priceDelta: 0 })} className="text-xs">
-                              Triple Sharing Room
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Add Room Sharing Options</label>
+                    <div className="flex gap-2">
+                      <Select value={selectedRoomOptionToAdd} onValueChange={setSelectedRoomOptionToAdd}>
+                        <SelectTrigger className="h-9 text-xs flex-1 bg-white border-slate-200 shadow-sm">
+                          <SelectValue placeholder="Select Room Option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fullTrip?.roomOptions?.map((opt: any, idx: number) => (
+                            <SelectItem key={idx} value={JSON.stringify(opt)} className="text-xs">
+                              {opt.label} (+₹{opt.priceDelta || 0})
                             </SelectItem>
-                            <SelectItem value={JSON.stringify({ label: "Couple Sharing Room", priceDelta: 2000 })} className="text-xs">
-                              Couple Sharing Room
-                            </SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        if (!selectedRoomOptionToAdd) return toast.error("Select a room option first");
-                        const opt = JSON.parse(selectedRoomOptionToAdd);
-                        const existingIdx = bookingItems.findIndex(item => item.name === opt.label);
-                        if (existingIdx > -1) {
-                          const updated = [...bookingItems];
-                          updated[existingIdx].qty += 1;
-                          setBookingItems(updated);
-                        } else {
-                          setBookingItems([...bookingItems, {
-                            id: opt.label.replace(/\s+/g, '_').toLowerCase(),
-                            name: opt.label,
-                            rate: opt.priceDelta || 0,
-                            qty: 1
-                          }]);
-                        }
-                        toast.success(`${opt.label} added to items`);
-                      }}
-                      className="p-2 bg-slate-100 border hover:bg-slate-200 rounded text-slate-700 h-8 flex items-center justify-center w-8 text-xs font-bold"
-                    >
-                      +
-                    </button>
+                          ))}
+                          {(!fullTrip?.roomOptions || fullTrip.roomOptions.length === 0) && (
+                            <>
+                              <SelectItem value={JSON.stringify({ label: "Triple Sharing Room", priceDelta: 0 })} className="text-xs">
+                                Triple Sharing Room
+                              </SelectItem>
+                              <SelectItem value={JSON.stringify({ label: "Couple Sharing Room", priceDelta: 2000 })} className="text-xs">
+                                Couple Sharing Room
+                              </SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (!selectedRoomOptionToAdd) return toast.error("Select a room option first");
+                          const opt = JSON.parse(selectedRoomOptionToAdd);
+                          const existingIdx = bookingItems.findIndex(item => item.name === opt.label);
+                          if (existingIdx > -1) {
+                            const updated = [...bookingItems];
+                            updated[existingIdx].qty += 1;
+                            setBookingItems(updated);
+                          } else {
+                            setBookingItems([...bookingItems, {
+                              id: opt.label.replace(/\s+/g, '_').toLowerCase(),
+                              name: opt.label,
+                              rate: opt.priceDelta || 0,
+                              qty: 1
+                            }]);
+                          }
+                          toast.success(`${opt.label} added to items`);
+                        }}
+                        className="h-9 w-9 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Save actions */}
-                <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
+                <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
                   <Button 
                     onClick={() => {
                       setIsEditingItems(false);
@@ -1200,14 +1280,14 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                     }}
                     variant="ghost" 
                     size="sm" 
-                    className="text-slate-400 h-8 hover:text-slate-855 font-bold uppercase text-[9px]"
+                    className="text-slate-500 hover:bg-slate-100 h-9 font-semibold px-4 text-xs rounded-lg transition-colors"
                   >
-                    Discard
+                    Discard Changes
                   </Button>
                   <Button 
                     onClick={handleSaveBookingItems}
                     size="sm" 
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 font-bold uppercase text-[9px] px-4 rounded"
+                    className="bg-[#C9A84C] hover:bg-[#b0913b] text-white h-9 font-bold px-5 text-xs rounded-lg shadow-md transition-all duration-150"
                   >
                     Save Changes
                   </Button>
@@ -1216,67 +1296,88 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
               </div>
             ) : (
               /* ─── STATIC VIEW (DEFAULT) ─── */
-              <div className="p-0">
-                <table className="w-full text-left text-xs table-striped">
+              <div className="p-0 bg-white">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="px-4 py-2">Description</th>
-                      <th className="px-4 py-2 w-24">Rate</th>
-                      <th className="px-4 py-2 w-16">Qty</th>
-                      <th className="px-4 py-2 w-28 text-right">Amt</th>
+                    <tr className="border-b border-slate-200/80 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="px-6 py-3">Item Details</th>
+                      <th className="px-6 py-3 w-28">Rate</th>
+                      <th className="px-6 py-3 w-20">Quantity</th>
+                      <th className="px-6 py-3 w-36 text-right">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {bookingItems.length > 0 ? (
                       bookingItems
                         .filter(item => item.qty > 0 || item.rate < 0)
-                        .map((item, index) => (
-                          <tr key={item.id || index}>
-                            <td className="px-4 py-3">
-                              <span className="bg-slate-100 text-slate-655 font-bold px-1.5 py-0.5 rounded mr-2 text-[9px] uppercase border border-slate-200">
-                                {item.name.toLowerCase().includes("sharing") ? "Room" : item.name.toLowerCase().includes("discount") ? "Adjustment" : "Travel"}
-                              </span>
-                              {item.name}
-                            </td>
-                            <td className="px-4 py-3 font-mono">₹ {item.rate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                            <td className="px-4 py-3 font-mono">{item.qty}</td>
-                            <td className="px-4 py-3 text-right font-bold font-mono">₹ {(item.rate * item.qty).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          </tr>
-                        ))
+                        .map((item, index) => {
+                          const isRoom = item.name.toLowerCase().includes("sharing");
+                          const isDiscount = item.name.toLowerCase().includes("discount") || item.rate < 0;
+                          const isTravel = !isRoom && !isDiscount;
+                          return (
+                            <tr key={item.id || index} className="hover:bg-slate-50/30 transition-colors duration-150">
+                              <td className="px-6 py-4 font-medium text-slate-800">
+                                <span className={cn(
+                                  "font-semibold px-2 py-0.5 rounded text-[8px] uppercase tracking-wider mr-2.5 border inline-block leading-normal",
+                                  isRoom && "bg-purple-50 text-purple-700 border-purple-100",
+                                  isDiscount && "bg-rose-50 text-rose-700 border-rose-100",
+                                  isTravel && "bg-blue-50 text-blue-700 border-blue-100"
+                                )}>
+                                  {isRoom ? "Room" : isDiscount ? "Discount" : "Travel"}
+                                </span>
+                                {item.name}
+                              </td>
+                              <td className="px-6 py-4 font-mono text-slate-600">₹ {item.rate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td className="px-6 py-4 font-mono text-slate-600">{item.qty}</td>
+                              <td className="px-6 py-4 text-right font-semibold font-mono text-slate-900">₹ {(item.rate * item.qty).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                            </tr>
+                          );
+                        })
                     ) : (
-                      <tr>
-                        <td className="px-4 py-3">
-                          <span className="bg-slate-100 text-slate-655 font-bold px-1.5 py-0.5 rounded mr-2 text-[9px] uppercase border border-slate-200">Per-Pax</span>
+                      <tr className="hover:bg-slate-50/30 transition-colors duration-150">
+                        <td className="px-6 py-4 font-medium text-slate-800">
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 font-semibold px-2 py-0.5 rounded text-[8px] uppercase tracking-wider mr-2.5 inline-block leading-normal">
+                            Package
+                          </span>
                           Pickup: {booking.pickupCity || 'AHMEDABAD'}, Drop: {booking.pickupCity || 'AHMEDABAD'} {booking.trainClass} Sleeper
                         </td>
-                        <td className="px-4 py-3 font-mono">₹ {itemRate.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                        <td className="px-4 py-3 font-mono">{qty}</td>
-                        <td className="px-4 py-3 text-right font-bold font-mono">₹ {packageAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                        <td className="px-6 py-4 font-mono text-slate-600">₹ {itemRate.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                        <td className="px-6 py-4 font-mono text-slate-600">{qty}</td>
+                        <td className="px-6 py-4 text-right font-semibold font-mono text-slate-900">₹ {packageAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
                       </tr>
                     )}
-                    <tr>
-                      <td className="px-4 py-3 text-slate-500">
-                        GST (Reg no. 24CRFPP3172G1ZT) @ 5%
+                    {/* Transparent Breakdown in Static Mode */}
+                    <tr className="bg-slate-50/20 border-t border-slate-150">
+                      <td colSpan={3} className="px-6 py-2.5 font-semibold text-right text-slate-500 text-[10px] uppercase tracking-wider">
+                        Base Price (Subtotal)
                       </td>
-                      <td className="px-4 py-3 font-mono text-slate-500">
-                        ₹ {((bookingItems.length > 0 
-                          ? bookingItems.filter(item => item.qty > 0 || item.rate < 0).reduce((acc, item) => acc + (item.rate * item.qty), 0)
-                          : packageAmt
-                        ) * 0.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-500">1</td>
-                      <td className="px-4 py-3 text-right font-mono text-slate-500">
-                        ₹ {((bookingItems.length > 0 
-                          ? bookingItems.filter(item => item.qty > 0 || item.rate < 0).reduce((acc, item) => acc + (item.rate * item.qty), 0)
-                          : packageAmt
-                        ) * 0.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td className="px-6 py-2.5 text-right font-semibold font-mono text-slate-800">
+                        ₹ {basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
-                    <tr className="bg-slate-50/70">
-                      <td colSpan={3} className="px-4 py-3.5 font-bold text-right text-slate-800 text-sm">
-                        Total
+                    <tr className="bg-slate-50/20">
+                      <td colSpan={3} className="px-6 py-2.5 font-semibold text-right text-slate-500 text-[10px] uppercase tracking-wider">
+                        GST (Reg no. 24CRFPP3172G1ZT) @ 5%
                       </td>
-                      <td className="px-4 py-3.5 text-right font-black font-mono text-slate-900 text-sm">
+                      <td className="px-6 py-2.5 text-right font-semibold font-mono text-slate-800">
+                        ₹ {gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    {gstDiscount > 0 && (
+                      <tr className="bg-slate-50/20">
+                        <td colSpan={3} className="px-6 py-2.5 font-bold text-right text-rose-600 text-[10px] uppercase tracking-wider">
+                          GST Discount
+                        </td>
+                        <td className="px-6 py-2.5 text-right font-bold font-mono text-rose-600">
+                          -₹ {gstDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className="bg-slate-100/60 border-t border-slate-200">
+                      <td colSpan={3} className="px-6 py-3.5 font-bold text-right text-slate-900 text-xs uppercase tracking-wider">
+                        Final Total
+                      </td>
+                      <td className="px-6 py-3.5 text-right font-extrabold font-mono text-slate-900 text-sm">
                         ₹ {booking.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>

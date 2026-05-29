@@ -69,8 +69,8 @@ export default function CinematicBanner({
   return (
     <section className="py-12 px-6 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto">
-        {/* Large Banner Style with 16:9 Aspect Ratio and 16px Radius */}
-        <div className="relative aspect-video min-h-[450px] md:h-[600px] w-full rounded-[16px] overflow-hidden group shadow-2xl bg-zinc-900 border border-zinc-100">
+        {/* Large Banner Style with Responsive Height and 16px Radius */}
+        <div className="relative h-[320px] sm:h-[450px] md:h-[600px] w-full rounded-[16px] overflow-hidden group shadow-2xl bg-zinc-900 border border-zinc-100">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={page}

@@ -9,39 +9,65 @@ const errorHandler = (err, req, res, next) => {
   if (req.file) console.log('[FILE]', req.file.originalname);
   if (req.files) console.log('[FILES]', req.files.length);
 
-  // Mongoose bad ObjectId (CastError)
-  if (err.name === 'CastError') {
-    const message = err.path === '_id' ? 'Invalid ID format' : `Invalid format for field: ${err.path}`;
+  // Prisma unique key constraint
+  if (err.code === 'P2002') {
+    const targets = err.meta?.target || ['field'];
+    const message = `Duplicate value error: ${targets.join(', ')} already exists`;
     return res.status(400).json({
       success: false,
       message
     });
   }
 
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
-    return res.status(400).json({
+  // Prisma record not found
+  if (err.code === 'P2025') {
+    return res.status(404).json({
       success: false,
-      message
+      message: err.meta?.cause || 'Record not found'
     });
   }
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message);
+  // Zod validation error
+  if (err.name === 'ZodError') {
+    const details = err.issues.map(issue => ({
+      field: issue.path.join('.'),
+      message: issue.message
+    }));
     return res.status(400).json({
       success: false,
-      message: message.join(', ')
+      message: 'Validation failed',
+      errors: details
     });
   }
 
-  res.status(error.statusCode || 500).json({
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid authorization token'
+    });
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Authorization token has expired'
+    });
+  }
+
+  // Multer errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'File size limit exceeded'
+    });
+  }
+
+  res.status(error.statusCode || error.status || 500).json({
     success: false,
     message: error.message || 'Server Error'
   });
 };
 
 module.exports = errorHandler;
+

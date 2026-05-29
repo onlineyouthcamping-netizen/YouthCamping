@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/lib/api';
 
-export default function BookingLinkResolvePage({ params }: { params: { token: string } }) {
+export default function BookingLinkResolvePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const router = useRouter();
   const [error, setError] = useState<string>('');
 
@@ -13,7 +14,7 @@ export default function BookingLinkResolvePage({ params }: { params: { token: st
       setError('');
       try {
         const res = await fetch(
-          `${API_BASE_URL}/booking-links/resolve?token=${encodeURIComponent(params.token)}`,
+          `${API_BASE_URL}/booking-links/resolve?token=${encodeURIComponent(token)}`,
           { cache: 'no-store' }
         );
         const json = await res.json();
@@ -45,7 +46,7 @@ export default function BookingLinkResolvePage({ params }: { params: { token: st
     };
 
     run();
-  }, [params.token, router]);
+  }, [token, router]);
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">

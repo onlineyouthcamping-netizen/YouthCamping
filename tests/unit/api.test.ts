@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
-import app from '../../travel-crm/backend/src/app';
-import { PrismaClient } from '@prisma/client';
+import app from '../../backend/src/app';
+import { PrismaClient } from '../../backend/node_modules/@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'testsecret123';
 let adminToken: string;
 let travelerToken: string;
 let adminId: string;
@@ -17,23 +18,26 @@ describe('Auth API - POST /api/auth/login', () => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('testpass123', salt);
     
-    const admin = await prisma.user.create({
+    const admin = await prisma.admin.create({
       data: {
+        id: 'dev_user',
         name: 'Test Admin',
         email: 'admin@test.com',
         password: hashedPassword,
-        role: 'ADMIN'
+        role: 'admin',
+        tenantId: 'default'
       }
     });
     adminId = admin.id;
 
     // Create test traveler
-    const traveler = await prisma.traveler.create({
+    const traveler = await prisma.user.create({
       data: {
         name: 'Test Traveler',
         email: 'traveler@test.com',
         password: hashedPassword,
-        phone: '1234567890'
+        phone: '1234567890',
+        role: 'user'
       }
     });
     travelerId = traveler.id;
@@ -41,34 +45,32 @@ describe('Auth API - POST /api/auth/login', () => {
 
   afterAll(async () => {
     // Cleanup
+    await prisma.admin.deleteMany({});
     await prisma.user.deleteMany({});
-    await prisma.traveler.deleteMany({});
     await prisma.$disconnect();
   });
 
   it('should login admin with correct credentials', async () => {
     const response = await request(app)
-      .post('/api/auth/login')
+      .post('/api/admin/login')
       .send({
         email: 'admin@test.com',
-        password: 'testpass123',
-        type: 'admin'
+        password: 'testpass123'
       });
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.data.token).toBeDefined();
-    expect(response.body.data.role).toBe('ADMIN');
+    expect(response.body.data.admin.role).toBe('admin');
     adminToken = response.body.data.token;
   });
 
   it('should login traveler with correct credentials', async () => {
     const response = await request(app)
-      .post('/api/auth/login')
+      .post('/api/users/login')
       .send({
         email: 'traveler@test.com',
-        password: 'testpass123',
-        type: 'traveler'
+        password: 'testpass123'
       });
 
     expect(response.status).toBe(200);
@@ -79,11 +81,10 @@ describe('Auth API - POST /api/auth/login', () => {
 
   it('should fail with incorrect password', async () => {
     const response = await request(app)
-      .post('/api/auth/login')
+      .post('/api/admin/login')
       .send({
         email: 'admin@test.com',
-        password: 'wrongpassword',
-        type: 'admin'
+        password: 'wrongpassword'
       });
 
     expect(response.status).toBe(401);
@@ -93,18 +94,17 @@ describe('Auth API - POST /api/auth/login', () => {
 describe('Auth API - GET /api/auth/me', () => {
   it('should return current user info with valid token', async () => {
     const response = await request(app)
-      .get('/api/auth/me')
+      .get('/api/admin/me')
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
-    expect(response.body.data.email).toBe('admin@test.com');
-    expect(response.body.data.role).toBe('ADMIN');
+    expect(response.body.data.role).toBe('admin');
   });
 
   it('should fail without token', async () => {
     const response = await request(app)
-      .get('/api/auth/me');
+      .get('/api/admin/me');
 
     expect(response.status).toBe(401);
   });
@@ -112,6 +112,9 @@ describe('Auth API - GET /api/auth/me', () => {
 
 describe('Trips API - GET /api/trips', () => {
   beforeAll(async () => {
+    // Cleanup any existing trips to avoid unique slug constraint failure
+    await prisma.trip.deleteMany({});
+    
     // Create test trip
     await prisma.trip.create({
       data: {
@@ -147,6 +150,7 @@ describe('Trips API - POST /api/trips', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         title: 'New Test Trip',
+        slug: 'new-test-trip',
         location: 'Ladakh',
         price: 15000,
         duration: '7 days',

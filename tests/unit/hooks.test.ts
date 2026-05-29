@@ -1,6 +1,9 @@
+/**
+ * @jest-environment jsdom
+ */
 import { renderHook, act } from '@testing-library/react';
-import { useLocalStorage } from '../../FT/src/hooks/use-local-storage';
-import { useDebounce } from '../../FT/src/hooks/use-debounce';
+import { useLocalStorage } from '../../frontend/src/hooks/use-local-storage';
+import { useDebounce } from '../../frontend/src/hooks/use-debounce';
 
 describe('useLocalStorage Hook', () => {
   beforeEach(() => {
@@ -13,7 +16,7 @@ describe('useLocalStorage Hook', () => {
   });
 
   it('should persist to localStorage', () => {
-    const { result } = renderHook(() => useLocalStorage('test-key', []));
+    const { result } = renderHook(() => useLocalStorage<string[]>('test-key', []));
     
     act(() => {
       result.current[1](['item1', 'item2']);
@@ -25,12 +28,12 @@ describe('useLocalStorage Hook', () => {
   it('should read from localStorage on mount', () => {
     localStorage.setItem('wishlist', JSON.stringify(['trip1', 'trip2']));
     
-    const { result } = renderHook(() => useLocalStorage('wishlist', []));
+    const { result } = renderHook(() => useLocalStorage<string[]>('wishlist', []));
     expect(result.current[0]).toEqual(['trip1', 'trip2']);
   });
 
   it('should handle array manipulation', () => {
-    const { result } = renderHook(() => useLocalStorage('items', []));
+    const { result } = renderHook(() => useLocalStorage<string[]>('items', []));
     
     act(() => {
       result.current[1](['a', 'b']);

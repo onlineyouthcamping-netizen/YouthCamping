@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Phone, Mail, Users, Bed, Train, 
   ChevronRight, ChevronLeft, Calendar, MapPin, CheckCircle2,
-  Loader2, AlertCircle, Info, Navigation, ShieldCheck, Tag, Star, 
+  Loader2, AlertCircle, Info, Navigation, ShieldCheck, Star, 
   Headset, Lock, Check, Sparkles, AlertTriangle, CreditCard, Building
 } from 'lucide-react';
 import { API_BASE_URL, normalizeImageUrl } from '@/lib/api';
@@ -23,12 +23,7 @@ const FALLBACK_JOINING_POINTS = [
   { cityName: 'Direct Join', deductionAmount: 2500, skipDays: 2, pickupPoint: 'Base Camp / Destination' }
 ];
 
-// Coupon Codes mapping
-const COUPONS: { [key: string]: { discount: number; type: 'flat' | 'percent'; desc: string } } = {
-  'CAMP500': { discount: 500, type: 'flat', desc: 'Flat ₹500 discount on your booking' },
-  'YOUTH10': { discount: 10, type: 'percent', desc: '10% discount on package total' },
-  'FIRSTCAMP': { discount: 1000, type: 'flat', desc: 'Flat ₹1000 introductory discount' }
-};
+
 
 function BookingForm() {
   const searchParams = useSearchParams();
@@ -144,9 +139,7 @@ function BookingForm() {
     }
   }, [joiningPoints, initialParams.basePrice, initialParams.pickupCity, tripData]);
 
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [couponError, setCouponError] = useState('');
+
   const [paymentMode, setPaymentMode] = useState<'Full Payment' | 'Partial Payment'>('Full Payment');
   const [customDepositPerPax, setCustomDepositPerPax] = useState<number | null>(initialParams.bookAmt);
 
@@ -299,61 +292,45 @@ function BookingForm() {
       originalTotalBase += travelerPrice;
     });
 
-    // Coupon Discount
-    let couponDiscount = 0;
-    if (appliedCoupon && COUPONS[appliedCoupon]) {
-      const rule = COUPONS[appliedCoupon];
-      if (rule.type === 'flat') {
-        couponDiscount = rule.discount;
-      } else if (rule.type === 'percent') {
-        couponDiscount = Math.round(originalTotalBase * (rule.discount / 100));
-      }
-    }
-
-    const netBase = Math.max(0, originalTotalBase - couponDiscount);
+    const netBase = originalTotalBase;
     
     // Partial payment details: configurable deposit per traveler (defaults to 2000)
     const depositPerPax = customDepositPerPax && customDepositPerPax > 0 ? customDepositPerPax : 2000;
     const partialBaseAmount = depositPerPax * formData.participants;
 
-    // GST Calculation
-    let gstAmount = 0;
+    // GST Calculation — use trip-configured GST rate, fallback to 5%
+    const gstRate = (tripData?.gstPercentage ?? 5) / 100;
+    
+    // Always calculate GST on the full package base
+    const gstAmount = Math.round(netBase * gstRate);
+    
+    // Absorbed by company: discount exactly equals GST
+    const gstDiscount = gstAmount; 
+
     let finalTotal = 0;
     let advancePaid = 0;
 
     if (paymentMode === 'Full Payment') {
-      gstAmount = Math.round(netBase * 0.05);
-      finalTotal = netBase + gstAmount;
+      finalTotal = netBase; // (netBase + gstAmount) - gstDiscount
       advancePaid = finalTotal;
     } else {
-      gstAmount = Math.round(partialBaseAmount * 0.05);
-      finalTotal = partialBaseAmount + gstAmount;
+      finalTotal = partialBaseAmount; // Just the deposit amount flat
       advancePaid = finalTotal;
     }
 
     return {
       originalTotalBase,
-      couponDiscount,
       netBase,
       partialBaseAmount,
       gstAmount,
+      gstDiscount,
       finalTotal,
       advancePaid,
-      remainingBalance: (netBase + Math.round(netBase * 0.05)) - advancePaid
+      remainingBalance: netBase - advancePaid
     };
-  }, [basePrice, selectedCity, formData.participants, formData.participantsList, appliedCoupon, paymentMode, customDepositPerPax]);
+  }, [basePrice, selectedCity, formData.participants, formData.participantsList, paymentMode, customDepositPerPax, tripData]);
 
-  // Apply Coupon Code
-  const applyPromo = () => {
-    setCouponError('');
-    const code = couponCode.trim().toUpperCase();
-    if (COUPONS[code]) {
-      setAppliedCoupon(code);
-    } else {
-      setCouponError('Invalid promo code');
-      setAppliedCoupon(null);
-    }
-  };
+
 
   // Step-by-Step validation
   const validateStep = () => {
@@ -419,7 +396,7 @@ function BookingForm() {
         skipDays: selectedCity.skipDays,
         adjustedPrice: pricing.originalTotalBase / formData.participants,
         amount: pricing.netBase,
-        totalAmount: paymentMode === 'Full Payment' ? pricing.finalTotal : (pricing.netBase + Math.round(pricing.netBase * 0.05)),
+        totalAmount: pricing.remainingBalance + pricing.advancePaid,
         advancePaid: pricing.advancePaid,
         status: 'pending',
         paymentStatus: paymentMode === 'Full Payment' ? 'Paid' : 'Partial',
@@ -460,7 +437,7 @@ function BookingForm() {
   };
 
   return (
-    <div className="bg-[#FAFAFA] min-h-screen text-slate-900 pb-20">
+    <div className="bg-[#FAFAFA] min-h-screen text-slate-900 pb-32 lg:pb-20">
       
       {/* Top Banner / Backdrop (Premium Light Layout) */}
       <div className="relative h-[250px] w-full overflow-hidden bg-slate-900">
@@ -792,45 +769,19 @@ function BookingForm() {
                   exit={{ opacity: 0, x: 10 }}
                   className="space-y-8"
                 >
-                  {/* Coupon & Payment Modes */}
+                  {/* Payment Plan */}
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 md:p-10 space-y-6 shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-[#FF5B00]/10 rounded-2xl flex items-center justify-center text-[#FF5B00]">
-                        <Tag size={20} />
+                        <CreditCard size={20} />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">Coupons & Payments</h2>
-                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">Select payment type and apply promos</p>
+                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">Payment Plan</h2>
+                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">Choose your payment plan</p>
                       </div>
                     </div>
 
-                    {/* Coupons */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold capitalize tracking-wider text-slate-500 block">Promo Coupon Code</label>
-                      <div className="flex gap-2">
-                        <input
-                          placeholder="e.g. CAMP500"
-                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 capitalize outline-none focus:bg-white focus:border-[#FF5B00]"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          onClick={applyPromo}
-                          className="bg-slate-100 hover:bg-slate-200 border border-slate-200 px-6 rounded-xl font-bold capitalize tracking-widest text-[10px] text-slate-700"
-                        >
-                          Apply
-                        </button>
-                      </div>
-                      {couponError && <p className="text-red-500 text-[10px] font-bold">{couponError}</p>}
-                      {appliedCoupon && (
-                        <p className="text-emerald-600 text-[10px] font-bold flex items-center gap-1">
-                          <CheckCircle2 size={10} /> Coupon Applied: {appliedCoupon} ({COUPONS[appliedCoupon]?.desc})
-                        </p>
-                      )}
-                    </div>
 
-                    <div className="h-px bg-slate-100" />
 
                     {/* Payment Mode Selection */}
                     <div className="space-y-4">
@@ -863,7 +814,7 @@ function BookingForm() {
                             <span className="text-xs font-bold capitalize text-slate-800">Partial Payment (Deposit)</span>
                             {paymentMode === 'Partial Payment' && <Check size={14} className="text-[#FF5B00]" />}
                           </div>
-                          <span className="text-[9px] text-slate-400 font-bold capitalize mt-1">Pay only ₹2,000/pax to reserve. Pay rest later.</span>
+                          <span className="text-[9px] text-slate-400 font-bold capitalize mt-1">Pay only ₹{(customDepositPerPax && customDepositPerPax > 0 ? customDepositPerPax : 2000).toLocaleString()}/pax to reserve. Pay rest later.</span>
                         </button>
                       </div>
                     </div>
@@ -897,6 +848,78 @@ function BookingForm() {
                       <p>
                         Cancellations, transfers, and refunds are managed strictly under the YouthCamping standard trip reservation agreement.
                       </p>
+                    </div>
+
+                    {/* Complete Booking Summary */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Booking Summary</h4>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Trip</p>
+                          <p className="font-bold text-slate-800 capitalize">{initialParams.tripName || tripData?.title || 'Expedition'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Date</p>
+                          <p className="font-bold text-slate-800">{initialParams.date || 'Flexible'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Joining Point</p>
+                          <p className="font-bold text-slate-800 capitalize">{selectedCity?.cityName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Lead Traveler</p>
+                          <p className="font-bold text-slate-800 capitalize">{formData.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Phone</p>
+                          <p className="font-bold text-slate-800">{formData.phone}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Travelers</p>
+                          <p className="font-bold text-slate-800">{formData.participants}</p>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-slate-200" />
+
+                      {/* Per-traveler breakdown */}
+                      <div className="space-y-2">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Traveler Details</p>
+                        {formData.participantsList.map((t, i) => (
+                          <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5">
+                            <div>
+                              <p className="text-xs font-bold text-slate-800 capitalize">{t.name || `Traveler ${i+1}`}</p>
+                              <p className="text-[10px] text-slate-400">{t.gender} • Age {t.age || 'N/A'}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[9px] text-slate-400">{t.roomSharing} • {t.trainOption}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="h-px bg-slate-200" />
+
+                      {/* Price breakdown */}
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Base Price</span>
+                          <span className="font-bold text-slate-800">₹{pricing.originalTotalBase.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">GST @ {tripData?.gstPercentage ?? 5}%</span>
+                          <span className="font-bold text-slate-800">+₹{pricing.gstAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Payment Plan</span>
+                          <span className="font-bold text-amber-600 capitalize">{paymentMode}</span>
+                        </div>
+                        <div className="flex justify-between bg-[#FF5B00]/5 rounded-xl p-3 -mx-1">
+                          <span className="font-bold text-slate-900">Amount Due Now</span>
+                          <span className="font-bold text-[#FF5B00] text-base">₹{pricing.finalTotal.toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Step 4: Mandatory T&C + optional WhatsApp opt-in checkboxes */}
@@ -1002,6 +1025,26 @@ function BookingForm() {
                       <span className="font-bold text-slate-900">₹{pricing.originalTotalBase.toLocaleString()}</span>
                     </div>
 
+                    {/* Per-traveler options breakdown */}
+                    {formData.participantsList.map((t, i) => {
+                      const trainOpts = tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
+                        { label: 'Sleeper', priceDelta: 0 }, { label: '3AC', priceDelta: 2000 }, { label: 'No Train', priceDelta: -1500 }
+                      ];
+                      const roomOpts = tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
+                        { label: 'Triple Sharing', priceDelta: 0 }, { label: 'Double Sharing', priceDelta: 1500 }, { label: 'Quad Sharing', priceDelta: -500 }
+                      ];
+                      const trainDelta = trainOpts.find((o: any) => o.label === t.trainOption)?.priceDelta || 0;
+                      const roomDelta = roomOpts.find((o: any) => o.label === t.roomSharing)?.priceDelta || 0;
+                      if (trainDelta === 0 && roomDelta === 0) return null;
+                      return (
+                        <div key={i} className="text-[10px] text-slate-400 pl-2 border-l-2 border-slate-100 space-y-0.5">
+                          <span className="font-bold capitalize text-slate-500">Traveler {i+1}</span>
+                          {roomDelta !== 0 && <div className="flex justify-between"><span>{t.roomSharing}</span><span className={roomDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{roomDelta > 0 ? '+' : ''}₹{roomDelta.toLocaleString()}</span></div>}
+                          {trainDelta !== 0 && <div className="flex justify-between"><span>{t.trainOption}</span><span className={trainDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{trainDelta > 0 ? '+' : ''}₹{trainDelta.toLocaleString()}</span></div>}
+                        </div>
+                      );
+                    })}
+
                     <div className="flex justify-between items-center text-slate-500">
                       <span>Joining Point</span>
                       <span className="font-bold capitalize text-[9px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{selectedCity?.cityName || 'Delhi'}</span>
@@ -1014,15 +1057,9 @@ function BookingForm() {
                       </div>
                     )}
 
-                    {appliedCoupon && (
-                      <div className="flex justify-between items-center text-emerald-600">
-                        <span>Promo Code: {appliedCoupon}</span>
-                        <span className="font-bold">-₹{pricing.couponDiscount.toLocaleString()}</span>
-                      </div>
-                    )}
 
                     <div className="flex justify-between items-center text-slate-500">
-                      <span>GST @ 5%</span>
+                      <span>GST @ {tripData?.gstPercentage ?? 5}%</span>
                       <span className="font-bold text-slate-900">+₹{pricing.gstAmount.toLocaleString()}</span>
                     </div>
 
@@ -1033,7 +1070,7 @@ function BookingForm() {
                       <p className="text-[10px] font-bold capitalize text-slate-400 tracking-wider">Plan Selected</p>
                       <p className="text-xs font-bold text-amber-500 capitalize tracking-widest">{paymentMode}</p>
                       <p className="text-[9px] text-slate-500 font-bold leading-tight capitalize">
-                        {paymentMode === 'Full Payment' ? 'Immediate full checkout' : `Reserve at deposit of ₹2,000/pax. Balance due before trip start.`}
+                        {paymentMode === 'Full Payment' ? 'Immediate full checkout' : `Reserve at deposit of ₹${(customDepositPerPax && customDepositPerPax > 0 ? customDepositPerPax : 2000).toLocaleString()}/pax. Balance due before trip start.`}
                       </p>
                     </div>
 
@@ -1072,6 +1109,34 @@ function BookingForm() {
           </div>
 
         </div>
+
+          {/* Mobile Sticky Bottom Pricing Bar */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-4 flex items-center justify-between z-50 lg:hidden">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total Due Now</p>
+              <p className="text-xl font-bold text-slate-900">₹{pricing.finalTotal.toLocaleString()}</p>
+              <p className="text-[9px] text-slate-400 font-medium">Incl. {tripData?.gstPercentage ?? 5}% GST</p>
+            </div>
+            {currentStep < 4 ? (
+              <button
+                onClick={handleNext}
+                type="button"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-3.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20"
+              >
+                Continue <ChevronRight size={14} />
+              </button>
+            ) : (
+              <button
+                onClick={handleFinalSubmit}
+                disabled={loading}
+                type="button"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-3.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
+                {loading ? 'Processing...' : 'Confirm'}
+              </button>
+            )}
+          </div>
       </div>
     </div>
   );

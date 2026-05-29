@@ -32,27 +32,22 @@ import {
   FileText,
   Paintbrush,
   Star,
-  Globe,
-  BarChart3,
-  Share2,
-  CreditCard,
   Users,
   Bell,
   Search,
-  HelpCircle,
   ExternalLink,
-  Building2,
   Banknote,
   Link2,
   Sparkles,
-  RefreshCw,
   Plus,
   User,
   Palette,
   PlusCircle,
   ChevronDown,
-  FilePlus
+  FilePlus,
+  HelpCircle
 } from "lucide-react";
+import { AdminContainer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -74,7 +69,6 @@ const navGroups = [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, roles: ['admin', 'manager', 'user'] },
       { title: "Bookings", url: "/admin/bookings", icon: CalendarCheck, roles: ['admin', 'manager'] },
       { title: "Quotations", url: "/admin/quotations", icon: FileText, badge: "NEW", roles: ['admin', 'manager'] },
-      { title: "AI Itinerary", url: "/admin/ai-itinerary", icon: Sparkles, badge: "AI", roles: ['admin', 'manager'] },
       { title: "Inquiries", url: "/admin/inquiries", icon: MessageSquare, badge: "NEW", roles: ['admin', 'manager'] },
     ]
   },
@@ -82,9 +76,6 @@ const navGroups = [
     label: "Inventory",
     items: [
       { title: "Trips & Tours", url: "/admin/trips", icon: Map, roles: ['admin', 'manager'] },
-      { title: "Vendors", url: "/admin/vendors", icon: Building2, roles: ['admin', 'manager'] },
-      { title: "Collections", url: "/admin/collections", icon: LayoutDashboard, roles: ['admin', 'manager'] },
-      { title: "Promotions", url: "/admin/promotions", icon: Star, roles: ['admin', 'manager'] },
     ]
   },
   {
@@ -92,28 +83,21 @@ const navGroups = [
     items: [
       { title: "Page Builder", url: "/admin/page-builder", icon: FilePlus, roles: ['admin'] },
       { title: "Website Theme", url: "/admin/theme", icon: Paintbrush, roles: ['admin'] },
-      { title: "Media Manager", url: "/admin/media", icon: Image, roles: ['admin', 'manager'] },
       { title: "Watch & Read", url: "/admin/blogs", icon: BookOpen, roles: ['admin', 'manager'] },
       { title: "Attractions", url: "/admin/attractions", icon: Map, roles: ['admin', 'manager'] },
       { title: "Review Center", url: "/admin/reviews", icon: Star, roles: ['admin', 'manager'] },
-      { title: "Question System", url: "/admin/questions", icon: HelpCircle, roles: ['admin', 'manager'] },
     ]
   },
   {
     label: "Marketing & Growth",
     items: [
-      { title: "SEO Center", url: "/admin/seo", icon: Globe, roles: ['admin'] },
       { title: "Inquiry Form", url: "/admin/inquiry-form", icon: MessageSquare, roles: ['admin', 'manager'] },
       { title: "Booking Forms", url: "/admin/booking-forms", icon: Link2, roles: ['admin', 'manager'] },
-      { title: "Dynamic Sync", url: "/admin/dynamic-sync", icon: RefreshCw, badge: "NEW", roles: ['admin'] },
-      { title: "Distribution", url: "/admin/distribution", icon: Share2, roles: ['admin'] },
     ]
   },
   {
     label: "Administration",
     items: [
-      { title: "Reports & Analytics", url: "/admin/reports", icon: BarChart3, roles: ['admin'] },
-      { title: "Billing & Plans", url: "/admin/billing", icon: CreditCard, roles: ['admin'] },
       { title: "User Management", url: "/admin/users", icon: Users, roles: ['admin'] },
       { title: "System Settings", url: "/admin/settings", icon: Settings, roles: ['admin'] },
     ]
@@ -342,9 +326,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <div className="flex-1 flex overflow-hidden">
              {/* Main Content Area */}
              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 lg:p-6 no-scrollbar">
-                <div className="max-w-[1600px] w-full mx-auto">
+                <AdminContainer>
                    {children}
-                </div>
+                </AdminContainer>
              </main>
 
              {/* Help Sidebar */}

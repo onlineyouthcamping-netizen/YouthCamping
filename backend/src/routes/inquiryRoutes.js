@@ -8,9 +8,10 @@ const {
   deleteInquiry
 } = require('../controllers/inquiryController');
 const { protect } = require('../middleware/auth');
+const { validate, createInquirySchema } = require('../validators');
 
 // Public route
-router.post('/', createInquiry);
+router.post('/', validate(createInquirySchema), createInquiry);
 
 // Admin routes
 const requireRole = require('../middleware/role');

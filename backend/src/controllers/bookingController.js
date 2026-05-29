@@ -118,6 +118,53 @@ exports.getBookingById = async (req, res, next) => {
   }
 };
 
+// PUBLIC: Lookup booking by user-facing bookingId (e.g. BK-087017) — for confirmation page
+exports.getBookingPublic = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await prisma.booking.findFirst({
+      where: { bookingId: String(bookingId) },
+      select: {
+        id: true,
+        bookingId: true,
+        tripName: true,
+        tripId: true,
+        status: true,
+        name: true,
+        phone: true,
+        email: true,
+        totalAmount: true,
+        advancePaid: true,
+        remainingAmount: true,
+        paymentMode: true,
+        paymentStatus: true,
+        payment_status: true,
+        departureDate: true,
+        pickupCity: true,
+        passengers: true,
+        gstAmount: true,
+        baseAmount: true,
+        gender: true,
+        age: true,
+        createdAt: true,
+      }
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    let persons = [];
+    if (booking.passengers && typeof booking.passengers === 'object') {
+      persons = Array.isArray(booking.passengers) ? booking.passengers : (booking.passengers.persons || []);
+    }
+
+    res.json({ success: true, data: { ...booking, passengers: persons } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.createBooking = async (req, res, next) => {
   try {
     const { 
@@ -199,6 +246,9 @@ exports.createBooking = async (req, res, next) => {
           joiningDate: joiningDate ? new Date(joiningDate) : null,
           age: req.body.age ? parseInt(req.body.age) : null,
           gender: req.body.gender || null,
+          numberOfTravelers: req.body.passengers?.length || 1,
+          baseAmount: amountValue,
+          gstAmount: req.body.gstAmount ? parseFloat(req.body.gstAmount) : null,
           passengers: {
             details: {
               trainClass: req.body.trainClass,
@@ -283,8 +333,16 @@ exports.updateBooking = async (req, res, next) => {
     delete updateData.trainClass;
     delete updateData.ticketStatus;
     delete updateData.roomType;
-    delete updateData.basePrice;
-    delete updateData.gstAmount;
+    if (updateData.basePrice !== undefined) {
+      updateData.baseAmount = updateData.basePrice !== null ? parseFloat(updateData.basePrice) : null;
+      delete updateData.basePrice;
+    }
+    if (updateData.gstAmount !== undefined) {
+      updateData.gstAmount = updateData.gstAmount !== null ? parseFloat(updateData.gstAmount) : null;
+    }
+    if (req.body.passengers && Array.isArray(req.body.passengers)) {
+      updateData.numberOfTravelers = req.body.passengers.length;
+    }
 
     if (updateData.advancePaid !== undefined) updateData.advancePaid = Number(updateData.advancePaid) || 0;
     if (updateData.totalAmount !== undefined) updateData.totalAmount = Number(updateData.totalAmount) || 0;
@@ -647,6 +705,9 @@ exports.submitBookingForm = async (req, res, next) => {
         joiningDate: req.body.joiningDate ? new Date(req.body.joiningDate) : null,
         age: req.body.age ? parseInt(req.body.age) : null,
         gender: req.body.gender || null,
+        numberOfTravelers: req.body.passengers?.length || 1,
+        baseAmount: parsedAmount,
+        gstAmount: req.body.gstAmount ? parseFloat(req.body.gstAmount) : null,
         amount: parsedAmount,
         totalAmount: parsedAmount,
         advancePaid: Number(req.body.advancePaid) || 0,
