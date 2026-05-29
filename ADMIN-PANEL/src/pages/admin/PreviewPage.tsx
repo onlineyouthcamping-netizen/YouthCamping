@@ -15,10 +15,7 @@ export default function PreviewPage() {
   const formatUrl = (url: string | undefined) => {
     if (!url) return "";
     if (url.startsWith("http") || url.startsWith("data:")) return url;
-    let apiBase = import.meta.env.VITE_API_URL || 'https://bktp1.onrender.com/api';
-    if (apiBase.includes('youthcamping.online') || apiBase.includes('youthcamping.in')) {
-      apiBase = 'https://bktp1.onrender.com/api';
-    }
+    let apiBase = import.meta.env.VITE_API_URL || 'https://api.youthcamping.online/api';
     apiBase = apiBase.replace(/\/api$/, '');
     return `${apiBase}${url}`;
   };

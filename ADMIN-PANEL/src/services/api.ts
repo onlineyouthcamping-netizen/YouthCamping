@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-let apiBaseUrl = import.meta.env.VITE_API_URL || 'https://bktp1.onrender.com/api';
-if (apiBaseUrl.includes('youthcamping.online') || apiBaseUrl.includes('youthcamping.in')) {
-  apiBaseUrl = 'https://bktp1.onrender.com/api';
-}
+let apiBaseUrl = import.meta.env.VITE_API_URL || 'https://api.youthcamping.online/api';
 
 const api = axios.create({
   baseURL: apiBaseUrl.replace(/\/api$/, '')

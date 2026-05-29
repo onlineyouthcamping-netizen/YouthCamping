@@ -1,10 +1,7 @@
 import { Trip, ItineraryDay } from "@/types";
 
-const DEFAULT_API = "https://bktp1.onrender.com";
+const DEFAULT_API = "https://api.youthcamping.online";
 let apiURL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API;
-if (apiURL.includes('youthcamping.online') || apiURL.includes('youthcamping.in')) {
-  apiURL = DEFAULT_API;
-}
 export const API_BASE_URL = apiURL.replace(/\/api$/, "") + "/api";
 const IMAGE_BASE_URL = API_BASE_URL.replace("/api", "");
 

@@ -261,7 +261,7 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
     if (!url) return "";
     const cleanUrl = url.split('|')[0];
     if (cleanUrl.startsWith("http")) return cleanUrl;
-    const apiBase = api.defaults.baseURL || "https://bktp1.onrender.com/api";
+    const apiBase = api.defaults.baseURL || "https://api.youthcamping.online/api";
     const serverBase = apiBase.split('/api')[0];
     return `${serverBase}${cleanUrl}`;
   };

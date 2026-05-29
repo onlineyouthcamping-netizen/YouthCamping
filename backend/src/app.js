@@ -17,11 +17,13 @@ app.set('trust proxy', 1);
 const cors = require('cors');
 const allowedOrigins = [
   'https://youthcamping.online',
-  'https://www.youthcamping.online'
+  'https://www.youthcamping.online',
+  'https://admin.youthcamping.online'
 ];
 
 if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
 if (process.env.CLIENT_URL) allowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ''));
+if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL.replace(/\/$/, ''));
 
 const corsOptions = {
   origin: (origin, callback) => {

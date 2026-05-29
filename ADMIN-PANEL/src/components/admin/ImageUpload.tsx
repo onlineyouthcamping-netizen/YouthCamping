@@ -22,7 +22,7 @@ const formatUrl = (url: any): string => {
   if (!url || typeof url !== 'string') return "";
   if (url.startsWith("http") || url.startsWith("data:") || url.startsWith("blob:")) return url;
   // Build absolute URL from the API base
-  const apiBase = api.defaults.baseURL || "https://bktp1.onrender.com/api";
+  const apiBase = api.defaults.baseURL || "https://api.youthcamping.online/api";
   const serverBase = apiBase.replace('/api', '');
   return `${serverBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
