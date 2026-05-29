@@ -314,7 +314,7 @@
     transform: translate(-50%, -50%) scale(1.02) !important;
   }
 
-  @container (min-aspect-ratio: 16/9) {
+  @container (aspect-ratio >= 1.77) {
     .hero-container.hero-has-video.video-custom-size .hero-video-iframe {
       width: 100cqw !important;
       height: 56.25cqw !important;
