@@ -12,6 +12,7 @@ import type { Booking, BookingTrip } from "@/types";
 import { toast } from "sonner";
 import { bookingsService } from "@/services/bookings.service";
 import { paymentsService } from "@/services/payments.service";
+import { tripsService } from "@/services/trips.service";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -82,12 +83,28 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   const [editDiscountLabel, setEditDiscountLabel] = useState("GST Discount");
 
   // Create payment modal state
-  const [showCreatePayment, setShowCreatePayment] = useState(false);
-  const [paymentSource, setPaymentSource] = useState<'collected' | 'online' | 'venue'>('collected');
-  const [payAmount, setPayAmount] = useState("");
-  const [payMode, setPayMode] = useState("UPI");
-  const [payComments, setPayComments] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
+
+  // Trips service & full details
+  const [fullTrip, setFullTrip] = useState<any>(null);
+  
+  // Custom states matching screenshots
+  const [bookingItems, setBookingItems] = useState<any[]>([]);
+  const [selectedTravelOptionToAdd, setSelectedTravelOptionToAdd] = useState("");
+  const [selectedRoomOptionToAdd, setSelectedRoomOptionToAdd] = useState("");
+  
+  const [customDescription, setCustomDescription] = useState("");
+  const [customRate, setCustomRate] = useState("");
+  const [customQty, setCustomQty] = useState("1");
+  
+  // Sidebar elements editing states
+  const [editingInternalNotes, setEditingInternalNotes] = useState(false);
+  const [internalNotesValue, setInternalNotesValue] = useState("");
+  
+  const [editingGuestDetails, setEditingGuestDetails] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
 
   const [paymentsList, setPaymentsList] = useState<any[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
@@ -132,24 +149,32 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     fetchEmailLogs();
     fetchPayments();
     setNotesValue(booking.notes || "");
+    setInternalNotesValue(booking.adminNotes || "");
     setConfirmEmail(booking.email || "");
+    setGuestName(booking.fullName || "");
+    setGuestEmail(booking.email || "");
+    setGuestPhone(booking.mobile || "");
     
-    // Set source value using actual booking-link metadata (preferred), then fallback to legacy note parsing.
+    // Set language and source value
+    const meta = (booking as any)?.sourceMeta || {};
+    setLangValue(meta.language || "English");
+    
     const linkPrefix = (booking as any)?.sourceBookingLink?.tokenPrefix;
     const salesAdminId = (booking as any)?.salesAdminId;
-    let src = "Website";
-
-    if (linkPrefix) {
-      src = `Booking Link #${linkPrefix}`;
-    } else if (salesAdminId) {
-      src = `Sales ${salesAdminId}`;
-    } else {
-      const lowerNotes = (booking.notes || "").toLowerCase();
-      if (lowerNotes.includes("source:")) {
-        const match = booking.notes?.match(/source:\s*([^\n]+)/i);
-        if (match && match[1]) src = match[1].trim();
+    let src = meta.bookingSource || "Website Form";
+    if (!meta.bookingSource) {
+      if (linkPrefix) {
+        src = `Booking Link #${linkPrefix}`;
+      } else if (salesAdminId) {
+        src = `Sales ${salesAdminId}`;
       } else {
-        src = booking.status === "confirmed" ? "Admin Panel" : "Website Form";
+        const lowerNotes = (booking.notes || "").toLowerCase();
+        if (lowerNotes.includes("source:")) {
+          const match = booking.notes?.match(/source:\s*([^\n]+)/i);
+          if (match && match[1]) src = match[1].trim();
+        } else {
+          src = booking.status === "confirmed" ? "Admin Panel" : "Website Form";
+        }
       }
     }
     setSourceValue(src);
@@ -178,6 +203,46 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
       setConfirmTotal(booking.totalAmount?.toString() || "");
     }
     setConfirmAdvance(booking.advancePaid?.toString() || "");
+
+    // Fetch full trip details and populate bookingItems
+    const loadTripData = async () => {
+      try {
+        const res = await tripsService.getById(booking.tripId);
+        setFullTrip(res);
+        
+        // If booking already has stored items in sourceMeta, load them
+        if (meta.bookingItems && Array.isArray(meta.bookingItems)) {
+          setBookingItems(meta.bookingItems);
+        } else {
+          // Initialize default items list:
+          // Try to get travel options of the trip, otherwise use default train options
+          const travOpts = res?.travelOptions || [
+            { label: "Sleeper Class Train", priceDelta: 0 },
+            { label: "3AC Class Train", priceDelta: 3000 }
+          ];
+          
+          const defaultItems: any[] = [];
+          
+          // Let's check which travel option was selected by the booking
+          travOpts.forEach((opt: any) => {
+            const isSelected = booking.trainClass && opt.label.toLowerCase().includes(booking.trainClass.toLowerCase());
+            defaultItems.push({
+              id: opt.label.replace(/\s+/g, '_').toLowerCase(),
+              name: opt.label,
+              rate: res?.price ? (res.price + (opt.priceDelta || 0)) : (booking.baseAmount || 11999),
+              qty: isSelected ? (booking.numberOfTravelers || 1) : 0
+            });
+          });
+          
+          setBookingItems(defaultItems);
+        }
+      } catch (err) {
+        console.error("Failed to fetch full trip details", err);
+      }
+    };
+    if (booking.tripId) {
+      loadTripData();
+    }
   }, [booking, trips]);
 
   const canManageBooking = (() => {
@@ -333,26 +398,70 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     }
   };
 
-  const handleSaveBookingItems = async () => {
-    const rate = parseFloat(editRate);
-    const qtyVal = parseInt(editQty);
-    const disc = parseFloat(editDiscount) || 0;
-    if (isNaN(rate) || rate < 0 || isNaN(qtyVal) || qtyVal <= 0) {
-      toast.error("Please enter a valid rate and quantity");
-      return;
+  const handleUpdateTotal = () => {
+    if (customDescription && customRate) {
+      const rateVal = parseFloat(customRate);
+      const qtyVal = parseInt(customQty) || 1;
+      const newItem = {
+        id: customDescription.replace(/\s+/g, '_').toLowerCase() + '_' + Date.now(),
+        name: customDescription,
+        rate: rateVal,
+        qty: qtyVal,
+        isCustom: true
+      };
+      setBookingItems([...bookingItems, newItem]);
+      setCustomDescription("");
+      setCustomRate("");
+      setCustomQty("1");
+      toast.success("Custom item added!");
+    } else {
+      toast.info("Total updated dynamically");
     }
+  };
+
+  const handleSaveBookingItems = async () => {
     try {
-      const packageTotal = rate * qtyVal + disc;
-      const totalAmount = packageTotal * 1.05;
+      // Auto-add any custom item in progress
+      let currentItems = [...bookingItems];
+      if (customDescription && customRate) {
+        const rateVal = parseFloat(customRate);
+        const qtyVal = parseInt(customQty) || 1;
+        const newItem = {
+          id: customDescription.replace(/\s+/g, '_').toLowerCase() + '_' + Date.now(),
+          name: customDescription,
+          rate: rateVal,
+          qty: qtyVal,
+          isCustom: true
+        };
+        currentItems.push(newItem);
+        setBookingItems(currentItems);
+        setCustomDescription("");
+        setCustomRate("");
+        setCustomQty("1");
+      }
+
+      const activeItems = currentItems.filter(item => item.qty > 0 || item.rate < 0);
+      const subtotal = activeItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
+      const totalAmount = subtotal * 1.05;
       const remainingAmount = totalAmount - booking.advancePaid;
       
+      const totalQty = activeItems
+        .filter(item => !item.name.toLowerCase().includes("discount") && item.rate >= 0)
+        .reduce((acc, item) => acc + item.qty, 0);
+
+      const meta = (booking as any)?.sourceMeta || {};
+      const newMeta = {
+        ...meta,
+        bookingItems: currentItems
+      };
+
       await bookingsService.update(booking.id, {
-        baseAmount: rate,
-        numberOfTravelers: qtyVal,
         totalAmount,
         remainingAmount,
-        notes: booking.notes ? `${booking.notes}\n[Adjustment: ${editDiscountLabel} ${disc}]` : `[Adjustment: ${editDiscountLabel} ${disc}]`
+        numberOfTravelers: totalQty || booking.numberOfTravelers || 1,
+        sourceMeta: newMeta
       });
+
       toast.success("Booking items updated successfully!");
       setIsEditingItems(false);
       onRefresh();
@@ -831,9 +940,9 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                 {/* Subactions bar */}
                 <div className="flex gap-1.5 border-b border-slate-100 pb-3 flex-wrap">
                   <span className="text-[10px] font-bold uppercase text-slate-400 self-center mr-2">Select Passengers</span>
-                  <button type="button" onClick={() => toast.info("Passengers are automatically selected.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-650">Special Charge/Discount</button>
-                  <button type="button" onClick={() => toast.info("No coupons available for this trip.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-650">Coupon</button>
-                  <button type="button" onClick={() => toast.info("No addons configured for this trip.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-650">Addon (0 Available)</button>
+                  <button type="button" onClick={() => toast.info("Passengers are automatically selected.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-655">Special Charge/Discount</button>
+                  <button type="button" onClick={() => toast.info("No coupons available for this trip.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-655">Coupon</button>
+                  <button type="button" onClick={() => toast.info("No addons configured for this trip.")} className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-655">Addon (0 Available)</button>
                 </div>
 
                 {/* Table for inputs */}
@@ -847,75 +956,243 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-755">
-                    
-                    {/* Item 1: Package row */}
+                    {bookingItems.map((item, index) => {
+                      const isZeroQty = item.qty === 0;
+                      return (
+                        <tr key={item.id || index}>
+                          <td className="px-4 py-3">
+                            <div className="space-y-0.5">
+                              <span className="font-semibold text-slate-800">{item.name}</span>
+                              {item.name.toLowerCase().includes("nonac") && (
+                                <p className="text-[10px] text-slate-400">Get NonAC Sleeper Train Tickets for Upward & Return Train</p>
+                              )}
+                              {item.name.toLowerCase().includes("3ac") && (
+                                <p className="text-[10px] text-slate-400">Get 3TIER AC Train Tickets for Upward & Return Both, Please</p>
+                              )}
+                              {(item.isCustom || item.name.toLowerCase().includes("sharing") || item.name.toLowerCase().includes("discount")) && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    const updated = bookingItems.filter(x => x.id !== item.id);
+                                    setBookingItems(updated);
+                                    toast.success("Item removed");
+                                  }} 
+                                  className="text-[10px] text-red-500 hover:underline block mt-0.5"
+                                >
+                                  remove
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {!isZeroQty || item.rate < 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <Input 
+                                  type="number"
+                                  value={item.rate}
+                                  onChange={e => {
+                                    const updated = [...bookingItems];
+                                    updated[index].rate = parseFloat(e.target.value) || 0;
+                                    setBookingItems(updated);
+                                  }}
+                                  className="h-7 text-xs w-20 font-mono"
+                                />
+                                <button type="button" className="p-1 border rounded hover:bg-slate-50 text-slate-400" title="Edit Rate">
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-slate-350">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Input 
+                              type="number"
+                              value={item.qty}
+                              onChange={e => {
+                                const updated = [...bookingItems];
+                                updated[index].qty = parseInt(e.target.value) || 0;
+                                setBookingItems(updated);
+                              }}
+                              className="h-7 text-xs w-12 font-mono"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold font-mono">
+                            {!isZeroQty || item.rate < 0 ? `₹ ${(item.rate * item.qty).toLocaleString('en-IN')}` : ""}
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* Custom item input line */}
                     <tr>
                       <td className="px-4 py-3">
-                        <span className="bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded mr-2 text-[9px] uppercase border">Per-Pax</span>
-                        Pickup: {booking.pickupCity || 'AHMEDABAD'}, Drop: {booking.pickupCity || 'AHMEDABAD'} {booking.trainClass} Sleeper
+                        <Input 
+                          placeholder="Description"
+                          value={customDescription}
+                          onChange={e => setCustomDescription(e.target.value)}
+                          className="h-7 text-xs w-full"
+                        />
+                        {customDescription && (
+                          <button 
+                            type="button" 
+                            onClick={() => { setCustomDescription(""); setCustomRate(""); setCustomQty("1"); }}
+                            className="text-[10px] text-red-500 hover:underline block mt-1"
+                          >
+                            remove
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Input 
+                          placeholder="Rate"
                           type="number"
-                          value={editRate}
-                          onChange={e => setEditRate(e.target.value)}
+                          value={customRate}
+                          onChange={e => setCustomRate(e.target.value)}
                           className="h-7 text-xs w-20 font-mono"
                         />
                       </td>
                       <td className="px-4 py-3">
                         <Input 
                           type="number"
-                          value={editQty}
-                          onChange={e => setEditQty(e.target.value)}
+                          value={customQty}
+                          onChange={e => setCustomQty(e.target.value)}
                           className="h-7 text-xs w-12 font-mono"
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-bold font-mono">
-                        ₹ {((parseFloat(editRate) || 0) * (parseInt(editQty) || 1)).toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-
-                    {/* Item 2: Special Charge / GST Discount row */}
-                    <tr>
-                      <td className="px-4 py-3">
-                        <Input 
-                          value={editDiscountLabel}
-                          onChange={e => setEditDiscountLabel(e.target.value)}
-                          className="h-7 text-xs w-36"
-                        />
-                        <button type="button" onClick={() => setEditDiscount("")} className="text-[10px] text-red-500 hover:underline block mt-1">remove</button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Input 
-                          type="number"
-                          value={editDiscount}
-                          onChange={e => setEditDiscount(e.target.value)}
-                          placeholder="0"
-                          className="h-7 text-xs w-20 font-mono text-red-650"
-                        />
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-400 pl-3">1</td>
-                      <td className="px-4 py-3 text-right font-bold font-mono text-red-650">
-                        ₹ {(parseFloat(editDiscount) || 0).toLocaleString('en-IN')}
+                        ₹ {((parseFloat(customRate) || 0) * (parseInt(customQty) || 1)).toLocaleString('en-IN')}
                       </td>
                     </tr>
 
                     {/* Total Row */}
                     <tr className="bg-slate-50/70 font-bold">
                       <td colSpan={3} className="px-4 py-3 text-right text-slate-800 flex items-center justify-end gap-1.5">
-                        Total <button type="button" onClick={() => toast.info("Total updated dynamically below")} className="px-1 py-0.5 border border-slate-200 bg-white hover:bg-slate-50 text-[9px] uppercase tracking-wide rounded">Update</button>
+                        Total 
+                        <button 
+                          type="button" 
+                          onClick={handleUpdateTotal} 
+                          className="px-2 py-0.5 border border-slate-200 bg-white hover:bg-slate-50 text-[10px] uppercase tracking-wide rounded"
+                        >
+                          Update
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-right font-black font-mono text-slate-900 bg-slate-950 text-white rounded-md text-sm pr-4">
-                        ₹ {(((parseFloat(editRate) || 0) * (parseInt(editQty) || 1) + (parseFloat(editDiscount) || 0)) * 1.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹ {(((bookingItems.reduce((acc, x) => acc + (x.rate * x.qty), 0) + ((parseFloat(customRate) || 0) * (parseInt(customQty) || 1)))) * 1.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   </tbody>
                 </table>
 
+                {/* Dropdowns to add Room Sharing Options */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex gap-2 items-center">
+                    <Select value={selectedTravelOptionToAdd} onValueChange={setSelectedTravelOptionToAdd}>
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="Select Travel Option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fullTrip?.travelOptions?.map((opt: any, idx: number) => (
+                          <SelectItem key={idx} value={JSON.stringify(opt)} className="text-xs">
+                            {opt.label} (+₹{opt.priceDelta || 0})
+                          </SelectItem>
+                        ))}
+                        {(!fullTrip?.travelOptions || fullTrip.travelOptions.length === 0) && (
+                          <>
+                            <SelectItem value={JSON.stringify({ label: "Ahmedabad/Gandhinagar NonAC Sleeper Train", priceDelta: 0 })} className="text-xs">
+                              Ahmedabad/Gandhinagar NonAC Sleeper Train
+                            </SelectItem>
+                            <SelectItem value={JSON.stringify({ label: "Ahmedabad/Gandhinagar 3AC Train", priceDelta: 3000 })} className="text-xs">
+                              Ahmedabad/Gandhinagar 3AC Train
+                            </SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        if (!selectedTravelOptionToAdd) return toast.error("Select a travel option first");
+                        const opt = JSON.parse(selectedTravelOptionToAdd);
+                        const existingIdx = bookingItems.findIndex(item => item.name === opt.label);
+                        if (existingIdx > -1) {
+                          const updated = [...bookingItems];
+                          updated[existingIdx].qty += 1;
+                          setBookingItems(updated);
+                        } else {
+                          setBookingItems([...bookingItems, {
+                            id: opt.label.replace(/\s+/g, '_').toLowerCase(),
+                            name: opt.label,
+                            rate: fullTrip?.price ? (fullTrip.price + (opt.priceDelta || 0)) : 14999,
+                            qty: 1
+                          }]);
+                        }
+                        toast.success(`${opt.label} added to items`);
+                      }}
+                      className="p-2 bg-slate-100 border hover:bg-slate-200 rounded text-slate-700 h-8 flex items-center justify-center w-8 text-xs font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2 items-center">
+                    <Select value={selectedRoomOptionToAdd} onValueChange={setSelectedRoomOptionToAdd}>
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="Select Room Option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fullTrip?.roomOptions?.map((opt: any, idx: number) => (
+                          <SelectItem key={idx} value={JSON.stringify(opt)} className="text-xs">
+                            {opt.label} (+₹{opt.priceDelta || 0})
+                          </SelectItem>
+                        ))}
+                        {(!fullTrip?.roomOptions || fullTrip.roomOptions.length === 0) && (
+                          <>
+                            <SelectItem value={JSON.stringify({ label: "Triple Sharing Room", priceDelta: 0 })} className="text-xs">
+                              Triple Sharing Room
+                            </SelectItem>
+                            <SelectItem value={JSON.stringify({ label: "Couple Sharing Room", priceDelta: 2000 })} className="text-xs">
+                              Couple Sharing Room
+                            </SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        if (!selectedRoomOptionToAdd) return toast.error("Select a room option first");
+                        const opt = JSON.parse(selectedRoomOptionToAdd);
+                        const existingIdx = bookingItems.findIndex(item => item.name === opt.label);
+                        if (existingIdx > -1) {
+                          const updated = [...bookingItems];
+                          updated[existingIdx].qty += 1;
+                          setBookingItems(updated);
+                        } else {
+                          setBookingItems([...bookingItems, {
+                            id: opt.label.replace(/\s+/g, '_').toLowerCase(),
+                            name: opt.label,
+                            rate: opt.priceDelta || 0,
+                            qty: 1
+                          }]);
+                        }
+                        toast.success(`${opt.label} added to items`);
+                      }}
+                      className="p-2 bg-slate-100 border hover:bg-slate-200 rounded text-slate-700 h-8 flex items-center justify-center w-8 text-xs font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
                 {/* Save actions */}
                 <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
                   <Button 
-                    onClick={() => setIsEditingItems(false)}
+                    onClick={() => {
+                      setIsEditingItems(false);
+                      const meta = (booking as any)?.sourceMeta || {};
+                      if (meta.bookingItems) setBookingItems(meta.bookingItems);
+                    }}
                     variant="ghost" 
                     size="sm" 
                     className="text-slate-400 h-8 hover:text-slate-855 font-bold uppercase text-[9px]"
@@ -945,22 +1222,50 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr>
-                      <td className="px-4 py-3">
-                        <span className="bg-slate-100 text-slate-655 font-bold px-1.5 py-0.5 rounded mr-2 text-[9px] uppercase border border-slate-200">Per-Pax</span>
-                        Pickup: {booking.pickupCity || 'AHMEDABAD'}, Drop: {booking.pickupCity || 'AHMEDABAD'} {booking.trainClass} Sleeper
-                      </td>
-                      <td className="px-4 py-3 font-mono">₹ {itemRate.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                      <td className="px-4 py-3 font-mono">{qty}</td>
-                      <td className="px-4 py-3 text-right font-bold font-mono">₹ {packageAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                    </tr>
+                    {bookingItems.length > 0 ? (
+                      bookingItems
+                        .filter(item => item.qty > 0 || item.rate < 0)
+                        .map((item, index) => (
+                          <tr key={item.id || index}>
+                            <td className="px-4 py-3">
+                              <span className="bg-slate-100 text-slate-655 font-bold px-1.5 py-0.5 rounded mr-2 text-[9px] uppercase border border-slate-200">
+                                {item.name.toLowerCase().includes("sharing") ? "Room" : item.name.toLowerCase().includes("discount") ? "Adjustment" : "Travel"}
+                              </span>
+                              {item.name}
+                            </td>
+                            <td className="px-4 py-3 font-mono">₹ {item.rate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                            <td className="px-4 py-3 font-mono">{item.qty}</td>
+                            <td className="px-4 py-3 text-right font-bold font-mono">₹ {(item.rate * item.qty).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td className="px-4 py-3">
+                          <span className="bg-slate-100 text-slate-655 font-bold px-1.5 py-0.5 rounded mr-2 text-[9px] uppercase border border-slate-200">Per-Pax</span>
+                          Pickup: {booking.pickupCity || 'AHMEDABAD'}, Drop: {booking.pickupCity || 'AHMEDABAD'} {booking.trainClass} Sleeper
+                        </td>
+                        <td className="px-4 py-3 font-mono">₹ {itemRate.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                        <td className="px-4 py-3 font-mono">{qty}</td>
+                        <td className="px-4 py-3 text-right font-bold font-mono">₹ {packageAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                      </tr>
+                    )}
                     <tr>
                       <td className="px-4 py-3 text-slate-500">
                         GST (Reg no. 24CRFPP3172G1ZT) @ 5%
                       </td>
-                      <td className="px-4 py-3 font-mono text-slate-500">₹ {(itemRate * 0.05).toFixed(2)}</td>
+                      <td className="px-4 py-3 font-mono text-slate-500">
+                        ₹ {((bookingItems.length > 0 
+                          ? bookingItems.filter(item => item.qty > 0 || item.rate < 0).reduce((acc, item) => acc + (item.rate * item.qty), 0)
+                          : packageAmt
+                        ) * 0.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
                       <td className="px-4 py-3 font-mono text-slate-500">1</td>
-                      <td className="px-4 py-3 text-right font-mono text-slate-500">₹ {gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-right font-mono text-slate-500">
+                        ₹ {((bookingItems.length > 0 
+                          ? bookingItems.filter(item => item.qty > 0 || item.rate < 0).reduce((acc, item) => acc + (item.rate * item.qty), 0)
+                          : packageAmt
+                        ) * 0.05).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
                     </tr>
                     <tr className="bg-slate-50/70">
                       <td colSpan={3} className="px-4 py-3.5 font-bold text-right text-slate-800 text-sm">
@@ -1457,18 +1762,37 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
               </div>
               
               {editingSource ? (
-                <div className="flex gap-1.5 mt-1">
-                  <Input 
-                    value={sourceValue} 
-                    onChange={e => setSourceValue(e.target.value)} 
-                    className="h-7 text-xs px-2"
-                  />
-                  <button 
-                    onClick={() => { setEditingSource(false); toast.success("Source saved locally"); }}
-                    className="p-1.5 bg-slate-900 text-white rounded"
-                  >
-                    <Check className="w-3 h-3" />
-                  </button>
+                <div className="space-y-1.5 mt-1">
+                  <Select value={sourceValue} onValueChange={setSourceValue}>
+                    <SelectTrigger className="h-8 text-xs rounded"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Direct Booking" className="text-xs">Direct Booking</SelectItem>
+                      <SelectItem value="Website Form" className="text-xs">Website Form</SelectItem>
+                      <SelectItem value="Booking Link" className="text-xs">Booking Link</SelectItem>
+                      <SelectItem value="Admin Panel" className="text-xs">Admin Panel</SelectItem>
+                      <SelectItem value="Referral" className="text-xs">Referral</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-1.5 justify-end">
+                    <button 
+                      onClick={() => setEditingSource(false)}
+                      className="px-2.5 py-1 bg-white border rounded text-[10px]"
+                    >
+                      Discard changes
+                    </button>
+                    <button 
+                      onClick={async () => { 
+                        setEditingSource(false); 
+                        const meta = (booking as any)?.sourceMeta || {};
+                        await bookingsService.update(booking.id, { sourceMeta: { ...meta, bookingSource: sourceValue } });
+                        toast.success("Booking source updated!");
+                        onRefresh();
+                      }}
+                      className="px-2.5 py-1 bg-[#5cb85c] text-white rounded text-[10px] font-bold"
+                    >
+                      Save booking source
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="pl-5 space-y-0.5">
@@ -1532,15 +1856,48 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                   <FileText className="w-3.5 h-3.5 text-slate-400" /> Internal Notes
                 </span>
                 <button 
-                  onClick={() => setEditingNotes(true)}
+                  onClick={() => setEditingInternalNotes(!editingInternalNotes)}
                   className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-800"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
               </div>
-              <div className="pl-5">
-                <p className="text-slate-450 italic">None recorded. Click edit to add internal notes.</p>
-              </div>
+              
+              {editingInternalNotes ? (
+                <div className="space-y-1.5 mt-1">
+                  <textarea 
+                    value={internalNotesValue}
+                    onChange={e => setInternalNotesValue(e.target.value)}
+                    className="w-full border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-primary outline-none"
+                    rows={3}
+                  />
+                  <div className="flex gap-1.5 justify-end">
+                    <button 
+                      onClick={() => { setEditingInternalNotes(false); setInternalNotesValue(booking.adminNotes || ""); }}
+                      className="h-7 px-2.5 border border-slate-200 rounded hover:bg-slate-50 text-[10px]"
+                    >
+                      Discard changes
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        setEditingInternalNotes(false);
+                        await bookingsService.update(booking.id, { adminNotes: internalNotesValue });
+                        toast.success("Internal notes updated successfully");
+                        onRefresh();
+                      }}
+                      className="h-7 px-3 bg-[#5cb85c] text-white font-bold rounded text-[10px]"
+                    >
+                      Save Internal Notes
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="pl-5">
+                  <p className={cn("leading-relaxed", !booking.adminNotes && "text-slate-400 italic")}>
+                    {booking.adminNotes || "(none)"}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* 4. Guest Identity Contact */}
@@ -1550,17 +1907,76 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                   <User className="w-3.5 h-3.5 text-slate-400" /> Guest Details
                 </span>
                 <button 
-                  onClick={() => toast.info("Use edit guest attributes from passenger manifest")}
+                  onClick={() => setEditingGuestDetails(!editingGuestDetails)}
                   className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-800"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
               </div>
-              <div className="pl-5 space-y-0.5">
-                <p className="font-bold text-slate-800">{booking.fullName}</p>
-                <p className="text-blue-600 hover:underline font-mono truncate max-w-[180px]">{booking.email || 'no-email@details.com'}</p>
-                <p className="font-mono text-slate-500">+91 {booking.mobile}</p>
-              </div>
+              
+              {editingGuestDetails ? (
+                <div className="space-y-2 mt-1">
+                  <div className="space-y-1.5">
+                    <Input 
+                      value={guestName} 
+                      onChange={e => setGuestName(e.target.value)} 
+                      placeholder="Guest Name"
+                      className="h-8 text-xs rounded"
+                    />
+                    <Input 
+                      value={guestEmail} 
+                      onChange={e => setGuestEmail(e.target.value)} 
+                      placeholder="Email address"
+                      className="h-8 text-xs rounded font-mono"
+                    />
+                    <div className="flex gap-1.5 items-center">
+                      <span className="bg-slate-100 px-2 py-1.5 rounded text-xs border font-mono">🇮🇳 +91</span>
+                      <Input 
+                        value={guestPhone} 
+                        onChange={e => setGuestPhone(e.target.value)} 
+                        placeholder="Mobile number"
+                        className="h-8 text-xs rounded font-mono flex-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 justify-end">
+                    <button 
+                      onClick={() => {
+                        setEditingGuestDetails(false);
+                        setGuestName(booking.fullName || "");
+                        setGuestEmail(booking.email || "");
+                        setGuestPhone(booking.mobile || "");
+                      }}
+                      className="px-2.5 py-1 bg-white border rounded text-[10px]"
+                    >
+                      Discard changes
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        setEditingGuestDetails(false);
+                        await bookingsService.update(booking.id, {
+                          fullName: guestName,
+                          name: guestName,
+                          email: guestEmail,
+                          mobile: guestPhone,
+                          phone: guestPhone
+                        });
+                        toast.success("Guest details updated!");
+                        onRefresh();
+                      }}
+                      className="px-2.5 py-1 bg-[#5cb85c] text-white rounded text-[10px] font-bold"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="pl-5 space-y-0.5">
+                  <p className="font-bold text-slate-800">{booking.fullName}</p>
+                  <p className="text-blue-600 hover:underline font-mono truncate max-w-[180px]">{booking.email || 'no-email@details.com'}</p>
+                  <p className="font-mono text-slate-500">+91 {booking.mobile}</p>
+                </div>
+              )}
             </div>
 
             {/* 5. Booking Language */}
@@ -1572,29 +1988,48 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                 <button 
                   onClick={() => setEditingLang(!editingLang)}
                   className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-800"
+                  id="btn-edit-lang"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
               </div>
               {editingLang ? (
-                <div className="pl-5 mt-1.5 flex gap-1.5">
+                <div className="space-y-1.5 mt-1.5 pl-5">
                   <Select value={langValue} onValueChange={setLangValue}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs rounded"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="English">English</SelectItem>
-                      <SelectItem value="Hindi">Hindi</SelectItem>
+                      <SelectItem value="English">English (en)</SelectItem>
+                      <SelectItem value="Hindi">Hindi (hi)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <button 
-                    onClick={() => { setEditingLang(false); toast.success("Language updated"); }}
-                    className="p-1.5 bg-slate-900 text-white rounded h-7 w-7 flex items-center justify-center"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex gap-1.5 justify-end">
+                    <button 
+                      onClick={() => {
+                        setEditingLang(false);
+                        const meta = (booking as any)?.sourceMeta || {};
+                        setLangValue(meta.language || "English");
+                      }}
+                      className="px-2.5 py-1 bg-white border rounded text-[10px]"
+                    >
+                      Discard changes
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        setEditingLang(false);
+                        const meta = (booking as any)?.sourceMeta || {};
+                        await bookingsService.update(booking.id, { sourceMeta: { ...meta, language: langValue } });
+                        toast.success("Language updated successfully!");
+                        onRefresh();
+                      }}
+                      className="px-2.5 py-1 bg-[#5cb85c] text-white rounded text-[10px] font-bold"
+                    >
+                      Save
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="pl-5">
-                  <p className="font-bold text-slate-800">{langValue}</p>
+                  <p className="font-bold text-slate-800">{langValue === "English" ? "English (en)" : "Hindi (hi)"}</p>
                 </div>
               )}
             </div>
