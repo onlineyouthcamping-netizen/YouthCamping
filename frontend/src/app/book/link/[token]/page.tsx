@@ -14,7 +14,7 @@ export default function BookingLinkResolvePage({ params }: { params: Promise<{ t
       setError('');
       try {
         const res = await fetch(
-          `${API_BASE_URL}/booking-links/resolve?token=${encodeURIComponent(token)}`,
+          `${API_BASE_URL}/booking-links/resolve?token=${encodeURIComponent(token)}&_t=${Date.now()}`,
           { cache: 'no-store' }
         );
         const json = await res.json();
