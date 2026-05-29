@@ -114,8 +114,6 @@ export default function Hero({
     <div 
       className="hero-container relative w-full overflow-hidden bg-navy max-md:aspect-video" 
       style={{ 
-        height: isMobile ? 'auto' : 'var(--hero-height)', 
-        minHeight: isMobile ? '0' : '400px',
         transform: 'scale(1.001)',
         willChange: 'transform',
         backfaceVisibility: 'hidden',

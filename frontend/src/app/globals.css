@@ -281,6 +281,11 @@
     transform: none !important;
   }
 
+  .hero-container {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
   .hero-video-wrapper {
     position: absolute !important;
     inset: 0 !important;
@@ -532,6 +537,8 @@
   .hero-container {
     position: relative;
     width: 100%;
+    height: var(--hero-height);
+    min-height: 400px;
     overflow: hidden;
     transform: scale(1.001);
     will-change: transform;
