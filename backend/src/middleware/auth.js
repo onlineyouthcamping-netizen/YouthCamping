@@ -30,7 +30,10 @@ const authenticate = (req, res, next) => {
     req.admin = user;
     next();
   } catch (err) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired', status: 401, success: false, message: 'Token expired' });
+    }
+    return res.status(401).json({ error: 'Invalid or expired token', status: 401, success: false, message: 'Invalid or expired token' });
   }
 };
 

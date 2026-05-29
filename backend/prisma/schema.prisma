@@ -248,6 +248,9 @@ model Booking {
   remainingAmount Float             @default(0)
   paymentMode     String?
   paymentStatus   String            @default("Pending")
+  payment_status  String            @default("pending")
+  payment_method  String            @default("upi")
+  upi_reference   String?
   notes           String?
   adminNotes      String?
   sourceBookingLinkId String?

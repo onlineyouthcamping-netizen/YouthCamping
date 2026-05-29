@@ -286,6 +286,7 @@ export default function BookingsPage() {
   const [depStart, setDepStart] = useState("");
   const [depEnd, setDepEnd] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [showTrips, setShowTrips] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
   const [editTarget, setEditTarget] = useState<Booking | null>(null);
@@ -303,6 +304,7 @@ export default function BookingsPage() {
     dates: false,
     depDates: false,
     status: true,
+    paymentStatus: true,
     source: false,
     collections: false,
     language: false,
@@ -354,6 +356,7 @@ export default function BookingsPage() {
     if (filterTrip !== 'all' && b.tripId !== filterTrip) return false;
     if (filterSalesAdmin !== 'all' && String((b as any).salesAdminId || '') !== filterSalesAdmin) return false;
     if (statusFilter !== 'all' && b.paymentStatus?.toLowerCase() !== statusFilter.toLowerCase()) return false;
+    if (paymentStatusFilter !== 'all' && (b.payment_status || 'pending').toLowerCase() !== paymentStatusFilter.toLowerCase()) return false;
     if (tab === 'confirmed' && filterPayment !== 'all' && b.paymentStatus?.toLowerCase() !== filterPayment) return false;
     if (search) {
       const s = search.toLowerCase();
@@ -468,6 +471,17 @@ export default function BookingsPage() {
     try { await bookingsService.delete(id); toast.success("Deleted"); fetchAll(); } catch { toast.error("Failed"); }
   };
 
+  const handleConfirmPayment = async (id: string) => {
+    if (!confirm("Confirm payment for this booking?")) return;
+    try {
+      await bookingsService.confirmPayment(id);
+      toast.success("Payment confirmed and WhatsApp triggered!");
+      fetchAll();
+    } catch {
+      toast.error("Failed to confirm payment");
+    }
+  };
+
   const clearFilters = () => {
     setSearch("");
     setFilterTrip("all");
@@ -477,6 +491,7 @@ export default function BookingsPage() {
     setDepStart("");
     setDepEnd("");
     setStatusFilter("all");
+    setPaymentStatusFilter("all");
     setBalanceOnly(false);
     setActivePreset('all');
   };
@@ -695,6 +710,18 @@ export default function BookingsPage() {
             </Select>
           </AccordionSection>
 
+          <AccordionSection title="Payment Status (UPI)" isOpen={openSections.paymentStatus} onToggle={() => toggleSection('paymentStatus')}>
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <SelectTrigger className="h-8 text-[11px] rounded bg-slate-50 border-slate-200/80 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All (UPI)</SelectItem>
+                <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                <SelectItem value="confirmed" className="text-xs">Confirmed</SelectItem>
+                <SelectItem value="failed" className="text-xs">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+          </AccordionSection>
+
           <AccordionSection title="Expedition Trip" isOpen={openSections.trips} onToggle={() => toggleSection('trips')}>
             <Select value={filterTrip} onValueChange={setFilterTrip}>
               <SelectTrigger className="h-8 text-[11px] rounded bg-slate-50 border-slate-200/80 mt-1"><SelectValue /></SelectTrigger>
@@ -797,6 +824,7 @@ export default function BookingsPage() {
                     <th className="px-3 py-2">Tour details</th>
                     <th className="px-3 py-2">Contact details</th>
                     <th className="px-3 py-2 hidden lg:table-cell">Departure details</th>
+                    <th className="px-3 py-2">UPI Reference</th>
                     <th className="px-3 py-2 text-right lg:text-left">Booking status</th>
                   </tr>
                 </thead>
@@ -814,6 +842,10 @@ export default function BookingsPage() {
                       <td className="px-3 py-2.5 hidden lg:table-cell">
                         <div className="h-3.5 bg-slate-100 rounded w-1/2 mb-1"></div>
                         <div className="h-3 bg-slate-50 rounded w-1/3"></div>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="h-3.5 bg-slate-100 rounded w-16 mb-1"></div>
+                        <div className="h-3 bg-slate-50 rounded w-12"></div>
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="h-5 bg-slate-100 rounded w-24 ml-auto lg:ml-0"></div>
@@ -862,6 +894,7 @@ export default function BookingsPage() {
                         <th className="px-4 py-3 font-semibold">Tour Details</th>
                         <th className="px-4 py-3 font-semibold">Contact Details</th>
                         <th className="px-4 py-3 font-semibold hidden lg:table-cell">Departure Details</th>
+                        <th className="px-4 py-3 font-semibold">UPI Reference</th>
                         <th className="px-4 py-3 font-semibold text-right lg:text-left">Booking Status</th>
                       </tr>
                     </thead>
@@ -931,6 +964,29 @@ export default function BookingsPage() {
                             </div>
                           </td>
 
+                          {/* UPI Reference Column */}
+                          <td className="px-3.5 py-2.5 align-top">
+                            <div className="space-y-0.5">
+                              {b.upi_reference ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-slate-700 font-medium bg-slate-100 px-1 py-0.2 rounded">{b.upi_reference}</span>
+                                  <button onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(b.upi_reference || '');
+                                    toast.success("UPI reference copied!");
+                                  }} className="text-slate-400 hover:text-slate-650" title="Copy reference">
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 font-mono italic">No Ref</span>
+                              )}
+                              <div className="text-[10px] text-slate-400 italic uppercase">
+                                {b.payment_method || 'upi'}
+                              </div>
+                            </div>
+                          </td>
+
                           {/* 4. BOOKING STATUS & HOVER ACTIONS */}
                           <td className="px-3.5 py-2.5 align-top text-right lg:text-left">
                             <div className="flex flex-col lg:items-start items-end gap-1">
@@ -947,6 +1003,15 @@ export default function BookingsPage() {
                                         : "bg-[#dd6b20]"
                                 )}>
                                   {getFlowStatus(b)}
+                                </span>
+                                <span className={cn("text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm tracking-wide text-white uppercase", 
+                                  (b.payment_status || 'pending').toLowerCase() === 'confirmed'
+                                    ? "bg-[#2f855a]"
+                                    : (b.payment_status || 'pending').toLowerCase() === 'failed'
+                                      ? "bg-[#9b2c2c]"
+                                      : "bg-amber-500"
+                                )}>
+                                  UPI: {b.payment_status || 'pending'}
                                 </span>
                                 {getFlowStatus(b) === 'Confirmed' && (b.remainingAmount || 0) > 0 && (
                                   <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm bg-[#9b2c2c] text-white font-mono flex items-center gap-0.5">
@@ -973,6 +1038,15 @@ export default function BookingsPage() {
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold h-6 px-2 rounded shrink-0 shadow-sm"
                                   >
                                     Confirm
+                                  </Button>
+                                )}
+                                {(b.payment_status || 'pending').toLowerCase() !== 'confirmed' && canManageBooking(b) && (
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleConfirmPayment(b.id)}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-bold h-6 px-2 rounded shrink-0 shadow-sm"
+                                  >
+                                    Confirm Payment
                                   </Button>
                                 )}
                                 {canManageBooking(b) && (
@@ -1041,8 +1115,13 @@ export default function BookingsPage() {
                           <p className="text-slate-400">{b.numberOfTravelers || 1} Pax</p>
                         </div>
                       </div>
+                      {b.upi_reference && (
+                        <div className="text-[10px] text-slate-500 font-mono bg-slate-50 p-1 rounded">
+                          UPI Ref: <span className="font-bold text-slate-700">{b.upi_reference}</span>
+                        </div>
+                      )}
                       <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={cn("text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm tracking-wide text-white uppercase", 
                             getFlowStatus(b) === 'Confirmed'
                               ? "bg-[#2f855a]"
@@ -1054,15 +1133,27 @@ export default function BookingsPage() {
                           )}>
                             {getFlowStatus(b)}
                           </span>
+                          <span className={cn("text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm tracking-wide text-white uppercase", 
+                            (b.payment_status || 'pending').toLowerCase() === 'confirmed'
+                              ? "bg-[#2f855a]"
+                              : (b.payment_status || 'pending').toLowerCase() === 'failed'
+                                ? "bg-[#9b2c2c]"
+                                : "bg-amber-500"
+                          )}>
+                            UPI: {b.payment_status || 'pending'}
+                          </span>
                           {getFlowStatus(b) === 'Confirmed' && (b.remainingAmount || 0) > 0 && (
                             <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-sm bg-[#9b2c2c] text-white font-mono">
                               ₹{Number(b.remainingAmount).toLocaleString('en-IN')} due
                             </span>
                           )}
                         </div>
-                        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-1 flex-wrap" onClick={e => e.stopPropagation()}>
                           {['Inquiry', 'Pending Payment', 'Partially Paid'].includes(getFlowStatus(b)) && canManageBooking(b) && (
                             <button onClick={() => setConfirmTarget(b)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold h-6 px-2 rounded">Confirm</button>
+                          )}
+                          {(b.payment_status || 'pending').toLowerCase() !== 'confirmed' && canManageBooking(b) && (
+                            <button onClick={() => handleConfirmPayment(b.id)} className="bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-bold h-6 px-2 rounded">Confirm Payment</button>
                           )}
                           {canManageBooking(b) && (
                             <>

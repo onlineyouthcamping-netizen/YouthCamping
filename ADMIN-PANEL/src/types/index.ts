@@ -195,6 +195,9 @@ export interface Booking {
   remainingAmount: number;
   paymentMode: 'UPI' | 'Cash' | 'Bank Transfer' | '';
   paymentStatus: 'Pending' | 'Partial' | 'Paid';
+  payment_status?: string;
+  payment_method?: string;
+  upi_reference?: string;
   notes?: string;
   departureDate?: string;
   pickupCity?: string;

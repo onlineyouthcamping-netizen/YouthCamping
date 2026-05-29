@@ -13,7 +13,9 @@ const {
   createTrip,
   updateTrip,
   deleteTrip,
-  searchByPhone
+  searchByPhone,
+  confirmPayment,
+  updateBookingUpi
 } = require('../controllers/bookingController');
 const { protectAny } = require('../middleware/auth');
 
@@ -36,6 +38,8 @@ router.post('/create', createBooking);
 router.get('/:id', protectAny, getBookingById);
 router.put('/:id/confirm', protectAny, confirmBooking);
 router.put('/:id', protectAny, updateBooking);
+router.patch('/:id/confirm-payment', protectAny, confirmPayment);
+router.patch('/:id', updateBookingUpi);
 router.delete('/:id', protectAny, deleteBooking);
 
 module.exports = router;

@@ -13,6 +13,36 @@ function ConfirmationContent() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<any>(null);
   const [error, setError] = useState('');
+  const [upiRef, setUpiRef] = useState('');
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+
+  const handlePaymentSubmit = async () => {
+    if (!upiRef.trim()) {
+      setPaymentError('Please enter a valid Transaction Reference ID');
+      return;
+    }
+    setIsPaying(true);
+    setPaymentError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/bookings/${booking?.id || bookingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upi_reference: upiRef })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentSuccess(true);
+      } else {
+        setPaymentError(data.message || 'Payment submission failed.');
+      }
+    } catch {
+      setPaymentError('Connection error. Please try again.');
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   useEffect(() => {
     if (!bookingId) {
@@ -181,47 +211,72 @@ function ConfirmationContent() {
 
             <div className="h-px bg-white/5" />
 
-            {/* Price breakdown */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold capitalize tracking-widest text-slate-400">Payment Breakdown</h3>
-              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-3">
-                <div className="flex justify-between items-center text-xs text-slate-400">
-                  <span>Package Base Subtotal</span>
-                  <span className="font-bold text-white">₹{booking.totalAmount?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs text-slate-400">
-                  <span>Paid Deposit / Advance</span>
-                  <span className="font-bold text-white">₹{booking.advancePaid?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs text-slate-400">
-                  <span>Payment Mode Selection</span>
-                  <span className="font-bold text-amber-400 capitalize text-[10px]">{booking.paymentMode || 'UPI'}</span>
-                </div>
-                <div className="h-px bg-white/5 my-2" />
-                <div className="flex justify-between items-center text-sm font-bold capitalize tracking-wider">
-                  <span className="text-[#FF5B00]">Remaining Balance</span>
-                  <span className="text-xl text-white">₹{(booking.remainingAmount ?? (booking.totalAmount - booking.advancePaid))?.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
+            {/* Payment Section (Manual UPI Checkout) */}
+            <div className="h-px bg-white/5" />
 
-            {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <a
-                href={`https://wa.me/9174374374783?text=Hi%2C%20I%20just%20completed%20booking%20${booking.bookingId}%20for%20${encodeURIComponent(booking.tripName)}.%20Please%20verify%20my%20details.`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-center py-5 rounded-2xl font-bold capitalize tracking-widest text-xs transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-2"
-              >
-                <Phone size={14} /> Connect on WhatsApp
-              </a>
+            <div className="space-y-6">
+              <h3 className="text-xs font-bold capitalize tracking-widest text-slate-400">Secure Manual UPI Payment</h3>
               
-              <button
-                onClick={() => window.print()}
-                className="flex-1 bg-white/5 hover:bg-white/10 text-white py-5 rounded-2xl font-bold capitalize tracking-widest text-xs border border-white/10 transition-all flex items-center justify-center gap-2"
-              >
-                Print Receipt
-              </button>
+              {!paymentSuccess ? (
+                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8 space-y-6">
+                  {/* UPI Details */}
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="space-y-2 text-center md:text-left">
+                      <span className="text-[10px] text-slate-500 font-bold capitalize tracking-wider">UPI ID Address</span>
+                      <p className="text-xl md:text-2xl font-bold font-mono text-amber-400">youthcamping@upi</p>
+                      <p className="text-[10px] text-slate-400 leading-normal">
+                        Scan the QR code or pay directly to the UPI ID above.<br />
+                        Ensure you pay the deposit or full balance amount.
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-2xl shrink-0 shadow-lg">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=youthcamping@upi%26pn=YouthCamping%26am=${booking.totalAmount - booking.advancePaid}`} 
+                        alt="UPI Payment QR Code" 
+                        className="w-32 h-32 md:w-36 md:h-36"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/5" />
+
+                  {/* Transaction reference input */}
+                  <div className="space-y-2.5">
+                    <label className="text-[10px] font-bold capitalize tracking-wider text-slate-400 block">
+                      Enter your UPI Transaction ID / Reference Number *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 12-digit UPI Ref No. or Txn ID"
+                      value={upiRef}
+                      onChange={(e) => setUpiRef(e.target.value)}
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-2xl py-4.5 px-6 text-sm font-bold text-white placeholder-slate-500 focus:bg-slate-900 focus:border-amber-400 outline-none transition-all"
+                    />
+                    {paymentError && <p className="text-red-500 text-[10px] font-bold">{paymentError}</p>}
+                  </div>
+
+                  {/* Checkout Confirm Button */}
+                  <button
+                    onClick={handlePaymentSubmit}
+                    disabled={isPaying || !upiRef.trim()}
+                    className="w-full bg-[#FF5B00] hover:bg-[#E65200] disabled:bg-white/10 disabled:text-slate-500 text-white py-5 rounded-2xl font-bold capitalize tracking-widest text-xs transition-all shadow-xl shadow-[#FF5B00]/15 flex items-center justify-center gap-2"
+                  >
+                    {isPaying ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
+                    {isPaying ? 'Verifying payment...' : 'I have paid — Confirm Booking'}
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-8 text-center space-y-4">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+                  <div className="space-y-1">
+                    <h4 className="text-lg font-bold text-white">Payment Received!</h4>
+                    <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
+                      Booking received! Our team will confirm within 2 hours on WhatsApp.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

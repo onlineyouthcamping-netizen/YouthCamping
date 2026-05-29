@@ -64,7 +64,7 @@ app.options('*', cors(corsOptions));
 const PORT = process.env.PORT || 3000;
 
 // ISSUE 4 - Health Check (Before all other routes)
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
 // 2. Security & Middleware
 app.use(helmet({ 
@@ -74,6 +74,29 @@ app.use(helmet({
 app.use(compression());
 app.use(express.json({ limit: '15mb' }));
 app.use(morgan('dev'));
+
+// Rate Limiting
+const rateLimit = require('express-rate-limit');
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests, try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many requests, try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', globalLimiter);
+app.use('/api/admin/login', authLimiter);
+app.use('/api/users/login', authLimiter);
 
 // 3. Import & Mount Routes
 app.use('/api/admin', require('./routes/adminRoutes'));

@@ -681,3 +681,63 @@ exports.getTripInfo = async (req, res, next) => {
     res.json({ success: true, data: trip });
   } catch (error) { next(error); }
 };
+
+exports.confirmPayment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || 'default';
+
+    const booking = await prisma.booking.findFirst({
+      where: { id, tenantId }
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const updatedBooking = await prisma.booking.update({
+      where: { id },
+      data: {
+        payment_status: 'confirmed',
+        paymentStatus: 'Paid'
+      }
+    });
+
+    // Sync to Google Sheets
+    syncBookingToSheets(updatedBooking).catch(err => console.error('[SHEETS_SYNC_SILENT_ERR]', err.message));
+
+    // Simulated WhatsApp trigger
+    console.log(`📲 [WHATSAPP PAYMENT CONFIRMATION] Sending WhatsApp notification to customer ${booking.name} (${booking.phone}): "Your payment of ₹${booking.advancePaid || booking.totalAmount} has been confirmed! Your booking ${booking.bookingId} is now active."`);
+
+    res.json({ success: true, message: 'Payment confirmed and WhatsApp triggered', data: updatedBooking });
+  } catch (error) { next(error); }
+};
+
+exports.updateBookingUpi = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { upi_reference } = req.body;
+
+    const booking = await prisma.booking.findFirst({
+      where: { OR: [{ id }, { bookingId: id }] }
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const updatedBooking = await prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        upi_reference,
+        payment_status: 'pending',
+        payment_method: 'upi'
+      }
+    });
+
+    // Sync to Google Sheets
+    syncBookingToSheets(updatedBooking).catch(err => console.error('[SHEETS_SYNC_SILENT_ERR]', err.message));
+
+    res.json({ success: true, message: 'UPI reference saved successfully', data: updatedBooking });
+  } catch (error) { next(error); }
+};

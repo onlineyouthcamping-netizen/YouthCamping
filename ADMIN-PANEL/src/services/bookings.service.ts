@@ -40,6 +40,11 @@ export const bookingsService = {
     return res.data.data;
   },
 
+  async confirmPayment(id: string): Promise<Booking> {
+    const res = await api.patch(`/bookings/${id}/confirm-payment`);
+    return res.data.data;
+  },
+
   async delete(id: string): Promise<void> {
     await api.delete(`/bookings/${id}`);
   },

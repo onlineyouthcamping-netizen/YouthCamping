@@ -16,11 +16,26 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Youthcamping | Your Story Starts Here",
-  description: "Join the community of 10,000+ travelers. Authentic adventure experiences since 2019.",
+  title: "YouthCamping — Adventure Tours for Young India",
+  description: "Book Himachal Pradesh, Ladakh, Kashmir, Kerala group tours. Best adventure trips for young adults from Gujarat.",
   icons: {
     icon: "/favicon.ico",
   },
+  openGraph: {
+    title: "YouthCamping — Adventure Tours for Young India",
+    description: "Book group adventure tours across India.",
+    url: "https://youthcamping.in",
+    siteName: "YouthCamping",
+    images: [{ url: "https://youthcamping.in/og-image.jpg", width: 1200, height: 630 }],
+    locale: "en_IN",
+    type: "website"
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "YouthCamping — Adventure Tours for Young India",
+    description: "Book group adventure tours across India.",
+    images: ["https://youthcamping.in/og-image.jpg"]
+  }
 };
 
 export default async function RootLayout({
