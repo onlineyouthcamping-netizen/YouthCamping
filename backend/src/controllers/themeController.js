@@ -85,6 +85,7 @@ const defaultTheme = {
   heroCtaLink: '',
   heroCtaStyle: 'filled',
   mobileHeroHeight: '70',
+  mobileHeroVideoHeight: 'aspect-video',
 
   // Navbar
   navbarHeight: '80',

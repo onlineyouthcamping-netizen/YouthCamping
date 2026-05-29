@@ -935,6 +935,18 @@ function MobileTab({ config, onChange }: { config: ThemeConfig; onChange: (k: ke
           <SelectInput label="Card Layout" value={config.mobileCardLayout} onChange={v => onChange('mobileCardLayout', v)}
             options={[{ value: 'scroll', label: 'Horizontal Scroll' }, { value: 'grid', label: 'Grid (2 columns)' }, { value: 'stack', label: 'Vertical Stack' }]}
           />
+          <SelectInput label="Mobile Video Hero Size" value={config.mobileHeroVideoHeight || 'aspect-video'} onChange={v => onChange('mobileHeroVideoHeight', v)}
+            options={[
+              { value: 'aspect-video', label: 'Aspect Ratio (16:9)' },
+              { value: '40', label: 'Short (40vh)' },
+              { value: '50', label: 'Medium-Short (50vh)' },
+              { value: '60', label: 'Medium (60vh)' },
+              { value: '70', label: 'Medium-Tall (70vh)' },
+              { value: '80', label: 'Tall (80vh)' },
+              { value: '90', label: 'Very Tall (90vh)' },
+              { value: '100', label: 'Full Screen (100vh)' }
+            ]}
+          />
         </div>
       </ThemeSection>
     </div>

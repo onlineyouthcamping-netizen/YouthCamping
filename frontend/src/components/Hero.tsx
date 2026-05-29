@@ -110,9 +110,16 @@ export default function Hero({
   const heroAlign = theme?.heroAlign || "center";
   const alignClass = heroAlign === "left" ? "items-start text-left" : heroAlign === "right" ? "items-end text-right" : "items-center text-center";
 
+  const mobileVideoHeight = theme?.mobileHeroVideoHeight || 'aspect-video';
+  const isCustomVideoSize = hasVideo && mobileVideoHeight !== 'aspect-video';
+
   return (
     <div 
-      className="hero-container relative w-full overflow-hidden bg-navy max-md:aspect-video" 
+      className={`hero-container relative w-full overflow-hidden bg-navy ${
+        hasVideo ? 'hero-has-video' : ''
+      } ${
+        isCustomVideoSize ? 'video-custom-size' : 'max-md:aspect-video'
+      }`}
       style={{ 
         transform: 'scale(1.001)',
         willChange: 'transform',

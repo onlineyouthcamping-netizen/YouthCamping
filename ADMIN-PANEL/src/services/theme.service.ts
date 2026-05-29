@@ -84,6 +84,7 @@ export interface ThemeConfig {
   heroCtaLink: string;
   heroCtaStyle: string;
   mobileHeroHeight: string;
+  mobileHeroVideoHeight: string;
 
   // Navbar
   navbarHeight: string;

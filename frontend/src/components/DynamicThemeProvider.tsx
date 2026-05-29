@@ -105,6 +105,15 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
     if (config.mobileFontSizeBase) root.style.setProperty('--mobile-font-base', `${config.mobileFontSizeBase}px`);
     if (config.mobileFontSizeHeading) root.style.setProperty('--mobile-font-heading', `${config.mobileFontSizeHeading}px`);
     if (config.mobileHeroHeight) root.style.setProperty('--mobile-hero-height', `${config.mobileHeroHeight}vh`);
+    if (config.mobileHeroVideoHeight) {
+      if (config.mobileHeroVideoHeight === 'aspect-video') {
+        root.style.setProperty('--mobile-hero-video-height', 'auto');
+        root.style.setProperty('--mobile-hero-video-aspect', '16/9');
+      } else {
+        root.style.setProperty('--mobile-hero-video-height', `${config.mobileHeroVideoHeight}vh`);
+        root.style.setProperty('--mobile-hero-video-aspect', 'auto');
+      }
+    }
     if (config.mobileNavbarHeight) root.style.setProperty('--mobile-navbar-height', `${config.mobileNavbarHeight}px`);
 
     // Animations
