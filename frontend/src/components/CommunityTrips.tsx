@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, MapPin, ChevronRight, ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +41,14 @@ export default function CommunityTrips({
   bottomColor = "#ffffff",
 }: CommunityTripsProps) {
   const { theme } = useTheme();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Filter trips by IDs first if provided
   const baseTrips = tripIds && tripIds.length > 0 
@@ -164,13 +172,15 @@ export default function CommunityTrips({
           
           <div className="flex flex-row items-center justify-between gap-4 mb-2">
             <div className={cn(
-              "flex-1",
+              "flex-1 min-w-0",
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-navy force-single-line"
+                className="section-heading text-navy force-single-line max-md:!text-[14px] max-md:!leading-none"
                 style={{ 
-                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+                  fontSize: isMobile 
+                    ? '14px' 
+                    : (titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined),
                   fontWeight: titleWeight ? titleWeight : undefined
                 }}
               >
@@ -179,10 +189,10 @@ export default function CommunityTrips({
             </div>
 
             <div className="flex items-center gap-4 shrink-0">
-              <Link href="/trips" className="flex items-center gap-3 text-navy font-semibold hover:text-primary-orange transition-all group">
-                <span className="text-[14px] md:text-[15px] capitalize tracking-wide font-semibold hidden sm:inline">View All Trips</span>
-                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-navy flex items-center justify-center text-white group-hover:bg-primary-orange shadow-md transition-colors">
-                  <ChevronRight className="w-5 h-5" />
+              <Link href="/trips" className="flex items-center gap-2 text-navy font-bold hover:text-primary-orange transition-all group">
+                <span className="text-xs md:text-sm capitalize tracking-wide font-bold">View All</span>
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-navy flex items-center justify-center text-white group-hover:bg-primary-orange transition-colors">
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </div>
               </Link>
             </div>

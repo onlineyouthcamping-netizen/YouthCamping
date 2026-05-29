@@ -132,7 +132,7 @@ export default function RealitySection({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-6xl aspect-video bg-black rounded-[40px] overflow-hidden shadow-[0_0_100px_rgba(212,84,26,0.3)] border-4 border-white/10"
+              className="w-full max-w-6xl aspect-video bg-black rounded-2xl md:rounded-[40px] overflow-hidden shadow-[0_0_100px_rgba(212,84,26,0.3)] border-2 md:border-4 border-white/10"
             >
               {activeVideo.includes('youtube.com') || activeVideo.includes('youtu.be') ? (
                 <iframe

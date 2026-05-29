@@ -112,10 +112,10 @@ export default function Hero({
 
   return (
     <div 
-      className="hero-container relative w-full overflow-hidden bg-navy" 
+      className="hero-container relative w-full overflow-hidden bg-navy max-md:aspect-video" 
       style={{ 
-        height: 'var(--hero-height)', 
-        minHeight: '400px',
+        height: isMobile ? 'auto' : 'var(--hero-height)', 
+        minHeight: isMobile ? '0' : '400px',
         transform: 'scale(1.001)',
         willChange: 'transform',
         backfaceVisibility: 'hidden',
@@ -160,19 +160,20 @@ export default function Hero({
         <div className="absolute inset-0 bg-black/60 transition-opacity duration-700" style={overlayOpacity != null ? { opacity: overlayOpacity } : undefined} />
       </div>
 
-      {/* Content Over the Frame — identical layout desktop & mobile, proportionally scaled */}
-      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-6 md:px-10 py-8 text-white ${alignClass}`}>
+      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 py-3 md:px-10 md:py-8 text-white ${alignClass}`}>
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="hero-title mb-4 md:mb-8"
+            className="hero-title mb-1.5 md:mb-8"
             style={{ 
-              fontSize: titleSize 
-                ? (isNaN(Number(titleSize)) 
-                    ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
-                    : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
-                : undefined,
+              fontSize: isMobile
+                ? 'clamp(1.3rem, 6vw, 1.8rem)'
+                : (titleSize 
+                    ? (isNaN(Number(titleSize)) 
+                        ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
+                        : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
+                    : undefined),
               fontWeight: titleWeight || undefined
             }}
           >
@@ -184,8 +185,8 @@ export default function Hero({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center font-medium mt-3 md:mt-6"
-            style={{ fontSize: 'clamp(1rem, 2.5vw, 1.875rem)' }}
+            className="flex items-center justify-center font-medium mt-1 md:mt-6"
+            style={{ fontSize: isMobile ? '0.85rem' : 'clamp(1rem, 2.5vw, 1.875rem)' }}
           >
             <Typewriter phrases={typingPhrases} />
             <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>
@@ -194,20 +195,20 @@ export default function Hero({
 
         {ctaText && ctaLink && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.8 }}
-            className="mt-6 md:mt-8"
+            className="mt-2.5 md:mt-8"
           >
             <Link
               href={ctaLink}
-              className="inline-flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-primary-orange text-white font-semibold rounded-lg hover:opacity-90 transition-opacity text-sm md:text-base"
+              className="inline-flex items-center gap-1.5 px-4 py-2 md:px-8 md:py-4 bg-primary-orange text-white font-semibold rounded-lg hover:opacity-90 transition-opacity text-xs md:text-base"
               style={{
-                padding: `var(--button-padding-y) var(--button-padding-x)`,
+                padding: isMobile ? '8px 18px' : `var(--button-padding-y) var(--button-padding-x)`,
                 borderRadius: 'var(--radius-button)',
                 textTransform: 'var(--button-text-transform)' as any,
                 letterSpacing: 'var(--button-letter-spacing)',
-                fontSize: 'var(--button-font-size)',
+                fontSize: isMobile ? '0.75rem' : 'var(--button-font-size)',
               }}
             >
               {ctaText}
@@ -215,7 +216,6 @@ export default function Hero({
             </Link>
           </motion.div>
         )}
-      </div>
-    </div>
+      </div></div>
   );
 }
