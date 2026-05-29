@@ -36,3 +36,8 @@ playwright-report/
 # Misc
 scratch/
 archive-travel-crm/
+
+backend/.env.production
+backend/.env
+.env
+*.env
