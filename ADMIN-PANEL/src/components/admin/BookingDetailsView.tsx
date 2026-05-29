@@ -83,6 +83,11 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   const [editDiscountLabel, setEditDiscountLabel] = useState("GST Discount");
 
   // Create payment modal state
+  const [showCreatePayment, setShowCreatePayment] = useState(false);
+  const [paymentSource, setPaymentSource] = useState<'collected' | 'online' | 'venue'>('collected');
+  const [payAmount, setPayAmount] = useState("");
+  const [payMode, setPayMode] = useState("UPI");
+  const [payComments, setPayComments] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
 
   // Trips service & full details
