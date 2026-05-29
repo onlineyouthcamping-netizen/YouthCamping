@@ -157,6 +157,10 @@ export default function CommunityTrips({
 
   const overlayOpacity = theme?.cardOverlayDarkness != null ? theme.cardOverlayDarkness / 100 : 0.5;
 
+  const displayTitle = (!title || title.trim() === "" || title === "-" || title === "—") 
+    ? "Upcoming Community Trips" 
+    : title;
+
   return (
     <div className="overflow-hidden section-wrapper bg-transparent relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
@@ -184,7 +188,7 @@ export default function CommunityTrips({
                   fontWeight: titleWeight ? titleWeight : undefined
                 }}
               >
-                {title}
+                {displayTitle}
               </h2>
             </div>
 
