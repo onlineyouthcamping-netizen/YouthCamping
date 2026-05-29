@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
-
       {
         protocol: 'https',
         hostname: 'vl-prod-static.b-cdn.net',
@@ -36,8 +35,15 @@ const nextConfig: NextConfig = {
         hostname: 'youthcamping.online',
       }
     ],
-
-
+  },
+  async redirects() {
+    return [
+      {
+        source: "/about",
+        destination: "/about-us",
+        permanent: true,
+      },
+    ];
   },
 };
 
