@@ -40,10 +40,8 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
           const s = sections[idx];
           if (!s || s.visible === false) return '#ffffff';
           if (['hero', 'cta_banner', 'cinematic_banner'].includes(s.type)) return 'transparent';
-          if (s.type === 'destinations') return '#ffffff';
           
-          const patterns = ['#ffffff', '#f2f2f2'];
-          return patterns[idx % patterns.length];
+          return '#ffffff';
         };
 
         const renderSection = () => {
@@ -120,15 +118,7 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
 
         const getBackgroundClass = (idx: number) => {
           if (['hero', 'cta_banner', 'cinematic_banner'].includes(type)) return 'bg-transparent';
-          if (type === 'destinations') return 'bg-[#ffffff]';
-          
-          // Split background for CTA Slider to merge with gray sections below
-          if (type === 'cta_slider') {
-            return 'bg-gradient-to-b from-white from-50% to-[#f2f2f2] to-50%';
-          }
-          
-          const patterns = ['bg-[#ffffff]', 'bg-[#f2f2f2]'];
-          return patterns[idx % patterns.length];
+          return 'bg-[#ffffff]';
         };
 
         return (
