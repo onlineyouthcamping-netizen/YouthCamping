@@ -22,7 +22,7 @@ export default function TripCard({ trip, index }: TripCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
       viewport={{ once: true }}
-      className="group relative bg-white rounded-[32px] overflow-hidden border border-zinc-100 hover:border-primary-orange/20 transition-all shadow-sm hover:shadow-2xl h-full"
+      className="group relative bg-white rounded-[32px] overflow-hidden border border-zinc-100 hover:border-primary-orange/30 transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.015] active:scale-[0.985] cursor-pointer h-full"
     >
       {/* Invisible Link Overlay - Ensures 100% clickability */}
       <Link 

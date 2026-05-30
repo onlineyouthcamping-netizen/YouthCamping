@@ -13,8 +13,8 @@
   --font-montserrat: var(--font-montserrat);
   --color-primary-orange: var(--primary);
   --color-navy: var(--secondary);
-  --color-charcoal: #333333;
-  --color-light-orange: #FFF1ED;
+  --color-charcoal: #1F2937;
+  --color-light-orange: var(--light-orange);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
@@ -61,14 +61,14 @@
 }
 
 :root {
-  /* Youthcamping Premium Theme (Luxury Adventure Aesthetic) */
-  --primary: #FF6B00;
-  --secondary: #0B1F4D;
-  --background: #F8F7F4;
-  --foreground: #111111;
+  /* Youthcamping Premium Theme (Klook Color Philosophy Inspired) */
+  --primary: #FF5B00;
+  --secondary: #1F2937;
+  --background: #FFFFFF;
+  --foreground: #1F2937;
   
-  --button-bg: #FF6B00;
-  --button-hover: #E05E00;
+  --button-bg: #FF5B00;
+  --button-hover: #E65100;
   --button-text: #FFFFFF;
   --radius-button: 12px;
   
@@ -76,7 +76,7 @@
   --radius-card: 24px;
   --shadow-card: 0 10px 40px rgba(0,0,0,0.03);
   
-  --border: #D9D9D9;
+  --border: #E5E7EB;
   --border-width: 1px;
   
   --font-primary: 'Montserrat', sans-serif;
@@ -101,9 +101,9 @@
   --container-width: 1280px;
   --spacing-unit: 4px;
  
-  --foreground-rgb: 17, 17, 17;
-  --background-start-rgb: 248, 247, 244;
-  --background-end-rgb: 248, 247, 244;
+  --foreground-rgb: 31, 41, 55;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
@@ -113,7 +113,7 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: #EF4444;
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -140,8 +140,8 @@
   /* Navbar */
   --navbar-height: 80px;
   --navbar-logo-size: 150px;
-  --navbar-active-color: #FF6B00;
-  --navbar-hover-color: #FF6B00;
+  --navbar-active-color: #FF5B00;
+  --navbar-hover-color: #FF5B00;
   --navbar-spacing: 24px;
   --mobile-navbar-height: 64px;
   
@@ -151,9 +151,9 @@
   --card-overlay: 50;
   --card-brightness: 100%;
   --card-title-size: 20px;
-  --card-price-color: #FF6B00;
+  --card-price-color: #FF5B00;
   --card-badge-bg: #FFFFFF;
-  --card-badge-text: #111111;
+  --card-badge-text: #1F2937;
   
   /* Button Extended */
   --button-padding-x: 24px;
@@ -162,7 +162,7 @@
   --button-text-transform: uppercase;
   --button-letter-spacing: 0.08em;
   --button-font-size: 0.9rem;
-  --button-secondary-bg: #0B1F4D;
+  --button-secondary-bg: #1F2937;
   --button-secondary-text: #FFFFFF;
   
   /* Typography Extended */
@@ -179,7 +179,8 @@
   
   /* Layout Extended */
   --section-spacing: 80px;
-  --accent-color: #FF6B00;
+  --accent-color: #FF5B00;
+  --light-orange: #FFF4EC;
   
   /* Mobile */
   --mobile-font-base: 14px;

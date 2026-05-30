@@ -52,6 +52,19 @@ export default function Footer({
   const brandName = companyName.split(' ')[0];
   const specialSectionTitle = `${brandName} Special`;
 
+  const getFooterLinkHref = (link: string) => {
+    const normalized = link.toLowerCase().trim();
+    if (normalized === "about us") return "/about-us";
+    if (normalized === "privacy policy") return "/privacy";
+    if (normalized === "terms & conditions") return "/terms";
+    if (normalized === "customer success & support") return "/questions";
+    if (normalized === "blogs") return "/blogs";
+    if (normalized === "payments") return "/trips";
+    if (normalized === "disclaimer") return "/terms#disclaimer";
+    if (normalized === "careers") return "/contact";
+    return `/${link.toLowerCase().replace(/\s+/g, '-')}`;
+  };
+
   return (
     <footer className="bg-[#0F1820] text-white pt-20 relative overflow-hidden flex flex-col items-center text-center font-montserrat border-t border-white/5">
       <div className="w-full max-w-6xl mx-auto px-6 relative z-10 flex flex-col items-center">
@@ -66,7 +79,7 @@ export default function Footer({
               {section.links.map((link) => (
                 <Link 
                   key={link} 
-                  href={section.title === "Quick Links" ? `/${link.toLowerCase().replace(/\s+/g, '-')}` : "/trips"} 
+                  href={section.title === "Quick Links" ? getFooterLinkHref(link) : "/trips"} 
                   className="text-zinc-400 hover:text-white transition-colors text-sm font-medium"
                 >
                   {link}
@@ -75,7 +88,7 @@ export default function Footer({
             </div>
           ))}
         </div>
-
+ 
         {/* Accordions (Mobile) */}
         <div className="w-full flex flex-col md:hidden mb-12 border-t border-white/10">
           {footerSections.map((section, idx) => {
@@ -105,7 +118,7 @@ export default function Footer({
                   {section.links.map((link) => (
                     <Link 
                       key={link} 
-                      href={section.title === "Quick Links" ? `/${link.toLowerCase().replace(/\s+/g, '-')}` : "/trips"} 
+                      href={section.title === "Quick Links" ? getFooterLinkHref(link) : "/trips"} 
                       className="text-zinc-400 hover:text-white transition-colors text-sm font-medium"
                     >
                       {link}

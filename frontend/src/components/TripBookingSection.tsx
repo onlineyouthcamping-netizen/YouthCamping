@@ -21,7 +21,9 @@ export default function TripBookingSection({ trip, onPriceChange, onDateSelect }
     if (onDateSelect) onDateSelect(date);
   };
 
-  const currentSkipDays = trip.variants[variantIndex]?.skipDays || 0;
+  const currentSkipDays = (Array.isArray(trip.variants) && trip.variants[variantIndex]) 
+    ? (trip.variants[variantIndex]?.skipDays || 0) 
+    : 0;
 
   return (
     <div className="space-y-8 md:space-y-24">

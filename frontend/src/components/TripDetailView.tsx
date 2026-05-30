@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AboutTrip from "./AboutTrip";
 import TripBookingSection from "./TripBookingSection";
 import InclusionsExclusions from "./InclusionsExclusions";
@@ -19,6 +19,10 @@ interface TripDetailViewProps {
 
 export default function TripDetailView({ trip }: TripDetailViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [trip.id]);
 
   return (
     <div className="lg:col-span-8 space-y-24">

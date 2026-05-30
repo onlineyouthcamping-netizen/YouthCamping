@@ -68,8 +68,7 @@ export default function Navbar({
     <>
       <nav
         className={cn(
-          "top-0 left-0 right-0 z-50 transition-all duration-500 px-4 sm:px-6 flex items-center",
-          isSticky ? "sticky" : "relative",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-4 sm:px-6 flex items-center",
           bgClass,
           blurClass
         )}
@@ -78,19 +77,19 @@ export default function Navbar({
         <div className="max-w-7xl mx-auto flex items-center justify-between w-full">
           <Link 
             href="/" 
-            className="relative z-[60] flex items-center shrink-0"
-            style={{ width: 'calc(var(--navbar-logo-size) * 2)', height: 'calc(var(--navbar-height) * 0.8)' }}
+            className="relative z-[60] flex items-center justify-start shrink-0"
           >
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none">
-              <img 
-                src={normalizeImageUrl(logoUrl) || "/logo.png"} 
-                alt="Youthcamping Logo" 
-                fetchPriority="high"
-                loading="eager"
-                className="w-auto object-contain drop-shadow-lg pointer-events-auto transition-transform hover:scale-105"
-                style={{ height: 'calc(var(--navbar-height) * 2.4)' }}
-              />
-            </div>
+            <img 
+              src="/logo.png"
+              alt="Youthcamping Logo" 
+              fetchPriority="high"
+              loading="eager"
+              className="w-auto max-w-[140px] md:max-w-none object-contain transition-transform hover:scale-105 pointer-events-auto"
+              style={{
+                height: 'calc(var(--navbar-height) * 0.53)',
+                maxHeight: '42px'
+              }}
+            />
           </Link>
 
           {/* Desktop Nav */}

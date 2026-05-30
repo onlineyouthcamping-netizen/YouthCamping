@@ -133,7 +133,7 @@ export default function Hero({
             {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
               <div className="hero-video-wrapper">
                 <iframe
-                  className="hero-video-iframe opacity-60"
+                  className="hero-video-iframe opacity-100"
                   src={`${videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1&loop=1&playlist=${videoUrl.split('v=')[1] || videoUrl.split('/').pop()}&controls=0&showinfo=0&rel=0&modestbranding=1`}
                   title="Hero Video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -146,7 +146,7 @@ export default function Hero({
                 muted
                 loop
                 playsInline
-                className="w-full h-full object-cover opacity-60 absolute inset-0"
+                className="w-full h-full object-cover opacity-100 absolute inset-0"
               />
             )}
           </div>
@@ -161,8 +161,15 @@ export default function Hero({
           <div className="w-full h-full bg-gradient-to-br from-navy via-charcoal to-navy" />
         )}
         
-        {/* Dynamic Overlay */}
-        <div className="absolute inset-0 bg-black/60 transition-opacity duration-700" style={overlayOpacity != null ? { opacity: overlayOpacity } : undefined} />
+        {/* Subtle Premium Dark Overlay (Capped at 15-25% to showcase vibrant natural colors) */}
+        <div 
+          className="absolute inset-0 bg-black transition-opacity duration-700" 
+          style={{ 
+            opacity: overlayOpacity != null 
+              ? Math.min(overlayOpacity, 0.25) 
+              : 0.20 
+          }} 
+        />
       </div>
 
       <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 py-3 md:px-10 md:py-8 text-white ${alignClass}`}>

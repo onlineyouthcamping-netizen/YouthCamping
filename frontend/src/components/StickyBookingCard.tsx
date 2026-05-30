@@ -6,6 +6,7 @@ import { useTripSelection } from "@/store/trip-selection";
 import { Trip } from "@/types";
 import DestinationInquiryModal from "./DestinationInquiryModal";
 import { fetchSettings } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface StickyBookingCardProps {
   trip: Trip;
@@ -15,9 +16,20 @@ export default function StickyBookingCard({ trip }: StickyBookingCardProps) {
   const { currentPrice } = useTripSelection();
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [settings, setSettings] = useState<any>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     fetchSettings().then(setSettings);
+
+    const handleScroll = () => {
+      // Show mobile sticky bar only after scrolling 300px down
+      setIsVisible(window.scrollY > 300);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Initial check
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
   
   // Initial price if store is empty
@@ -88,7 +100,10 @@ export default function StickyBookingCard({ trip }: StickyBookingCardProps) {
       </div>
 
       {/* Mobile Sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white shadow-[0_-20px_40px_rgba(0,0,0,0.1)] overflow-hidden pb-[env(safe-area-inset-bottom)]">
+      <div className={cn(
+        "fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.06)] border-t border-zinc-100 transition-all duration-500 ease-in-out pb-[env(safe-area-inset-bottom)]",
+        isVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+      )}>
         <div className="px-6 py-5 flex items-center justify-between gap-4">
           <div className="flex flex-col">
             <span className="text-2xl font-semibold tracking-wide text-navy leading-none">₹ {displayPrice.toLocaleString()}</span>
