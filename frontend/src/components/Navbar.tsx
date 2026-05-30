@@ -30,7 +30,17 @@ export default function Navbar({
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { theme } = useTheme();
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile, { passive: true });
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -55,20 +65,23 @@ export default function Navbar({
   const isTransparent = theme?.navbarTransparent ?? false;
   const blurClass = (theme?.navbarBlur ?? true) ? "backdrop-blur-md" : "backdrop-blur-none";
 
+  // Force solid background on mobile so that pushed-down page content does not cause text visibility issues
+  const showTransparent = isTransparent && !isMobile;
+
   // Determine bg color class based on scroll and transparency settings
   const bgClass = isScrolled 
-    ? "bg-white/95 shadow-lg" 
-    : isTransparent 
+    ? (isMobile ? "bg-white shadow-lg" : "bg-white/95 shadow-lg") 
+    : showTransparent 
       ? "bg-transparent" 
       : "bg-white shadow-md";
 
-  const textColorClass = isScrolled || !isTransparent ? "text-navy" : "text-white";
+  const textColorClass = isScrolled || !showTransparent ? "text-navy" : "text-white";
 
   return (
     <>
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-4 sm:px-6 flex items-center",
+          "md:fixed max-md:sticky top-0 left-0 right-0 z-50 transition-all duration-500 px-4 sm:px-6 flex items-center",
           bgClass,
           blurClass
         )}

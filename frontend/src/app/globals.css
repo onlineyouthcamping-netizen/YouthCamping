@@ -240,6 +240,8 @@
     --title-size-multiplier: 0.78;
   }
 
+
+
   /* Disable heavy filters, glass blurs, shadow/scale effects on mobile */
   [class*="backdrop-blur"],
   [class*="backdrop-filter"],
@@ -288,7 +290,6 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-}
 
   .hero-video-wrapper {
     position: absolute !important;
@@ -549,6 +550,15 @@
     will-change: transform;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    /* On desktop, pull hero up behind fixed navbar for immersive full-bleed */
+    margin-top: calc(-1 * var(--navbar-height, 80px));
+  }
+
+  /* On mobile, hero should NOT overlap navbar — stay below it */
+  @media (max-width: 768px) {
+    .hero-container {
+      margin-top: 0 !important;
+    }
   }
 
   .hero-video-wrapper {
