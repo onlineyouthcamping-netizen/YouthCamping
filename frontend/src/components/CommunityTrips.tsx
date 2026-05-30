@@ -167,7 +167,7 @@ export default function CommunityTrips({
       
       <div className="max-w-[1440px] mx-auto relative px-2">
         {/* Header Section */}
-        <div className="flex flex-col mb-3 md:mb-8">
+        <div className="flex flex-col mb-6 md:mb-8">
           {topLabel && (
             <span className="section-label">
               {topLabel}
@@ -204,7 +204,7 @@ export default function CommunityTrips({
         </div>
 
         {/* Month Pills */}
-        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-4 md:mb-8 pb-1">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 md:mb-8 pb-1">
           {displayMonths.map((m) => {
             const isActive = activeMonth === m;
             return (
