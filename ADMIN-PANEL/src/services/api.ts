@@ -1,6 +1,11 @@
 import axios from 'axios';
 
 let apiBaseUrl = import.meta.env.VITE_API_URL || 'https://api.youthcamping.online/api';
+if (!apiBaseUrl || apiBaseUrl.includes('onrender.com')) {
+  console.warn('⚠️ Stale or invalid Render API URL detected. Forcing fallback to Hostinger VPS.');
+  apiBaseUrl = 'https://api.youthcamping.online/api';
+}
+console.log('🚀 [Admin API] Active API base URL:', apiBaseUrl);
 
 const api = axios.create({
   baseURL: apiBaseUrl.replace(/\/api$/, '')

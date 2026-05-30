@@ -16,6 +16,9 @@ export default function PreviewPage() {
     if (!url) return "";
     if (url.startsWith("http") || url.startsWith("data:")) return url;
     let apiBase = import.meta.env.VITE_API_URL || 'https://api.youthcamping.online/api';
+    if (!apiBase || apiBase.includes('onrender.com')) {
+      apiBase = 'https://api.youthcamping.online/api';
+    }
     apiBase = apiBase.replace(/\/api$/, '');
     return `${apiBase}${url}`;
   };

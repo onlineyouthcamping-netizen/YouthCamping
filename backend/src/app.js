@@ -21,9 +21,22 @@ const allowedOrigins = [
   'https://admin.youthcamping.online'
 ];
 
-if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
-if (process.env.CLIENT_URL) allowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ''));
-if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL.replace(/\/$/, ''));
+const addOrigins = (val) => {
+  if (!val) return;
+  // Support comma-separated or space-separated lists of URLs
+  const origins = val.split(/[\s,]+/).map(o => o.trim().replace(/\/$/, '')).filter(Boolean);
+  origins.forEach(origin => {
+    if (!allowedOrigins.includes(origin)) {
+      allowedOrigins.push(origin);
+    }
+  });
+};
+
+addOrigins(process.env.ALLOWED_ORIGINS);
+addOrigins(process.env.CORS_ALLOWED_ORIGINS);
+addOrigins(process.env.FRONTEND_URL);
+addOrigins(process.env.CLIENT_URL);
+addOrigins(process.env.ADMIN_URL);
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -42,7 +55,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 };
 
 app.use(cors(corsOptions));
