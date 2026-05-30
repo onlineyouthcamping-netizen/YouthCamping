@@ -1,8 +1,7 @@
 import QuestionList from "@/components/QuestionList";
 import { HelpCircle, Sparkles, MapPin } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30;
 
 export const metadata = {
   title: "Knowledge Quest | YouthCamping Experiences",

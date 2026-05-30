@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Footer from "@/components/Footer";
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 import { fetchBlogs, normalizeImageUrl } from "@/lib/api";
 import { BookOpen, Sparkles, Filter, ChevronRight, ChevronLeft } from "lucide-react";

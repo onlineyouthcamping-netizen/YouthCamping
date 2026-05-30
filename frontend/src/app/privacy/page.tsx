@@ -8,8 +8,7 @@ export const metadata: Metadata = {
   description: "Learn about how YouthCamping collects and uses your data. Your privacy is our priority.",
 };
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function PrivacyPage() {
   const page = await fetchPageBySlug('privacy');

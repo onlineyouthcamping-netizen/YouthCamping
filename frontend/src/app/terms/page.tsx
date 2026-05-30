@@ -8,8 +8,7 @@ export const metadata: Metadata = {
   description: "Read the terms and conditions for using the YouthCamping platform and booking services.",
 };
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function TermsPage() {
   const page = await fetchPageBySlug('terms');

@@ -12,8 +12,7 @@ const montserrat = Montserrat({
   variable: "--font-montserrat",
 });
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30;
 
 export const metadata = {
   title: "YouthCamping — Adventure Tours for Young India",

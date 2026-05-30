@@ -1,5 +1,5 @@
 import Footer from "@/components/Footer";
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 import { fetchReviews, normalizeImageUrl } from "@/lib/api";
 import Link from "next/link";

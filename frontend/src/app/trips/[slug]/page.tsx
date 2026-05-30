@@ -1,6 +1,6 @@
 import { fetchTripBySlug } from "@/lib/api";
 import { notFound } from "next/navigation";
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 import {
   Calendar, Map as MapIcon, TrendingUp, Users, ChevronLeft

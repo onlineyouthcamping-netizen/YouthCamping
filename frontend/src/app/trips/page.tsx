@@ -5,7 +5,7 @@ import { Compass, Sparkles, Filter, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 import { Trip } from "@/types";
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 
 export default async function TripsPage() {
