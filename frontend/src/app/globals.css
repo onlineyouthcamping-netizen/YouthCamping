@@ -278,7 +278,16 @@
     aspect-ratio: 18 / 9 !important;
     min-height: 220px !important;
     overflow: hidden !important;
-  } }
+  }
+
+  .section-heading.force-single-line {
+    font-size: 16px !important;
+    white-space: nowrap !important;
+    text-wrap: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
 
   .hero-video-wrapper {
     position: absolute !important;
