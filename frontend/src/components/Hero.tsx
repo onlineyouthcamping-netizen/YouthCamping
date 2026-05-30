@@ -172,7 +172,7 @@ export default function Hero({
         />
       </div>
 
-      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 py-3 md:px-10 md:py-8 text-white ${alignClass}`}>
+      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 py-3 md:px-10 md:py-8 text-white max-md:items-center max-md:text-center ${alignClass}`}>
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

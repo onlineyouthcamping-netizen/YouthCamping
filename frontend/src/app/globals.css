@@ -281,7 +281,8 @@
   }
 
   .section-heading.force-single-line {
-    font-size: 16px !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
     white-space: nowrap !important;
     text-wrap: nowrap !important;
     overflow: hidden !important;
@@ -484,8 +485,8 @@
 
   @media (max-width: 768px) {
     .section-wrapper {
-      padding-top: 56px;
-      padding-bottom: 56px;
+      padding-top: 0px !important;
+      padding-bottom: 0px !important;
     }
   }
 }
