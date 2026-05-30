@@ -50,7 +50,8 @@ export default function QuotationsPage() {
   };
 
   const handleCopy = (q: any) => {
-    const url = `${import.meta.env.VITE_FRONTEND_URL}/quote/${q.slug || q.id}`;
+    const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://youthcamping.online';
+    const url = `${baseUrl}/quote/${q.slug || q.id}`;
     navigator.clipboard.writeText(url);
     toast.success("Link copied to clipboard!");
   };
@@ -98,7 +99,10 @@ export default function QuotationsPage() {
         <Button variant="ghost" size="icon" onClick={() => handleCopy(q)} title="Copy Public Link">
           <Copy className="h-4 w-4 text-emerald-600" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/quote/${q.slug || q.id}`, '_blank')} title="Preview Quote">
+        <Button variant="ghost" size="icon" onClick={() => {
+          const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://youthcamping.online';
+          window.open(`${baseUrl}/quote/${q.slug || q.id}`, '_blank');
+        }} title="Preview Quote">
           <Share2 className="h-4 w-4 text-blue-600" />
         </Button>
         <Button variant="ghost" size="icon" onClick={() => handleExtend(q.id)} title="Extend Validity (48h)">

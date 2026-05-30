@@ -154,13 +154,15 @@ export default function QuotationFormPage() {
     };
 
     const copyLink = () => {
-        const url = `${import.meta.env.VITE_FRONTEND_URL}/quote/${formData.slug || formData.id}`;
+        const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://youthcamping.online';
+        const url = `${baseUrl}/quote/${formData.slug || formData.id}`;
         navigator.clipboard.writeText(url);
         toast.success("Link copied to clipboard!");
     };
 
     const sendWhatsApp = () => {
-        const quoteLink = `${import.meta.env.VITE_FRONTEND_URL}/quote/${formData.slug || formData.id}`;
+        const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://youthcamping.online';
+        const quoteLink = `${baseUrl}/quote/${formData.slug || formData.id}`;
         const message = `Hi ${formData.customerName},
 
 Greetings from YOUTHCAMPING Experiences.
@@ -1078,7 +1080,10 @@ ${formData.expert?.designation}`;
                                     <Button variant="outline" onClick={copyLink} className="w-full h-12 justify-start rounded-xl text-[10px] font-bold uppercase tracking-widest border-slate-100 hover:bg-slate-50">
                                         <Copy size={14} className="mr-3" /> Copy Asset Link
                                     </Button>
-                                    <Button variant="outline" onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/quote/${formData.slug}?isAdmin=true`, '_blank')} className="w-full h-12 justify-start rounded-xl text-[10px] font-bold uppercase tracking-widest border-slate-100 hover:bg-slate-50">
+                                    <Button variant="outline" onClick={() => {
+                                        const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://youthcamping.online';
+                                        window.open(`${baseUrl}/quote/${formData.slug}?isAdmin=true`, '_blank');
+                                    }} className="w-full h-12 justify-start rounded-xl text-[10px] font-bold uppercase tracking-widest border-slate-100 hover:bg-slate-50">
                                         <ExternalLink size={14} className="mr-3" /> Live Preview
                                     </Button>
                                     <Button onClick={sendWhatsApp} className="w-full h-12 justify-start rounded-xl text-[10px] font-bold uppercase tracking-widest bg-[#25D366] hover:bg-[#128C7E] text-white shadow-lg shadow-green-100 border-none">
