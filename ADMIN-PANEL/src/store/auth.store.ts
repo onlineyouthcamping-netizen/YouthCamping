@@ -14,7 +14,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   admin: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
 
   login: async (email, password) => {
     set({ isLoading: true });
