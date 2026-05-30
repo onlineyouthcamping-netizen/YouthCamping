@@ -50,10 +50,21 @@ exports.createBookingLink = async (req, res, next) => {
     const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
     const finalExpiresAt = parsedExpiresAt && !isNaN(parsedExpiresAt.getTime()) ? parsedExpiresAt : null;
 
+    // Verify if the admin actually exists in the database to prevent foreign key violations (e.g. stale JWT tokens)
+    let finalAdminId = null;
+    if (req.user?.id) {
+      const adminExists = await prisma.admin.findUnique({
+        where: { id: req.user.id }
+      });
+      if (adminExists) {
+        finalAdminId = req.user.id;
+      }
+    }
+
     const link = await prisma.bookingLink.create({
       data: {
         tenantId,
-        createdByAdminId: req.user?.id || null,
+        createdByAdminId: finalAdminId,
         tripId,
         tripName: trip ? trip.title : null,
         departureDate: parsedDepartureDate,
