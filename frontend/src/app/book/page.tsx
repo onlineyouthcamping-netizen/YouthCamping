@@ -388,7 +388,7 @@ function BookingForm() {
         mobile: formData.phone,
         phone: formData.phone,
         email: formData.email || null,
-        tripId: initialParams.tripId || tripData?.id || 'manual',
+        tripId: tripData?.id || initialParams.tripId || 'manual',
         tripName: initialParams.tripName || tripData?.title || 'Expedition',
         departureDate: initialParams.date ? new Date(initialParams.date) : null,
         sourceBookingLinkId: initialParams.sourceBookingLinkId || null,

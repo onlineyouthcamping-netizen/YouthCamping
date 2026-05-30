@@ -168,7 +168,7 @@ exports.getBookingPublic = async (req, res, next) => {
 exports.createBooking = async (req, res, next) => {
   try {
     const { 
-      name, fullName, phone, mobile, tripId, amount, totalAmount, advancePaid,
+      name, fullName, phone, mobile, tripId: inputTripId, amount, totalAmount, advancePaid,
       status, paymentStatus, paymentMode, notes, email, departureDate,
       pickupCity, skipDays, adjustedPrice, joiningDate,
       sourceBookingLinkId, sourceBookingLinkToken
@@ -182,12 +182,33 @@ exports.createBooking = async (req, res, next) => {
 
     const tenantId = req.user?.tenantId || 'default';
     
-    if (!targetName || !targetPhone || !tripId) {
+    if (!targetName || !targetPhone || !inputTripId) {
       return res.status(400).json({ success: false, message: 'Required fields missing: Name, Phone, and Trip are mandatory' });
     }
-    const targetTrip = await prisma.trip.findFirst({
+
+    let tripId = inputTripId;
+    let targetTrip = await prisma.trip.findFirst({
       where: { id: tripId, tenantId }
     });
+
+    if (!targetTrip) {
+      // Fallback: Resolve by slug or title
+      targetTrip = await prisma.trip.findFirst({
+        where: {
+          OR: [
+            { slug: inputTripId },
+            { title: inputTripId },
+            ...(req.body.tripName ? [{ title: req.body.tripName }, { slug: req.body.tripName }] : [])
+          ],
+          tenantId
+        }
+      });
+      if (targetTrip) {
+        tripId = targetTrip.id;
+      } else {
+        return res.status(400).json({ success: false, message: 'Selected Trip is invalid or no longer exists in the system' });
+      }
+    }
 
     // Optional link attribution + expiry enforcement
     let sourceLink = null;
