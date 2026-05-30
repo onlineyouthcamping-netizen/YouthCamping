@@ -3,6 +3,31 @@ const router = express.Router();
 const upload = require('../middleware/upload');
 const path = require('path');
 const fs = require('fs');
+const cors = require('cors');
+
+const allowedOrigins = [
+  'https://youthcamping.online',
+  'https://www.youthcamping.online',
+  'https://admin.youthcamping.online'
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalized) || /\.vercel\.app$/i.test(normalized) || /^https?:\/\/localhost(:\d+)?$/i.test(normalized) || /patelparth3315/i.test(normalized)) {
+      return callback(null, true);
+    }
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+};
+
+// Register CORS explicitly at the router level
+router.use(cors(corsOptions));
+router.options('*', cors(corsOptions));
 
 // ── DELETE /api/upload/photo ──
 // Physically removes a file from uploads directory

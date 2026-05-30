@@ -34,13 +34,23 @@ if (isCloudinaryConfigured) {
   console.log('[UPLOAD] ✅ Cloudinary Storage configured and active');
 } else {
   console.warn('[UPLOAD] ⚠️ Falling back to LOCAL DISK STORAGE because Cloudinary is not configured');
+  const os = require('os');
   storage = multer.diskStorage({
     destination: (req, file, cb) => {
       const uploadDir = 'public/uploads/trips';
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      try {
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      } catch (err) {
+        console.error('[UPLOAD] ❌ Failed to create public upload directory, using system temp fallback:', err.message);
+        const tempDir = path.join(os.tmpdir(), 'youthcamping-uploads');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        cb(null, tempDir);
       }
-      cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
