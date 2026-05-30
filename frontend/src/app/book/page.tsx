@@ -79,6 +79,7 @@ function BookingForm() {
   const [error, setError] = useState('');
   const [tripData, setTripData] = useState<any>(null);
   const [basePrice, setBasePrice] = useState(initialParams.basePrice || 13999);
+  const [travelerAutoFilled, setTravelerAutoFilled] = useState(false);
 
   // Dynamic joining points loaded from tripData or fallback
   const joiningPoints = useMemo(() => {
@@ -254,6 +255,11 @@ function BookingForm() {
     const list = [...formData.participantsList];
     list[index] = { ...list[index], [field]: value };
     setFormData(prev => ({ ...prev, participantsList: list }));
+    
+    // Disable future auto-fill if Traveler 1 is edited manually
+    if (index === 0 && (field === 'name' || field === 'phone')) {
+      setTravelerAutoFilled(true);
+    }
   };
 
   // Pricing calculations
@@ -363,6 +369,18 @@ function BookingForm() {
       return;
     }
     setError('');
+    
+    // Auto-fill Traveler 1 with Lead Contact details on first step transition
+    if (currentStep === 1 && !travelerAutoFilled) {
+      const list = [...formData.participantsList];
+      if (list[0]) {
+        if (!list[0].name.trim()) list[0].name = formData.name;
+        if (!list[0].phone.trim()) list[0].phone = formData.phone;
+        setFormData(prev => ({ ...prev, participantsList: list }));
+      }
+      setTravelerAutoFilled(true);
+    }
+    
     setCurrentStep(prev => prev + 1);
   };
 
@@ -459,7 +477,7 @@ function BookingForm() {
             {initialParams.tripName || 'Adventure Checkout'}
           </h1>
           <p className="text-white/80 text-xs font-bold capitalize tracking-wider mt-1.5 flex items-center gap-4">
-            <span>Date: {initialParams.date || 'Flexible'}</span>
+            <span>Departure Date: {initialParams.date || 'Flexible'}</span>
             <span>Code: {initialParams.tripId || 'N/A'}</span>
           </p>
         </div>
@@ -851,73 +869,132 @@ function BookingForm() {
                     </div>
 
                     {/* Complete Booking Summary */}
-                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4">
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Booking Summary</h4>
-                      
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Trip</p>
-                          <p className="font-bold text-slate-800 capitalize">{initialParams.tripName || tripData?.title || 'Expedition'}</p>
+                    <div className="bg-slate-50 border border-slate-150 rounded-[2rem] p-6 space-y-6">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Booking Summary</h4>
+                        <span className="text-[9px] bg-[#FF5B00]/10 text-[#FF5B00] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Please Review</span>
+                      </div>
+
+                      {/* Section 1: Lead Contact Details */}
+                      <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <h5 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">1. Lead Contact</h5>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(1)}
+                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-bold flex items-center gap-1 transition-all"
+                          >
+                            Edit
+                          </button>
                         </div>
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Date</p>
-                          <p className="font-bold text-slate-800">{initialParams.date || 'Flexible'}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Joining Point</p>
-                          <p className="font-bold text-slate-800 capitalize">{selectedCity?.cityName}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Lead Traveler</p>
-                          <p className="font-bold text-slate-800 capitalize">{formData.name}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Phone</p>
-                          <p className="font-bold text-slate-800">{formData.phone}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Travelers</p>
-                          <p className="font-bold text-slate-800">{formData.participants}</p>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">Name</p>
+                            <p className="font-bold text-slate-800 capitalize">{formData.name}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">Phone</p>
+                            <p className="font-bold text-slate-800">{formData.phone}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">Email</p>
+                            <p className="font-bold text-slate-800">{formData.email || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">City/State</p>
+                            <p className="font-bold text-slate-800 capitalize">{formData.cityState}</p>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="h-px bg-slate-200" />
-
-                      {/* Per-traveler breakdown */}
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Traveler Details</p>
-                        {formData.participantsList.map((t, i) => (
-                          <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-4 py-2.5">
-                            <div>
-                              <p className="text-xs font-bold text-slate-800 capitalize">{t.name || `Traveler ${i+1}`}</p>
-                              <p className="text-[10px] text-slate-400">{t.gender} • Age {t.age || 'N/A'}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[9px] text-slate-400">{t.roomSharing} • {t.trainOption}</p>
+                      {/* Section 2: Trip & Joining details */}
+                      <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <h5 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">2. Trip Details</h5>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(2)}
+                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-bold flex items-center gap-1 transition-all"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="col-span-2">
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">Trip Name</p>
+                            <p className="font-extrabold text-slate-900 capitalize text-sm">{initialParams.tripName || tripData?.title || 'Expedition'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">Departure Date</p>
+                            <p className="font-bold text-slate-850 flex items-center gap-1"><Calendar size={12} className="text-[#FF5B00]" /> {initialParams.date || 'Flexible'}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-[9px] text-slate-400 uppercase font-medium">Joining Point</p>
+                            <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100/80 text-slate-800 rounded-xl text-xs font-bold border border-slate-200 capitalize">
+                              <MapPin size={12} className="text-[#FF5B00]" />
+                              {selectedCity?.cityName || 'Delhi'} {selectedCity?.pickupPoint ? `(${selectedCity.pickupPoint})` : ''}
                             </div>
                           </div>
-                        ))}
+                        </div>
                       </div>
 
-                      <div className="h-px bg-slate-200" />
+                      {/* Section 3: Traveler Details */}
+                      <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <h5 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">3. Traveler Details ({formData.participants})</h5>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(2)}
+                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-bold flex items-center gap-1 transition-all"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {formData.participantsList.map((t, i) => (
+                            <div key={i} className="flex flex-col md:flex-row md:items-center justify-between border border-slate-100 bg-slate-50/50 rounded-xl px-4 py-3 gap-2">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 capitalize">{t.name || `Traveler ${i+1}`}</p>
+                                <p className="text-[10px] text-slate-400 font-medium">Mobile: {t.phone} • {t.gender} • Age {t.age || 'N/A'}</p>
+                              </div>
+                              <div className="text-left md:text-right shrink-0">
+                                <span className="inline-block text-[9px] font-bold text-slate-500 bg-white border border-slate-200/60 px-2 py-0.5 rounded mr-1 capitalize">{t.roomSharing}</span>
+                                <span className="inline-block text-[9px] font-bold text-slate-500 bg-white border border-slate-200/60 px-2 py-0.5 rounded capitalize">{t.trainOption}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                      {/* Price breakdown */}
-                      <div className="space-y-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Base Price</span>
-                          <span className="font-bold text-slate-800">₹{pricing.originalTotalBase.toLocaleString()}</span>
+                      {/* Section 4: Payment Details */}
+                      <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <h5 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">4. Payment Details</h5>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(3)}
+                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-bold flex items-center gap-1 transition-all"
+                          >
+                            Edit
+                          </button>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">GST @ {tripData?.gstPercentage ?? 5}%</span>
-                          <span className="font-bold text-slate-800">+₹{pricing.gstAmount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Payment Plan</span>
-                          <span className="font-bold text-amber-600 capitalize">{paymentMode}</span>
-                        </div>
-                        <div className="flex justify-between bg-[#FF5B00]/5 rounded-xl p-3 -mx-1">
-                          <span className="font-bold text-slate-900">Amount Due Now</span>
-                          <span className="font-bold text-[#FF5B00] text-base">₹{pricing.finalTotal.toLocaleString()}</span>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Base Price</span>
+                            <span className="font-bold text-slate-800">₹{pricing.originalTotalBase.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">GST @ {tripData?.gstPercentage ?? 5}%</span>
+                            <span className="font-bold text-slate-800">+₹{pricing.gstAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-500">Payment Plan</span>
+                            <span className="font-bold text-amber-605 capitalize bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded text-[10px]">{paymentMode}</span>
+                          </div>
+                          <div className="flex justify-between bg-[#FF5B00]/5 rounded-xl p-3 -mx-1">
+                            <span className="font-bold text-slate-900">Total Payable Amount Due Now</span>
+                            <span className="font-extrabold text-[#FF5B00] text-base">₹{pricing.finalTotal.toLocaleString()}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1003,16 +1080,20 @@ function BookingForm() {
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] overflow-hidden shadow-md">
                 <div className="p-8 space-y-6">
                   
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <span className="text-[9px] text-[#FF5B00] font-bold capitalize tracking-widest flex items-center gap-1.5">
                       <Sparkles size={10} /> Live Expedition Summary
                     </span>
-                    <h3 className="text-xl font-bold capitalize tracking-tight text-slate-900 leading-tight">
+                    <h3 className="text-xl font-black capitalize tracking-tight text-slate-900 leading-tight">
                       {initialParams.tripName || 'Trip Checkout'}
                     </h3>
-                    <div className="flex flex-wrap gap-3 text-[10px] font-bold text-slate-400 pt-1">
-                      <span className="flex items-center gap-1"><Calendar size={12} /> {initialParams.date || 'Flexible'}</span>
-                      <span className="flex items-center gap-1"><Users size={12} /> {formData.participants} Travelers</span>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="flex items-center gap-1 px-2.5 py-1 bg-[#FF5B00]/10 text-[#FF5B00] rounded-lg text-[10px] font-bold">
+                        <Calendar size={11} /> Departure Date: {initialParams.date || 'Flexible'}
+                      </span>
+                      <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold border border-slate-200">
+                        <Users size={11} /> {formData.participants} Travelers
+                      </span>
                     </div>
                   </div>
 
@@ -1045,9 +1126,12 @@ function BookingForm() {
                       );
                     })}
 
-                    <div className="flex justify-between items-center text-slate-500">
-                      <span>Joining Point</span>
-                      <span className="font-bold capitalize text-[9px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{selectedCity?.cityName || 'Delhi'}</span>
+                    <div className="flex flex-col gap-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                      <span className="text-[9px] font-bold text-slate-450 uppercase tracking-wider block">Joining Point</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 capitalize">
+                        <MapPin size={12} className="text-[#FF5B00]" />
+                        {selectedCity?.cityName || 'Delhi'} {selectedCity?.pickupPoint ? `(${selectedCity.pickupPoint})` : ''}
+                      </div>
                     </div>
 
                     {selectedCity?.deductionAmount > 0 && (
@@ -1066,10 +1150,12 @@ function BookingForm() {
                     <div className="h-px bg-slate-100 my-2" />
 
                     {/* Plan description */}
-                    <div className="bg-slate-50 p-4 rounded-xl space-y-1 border border-slate-100">
-                      <p className="text-[10px] font-bold capitalize text-slate-400 tracking-wider">Plan Selected</p>
-                      <p className="text-xs font-bold text-amber-500 capitalize tracking-widest">{paymentMode}</p>
-                      <p className="text-[9px] text-slate-500 font-bold leading-tight capitalize">
+                    <div className="bg-slate-50 p-4 rounded-xl space-y-1.5 border border-slate-200/60">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold capitalize text-slate-400 tracking-wider">Plan Selected</span>
+                        <span className="text-[9px] font-extrabold text-amber-600 bg-amber-50 border border-amber-250 px-2 py-0.5 rounded uppercase tracking-wider">{paymentMode}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-bold leading-tight capitalize">
                         {paymentMode === 'Full Payment' ? 'Immediate full checkout' : `Reserve at deposit of ₹${(customDepositPerPax && customDepositPerPax > 0 ? customDepositPerPax : 2000).toLocaleString()}/pax. Balance due before trip start.`}
                       </p>
                     </div>

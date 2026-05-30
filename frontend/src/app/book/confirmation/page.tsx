@@ -170,7 +170,7 @@ function ConfirmationContent() {
               </span>
               <h2 className="text-2xl font-bold capitalize tracking-tight text-white">{booking.tripName}</h2>
               <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400 pt-1">
-                <div className="flex items-center gap-1.5"><Calendar size={14} className="text-[#FF5B00]" /> {booking.departureDate ? new Date(booking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</div>
+                <div className="flex items-center gap-1.5"><Calendar size={14} className="text-[#FF5B00]" /> Departure Date: {booking.departureDate ? new Date(booking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</div>
                 <div className="flex items-center gap-1.5"><MapPin size={14} className="text-[#FF5B00]" /> {booking.pickupCity || 'Delhi (Direct Join)'}</div>
                 <div className="flex items-center gap-1.5"><Users size={14} className="text-[#FF5B00]" /> {booking.passengers?.length || 1} Travelers</div>
               </div>
