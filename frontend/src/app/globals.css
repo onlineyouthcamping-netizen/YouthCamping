@@ -178,7 +178,7 @@
   --title-size-multiplier: 1;
   
   /* Layout Extended */
-  --section-spacing: 80px;
+  --section-spacing: var(--section-spacing-dynamic, 80px);
   --accent-color: #FF5B00;
   --light-orange: #FFF4EC;
   
@@ -234,10 +234,10 @@
   :root {
     --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
-    --section-spacing: 24px;
-    --card-width: 285px;
-    --card-height: 375px;
-    --title-size-multiplier: 0.80;
+    --section-spacing: 16px !important;
+    --card-width: 275px;
+    --card-height: 350px;
+    --title-size-multiplier: 0.78;
   }
 
   /* Disable heavy filters, glass blurs, shadow/scale effects on mobile */
@@ -275,10 +275,10 @@
 
   .hero-container {
     height: auto !important;
-    aspect-ratio: 16 / 9 !important;
-    min-height: 280px !important;
+    aspect-ratio: 18 / 9 !important;
+    min-height: 220px !important;
     overflow: hidden !important;
-  }
+  } }
 
   .hero-video-wrapper {
     position: absolute !important;

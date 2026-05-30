@@ -31,7 +31,7 @@ export default function TripCard({ trip, index }: TripCardProps) {
         aria-label={`View ${trip.title}`}
       />
 
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[16/10] md:aspect-[4/3] overflow-hidden">
         <OptimizedImage
           src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"}
           alt={trip.title}

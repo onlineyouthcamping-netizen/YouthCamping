@@ -140,9 +140,10 @@ export default async function Home() {
                 key={key} 
                 className={alternateClass}
                 style={{ 
-                  paddingTop: spacingPx,
-                  paddingBottom: spacingPx 
-                }}
+                  '--section-spacing-dynamic': spacingPx,
+                  paddingTop: 'var(--section-spacing)',
+                  paddingBottom: 'var(--section-spacing)'
+                } as any}
               >
                 {sectionMap[key]}
               </div>
