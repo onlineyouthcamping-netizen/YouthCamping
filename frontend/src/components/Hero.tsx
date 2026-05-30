@@ -177,10 +177,10 @@ export default function Hero({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="hero-title mb-1.5 md:mb-8"
+            className="hero-title mb-3 md:mb-8"
             style={{ 
               fontSize: isMobile
-                ? 'clamp(1.3rem, 6vw, 1.8rem)'
+                ? 'clamp(1.1rem, 5vw, 1.45rem)'
                 : (titleSize 
                     ? (isNaN(Number(titleSize)) 
                         ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
@@ -191,14 +191,14 @@ export default function Hero({
           >
             {displayHeadline}
           </motion.h1>
-
+ 
         {typingPhrases.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center font-medium mt-1 md:mt-6"
-            style={{ fontSize: isMobile ? '0.85rem' : 'clamp(1rem, 2.5vw, 1.875rem)' }}
+            className="flex items-center justify-center font-medium mt-2 md:mt-6"
+            style={{ fontSize: isMobile ? '0.8rem' : 'clamp(1rem, 2.5vw, 1.875rem)' }}
           >
             <Typewriter phrases={typingPhrases} />
             <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>

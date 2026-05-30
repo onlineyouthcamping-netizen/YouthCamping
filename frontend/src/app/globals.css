@@ -234,10 +234,10 @@
   :root {
     --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
-    --section-spacing: 48px;
-    --card-width: 100%;
-    --card-height: auto;
-    --title-size-multiplier: 0.85;
+    --section-spacing: 24px;
+    --card-width: 285px;
+    --card-height: 375px;
+    --title-size-multiplier: 0.80;
   }
 
   /* Disable heavy filters, glass blurs, shadow/scale effects on mobile */

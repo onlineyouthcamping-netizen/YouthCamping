@@ -177,13 +177,13 @@ export default function CommunityTrips({
           <div className="flex flex-row items-center justify-between gap-4 mb-2">
             <div className={cn(
               "flex-1 min-w-0",
-              titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
+              titleStyle === 'boxed' && "p-4 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-navy force-single-line max-md:!text-[14px] max-md:!leading-none"
+                className="section-heading text-navy force-single-line truncate max-md:!text-[16px] max-md:!leading-none"
                 style={{ 
                   fontSize: isMobile 
-                    ? '14px' 
+                    ? '16px' 
                     : (titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined),
                   fontWeight: titleWeight ? titleWeight : undefined
                 }}
@@ -318,13 +318,13 @@ export default function CommunityTrips({
  
                       {/* Bottom Content with Cinematic Gradient */}
                       <div 
-                        className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 text-white"
+                        className="absolute inset-0 flex flex-col justify-end p-4 md:p-8 text-white"
                         style={{
                           background: `linear-gradient(to top, rgba(0,0,0,${overlayOpacity * 1.7}) 0%, rgba(0,0,0,${overlayOpacity * 0.5}) 50%, transparent 100%)`
                         }}
                       >
                         <h3 
-                          className="mb-4 leading-tight tracking-tight capitalize break-words text-white"
+                          className="mb-2 md:mb-4 leading-tight tracking-tight capitalize break-words text-white"
                           style={{
                             fontSize: 'var(--card-title-size)',
                             fontWeight: 'var(--font-weight-heading, 500)'
@@ -333,7 +333,7 @@ export default function CommunityTrips({
                           {trip.title}
                         </h3>
                         
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-3 md:gap-4">
                           <div className="flex items-center justify-between">
                             <div className="flex flex-col gap-1.5">
                               <div className="flex items-center gap-2 text-white/90">

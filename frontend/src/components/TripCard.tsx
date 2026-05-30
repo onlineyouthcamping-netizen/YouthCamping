@@ -44,29 +44,29 @@ export default function TripCard({ trip, index }: TripCardProps) {
         </div>
       </div>
 
-      <div className="p-8">
-        <div className="flex items-center gap-2 text-primary-orange text-xs font-semibold uppercase tracking-wide mb-4">
-          <MapPin className="w-4 h-4" />
+      <div className="p-5 md:p-8">
+        <div className="flex items-center gap-2 text-primary-orange text-[10px] md:text-xs font-semibold uppercase tracking-wide mb-2 md:mb-4">
+          <MapPin className="w-3.5 h-3.5 md:w-4 h-4" />
           {trip.location}
         </div>
         
         <h3 
-          className="text-xl text-navy mb-4 md:mb-6 leading-tight tracking-tight group-hover:text-primary-orange transition-colors break-words"
+          className="text-lg md:text-xl text-navy mb-3 md:mb-6 leading-tight tracking-tight group-hover:text-primary-orange transition-colors break-words"
           style={{ fontWeight: 'var(--font-weight-heading, 500)' }}
         >
           {trip.title}
         </h3>
 
-        <div className="space-y-4 pt-6 border-t border-zinc-50">
+        <div className="space-y-4 pt-4 md:pt-6 border-t border-zinc-50">
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-semibold uppercase tracking-wide">
-              <Clock className="w-5 h-5 text-primary-orange" />
+            <div className="flex items-center gap-1.5 md:gap-2 text-zinc-400 text-[10px] md:text-xs font-semibold uppercase tracking-wide">
+              <Clock className="w-4 h-4 md:w-5 h-5 text-primary-orange" />
               {trip.duration}
             </div>
             <div className="text-right">
-              <p className="text-xs text-zinc-400 font-normal uppercase tracking-wide mb-1">Starts at</p>
-              <p className="text-xl font-semibold tracking-wide text-navy">₹{trip.price.toLocaleString()}</p>
+              <p className="text-[10px] text-zinc-400 font-normal uppercase tracking-wide mb-0.5 md:mb-1">Starts at</p>
+              <p className="text-lg md:text-xl font-semibold tracking-wide text-navy">₹{trip.price.toLocaleString()}</p>
             </div>
           </div>
         </div>
