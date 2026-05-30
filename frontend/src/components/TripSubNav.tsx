@@ -75,7 +75,8 @@ export default function TripSubNav({ sections }: TripSubNavProps) {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const offset = 140;
+      const isMob = window.innerWidth < 768;
+      const offset = isMob ? 130 : 170;
       const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
       const offsetPosition = elementPosition - offset;
 
@@ -94,11 +95,10 @@ export default function TripSubNav({ sections }: TripSubNavProps) {
       <div 
         ref={navRef}
         className={cn(
-          "w-full bg-white z-40 transition-all duration-200",
-          isSticky 
-            ? "fixed top-16 md:top-20 left-0 right-0 border-b border-zinc-100 shadow-sm" 
-            : "relative mt-4 md:mt-8 border-b border-zinc-100"
+          "sticky z-40 bg-white transition-all duration-200 border-b border-zinc-100 mt-4 md:mt-8",
+          isSticky ? "shadow-md" : "shadow-none"
         )}
+        style={{ top: 'var(--navbar-height)' }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div 
