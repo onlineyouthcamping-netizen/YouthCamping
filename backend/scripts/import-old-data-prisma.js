@@ -652,6 +652,64 @@ async function seed() {
       // Build description
       const description = correction.description || stripHtml(rawTrip.description) || tripTitle;
 
+      // Normalize popupDetails to prevent map crashes on string properties
+      let popupDetails = null;
+      if (correction.popupDetails) {
+        popupDetails = {
+          cancellation: [],
+          gears: [],
+          terms: [],
+          etiquette: [],
+          carry: []
+        };
+        
+        if (typeof correction.popupDetails.cancellation === 'string') {
+          popupDetails.cancellation = correction.popupDetails.cancellation
+            .split('.')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(s => {
+              const parts = s.split(':');
+              return {
+                label: parts[0]?.trim() || "",
+                val: parts[1]?.trim() || ""
+              };
+            });
+        } else if (Array.isArray(correction.popupDetails.cancellation)) {
+          popupDetails.cancellation = correction.popupDetails.cancellation;
+        }
+
+        if (typeof correction.popupDetails.gears === 'string') {
+          const items = correction.popupDetails.gears
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(s => ({ item: s, price: "Free" }));
+          popupDetails.gears = [{ category: "Required Gears", items }];
+        } else if (Array.isArray(correction.popupDetails.gears)) {
+          popupDetails.gears = correction.popupDetails.gears;
+        }
+
+        if (typeof correction.popupDetails.terms === 'string') {
+          popupDetails.terms = correction.popupDetails.terms
+            .split('.')
+            .map(s => s.trim())
+            .filter(Boolean);
+        } else if (Array.isArray(correction.popupDetails.terms)) {
+          popupDetails.terms = correction.popupDetails.terms;
+        }
+
+        if (typeof correction.popupDetails.etiquette === 'string') {
+          popupDetails.etiquette = correction.popupDetails.etiquette
+            .split('.')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(s => ({ title: "Guideline", desc: s }));
+        } else if (Array.isArray(correction.popupDetails.etiquette)) {
+          popupDetails.etiquette = correction.popupDetails.etiquette;
+        }
+      }
+
       // Assemble full trip data
       const tripData = {
         title: tripTitle,
@@ -672,13 +730,13 @@ async function seed() {
         inclusions: inclusions,
         exclusions: exclusions,
         availableDates: correction.availableDates || [],
-        variants: correction.variants || null,
+        variants: correction.variants || [],
         travelOptions: correction.travelOptions || null,
         roomOptions: correction.roomOptions || null,
         seo: correction.seo || null,
         highlights: correction.highlights || null,
         faqs: correction.faqs || null,
-        popupDetails: correction.popupDetails || null,
+        popupDetails: popupDetails,
         route: correction.route || null,
 
         // Trip metadata fields
