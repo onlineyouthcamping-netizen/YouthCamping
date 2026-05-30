@@ -103,6 +103,10 @@ export async function getQuotationSmart(idOrSlug: string, isAdmin: boolean = fal
 
     // 1. Try local CRM API (Production Fallback)
     let CRM_BASE = process.env.CRM_API_URL || API_BASE_URL;
+    if (!CRM_BASE || CRM_BASE.includes('onrender.com')) {
+        console.warn('[db-smart] Stale Render URL detected. Forcing fallback to Hostinger VPS.');
+        CRM_BASE = 'https://api.youthcamping.online/api';
+    }
     // Ensure it ends with /api for consistency with backend routes
     if (!CRM_BASE.endsWith('/api')) {
         CRM_BASE = `${CRM_BASE}/api`;
