@@ -29,24 +29,25 @@ interface PageRendererProps {
 export default function PageRenderer({ sections = [], trips = [], reviews = [], blogs = [] }: PageRendererProps) {
   if (!sections || !Array.isArray(sections)) return null;
 
+  const visibleSections = sections.filter(s => s.visible !== false);
+
   return (
     <div className="flex flex-col">
-      {sections.map((section, index) => {
-        const { type, data, visible } = section;
-        
-        if (visible === false) return null;
+      {visibleSections.map((section, index) => {
+        const { type, data } = section;
 
         const getBgColor = (idx: number) => {
-          const s = sections[idx];
-          if (!s || s.visible === false) return '#ffffff';
+          const s = visibleSections[idx];
+          if (!s) return '#ffffff';
           if (['hero', 'cta_banner', 'cinematic_banner'].includes(s.type)) return 'transparent';
           
-          return '#ffffff';
+          const patterns = ['#ffffff', '#f6f6f6'];
+          return patterns[idx % patterns.length];
         };
 
         const renderSection = () => {
           const prevBg = index > 0 ? getBgColor(index - 1) : '#ffffff';
-          const nextBg = index < sections.length - 1 ? getBgColor(index + 1) : '#ffffff';
+          const nextBg = index < visibleSections.length - 1 ? getBgColor(index + 1) : '#ffffff';
           const commonProps = { 
             topColor: prevBg, 
             bottomColor: nextBg,
@@ -118,7 +119,9 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
 
         const getBackgroundClass = (idx: number) => {
           if (['hero', 'cta_banner', 'cinematic_banner'].includes(type)) return 'bg-transparent';
-          return 'bg-[#ffffff]';
+          
+          const patterns = ['bg-[#ffffff]', 'bg-[#f6f6f6]'];
+          return patterns[idx % patterns.length];
         };
 
         return (
