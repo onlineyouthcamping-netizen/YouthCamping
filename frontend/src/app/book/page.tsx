@@ -262,6 +262,13 @@ function BookingForm() {
     }
   };
 
+  // Check if selected variant is Direct Join / Excludes travel options
+  const isDirectJoin = useMemo(() => {
+    if (!tripData?.variants || !Array.isArray(tripData.variants)) return false;
+    const selectedVariant = tripData.variants.find((v: any) => v.location === selectedCity?.cityName);
+    return selectedVariant?.excludeTravel === true;
+  }, [tripData, selectedCity]);
+
   // Pricing calculations
   const pricing = useMemo(() => {
     let originalTotalBase = 0;
@@ -270,14 +277,16 @@ function BookingForm() {
       let travelerPrice = basePrice;
       
       // Train options adjustment
-      const trainOptions = tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
-        { label: 'Sleeper', priceDelta: 0 },
-        { label: '3AC', priceDelta: 2000 },
-        { label: 'No Train', priceDelta: -1500 }
-      ];
-      const selectedTrainOpt = trainOptions.find((opt: any) => opt.label === p.trainOption);
-      if (selectedTrainOpt) {
-        travelerPrice += Number(selectedTrainOpt.priceDelta) || 0;
+      if (!isDirectJoin) {
+        const trainOptions = tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
+          { label: 'Sleeper', priceDelta: 0 },
+          { label: '3AC', priceDelta: 2000 },
+          { label: 'No Train', priceDelta: -1500 }
+        ];
+        const selectedTrainOpt = trainOptions.find((opt: any) => opt.label === p.trainOption);
+        if (selectedTrainOpt) {
+          travelerPrice += Number(selectedTrainOpt.priceDelta) || 0;
+        }
       }
 
       // Room sharing options adjustment
@@ -334,7 +343,7 @@ function BookingForm() {
       advancePaid,
       remainingBalance: netBase - advancePaid
     };
-  }, [basePrice, selectedCity, formData.participants, formData.participantsList, paymentMode, customDepositPerPax, tripData]);
+  }, [basePrice, selectedCity, formData.participants, formData.participantsList, paymentMode, customDepositPerPax, tripData, isDirectJoin]);
 
 
 
@@ -740,26 +749,28 @@ function BookingForm() {
                           </div>
 
                           {/* Train Class Option for this traveler */}
-                          <div className="space-y-1.5 pt-1">
-                            <label className="text-[8px] font-bold capitalize tracking-wider text-slate-500 flex items-center gap-1"><Train size={10} /> {tripData?.bookingFormLabels?.travelOption || 'Train Ticket Option'}</label>
-                            <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
-                              {(tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
-                                { label: 'Sleeper' }, { label: '3AC' }, { label: 'No Train' }
-                              ]).map((train: any) => (
-                                <button
-                                  key={train.label}
-                                  type="button"
-                                  onClick={() => handleParticipantChange(index, 'trainOption', train.label)}
-                                  className={cn(
-                                    "py-2 rounded-lg font-bold text-[9px] border text-center transition-all",
-                                    traveler.trainOption === train.label ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
-                                  )}
-                                >
-                                  {train.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                          {!isDirectJoin && (
+                             <div className="space-y-1.5 pt-1">
+                               <label className="text-[8px] font-bold capitalize tracking-wider text-slate-500 flex items-center gap-1"><Train size={10} /> {tripData?.bookingFormLabels?.travelOption || 'Train Ticket Option'}</label>
+                               <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+                                 {(tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
+                                   { label: 'Sleeper' }, { label: '3AC' }, { label: 'No Train' }
+                                 ]).map((train: any) => (
+                                   <button
+                                     key={train.label}
+                                     type="button"
+                                     onClick={() => handleParticipantChange(index, 'trainOption', train.label)}
+                                     className={cn(
+                                       "py-2 rounded-lg font-bold text-[9px] border text-center transition-all",
+                                       traveler.trainOption === train.label ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
+                                     )}
+                                   >
+                                     {train.label}
+                                   </button>
+                                 ))}
+                               </div>
+                             </div>
+                           )}
 
                         </div>
                       ))}
@@ -1114,14 +1125,14 @@ function BookingForm() {
                       const roomOpts = tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
                         { label: 'Triple Sharing', priceDelta: 0 }, { label: 'Double Sharing', priceDelta: 1500 }, { label: 'Quad Sharing', priceDelta: -500 }
                       ];
-                      const trainDelta = trainOpts.find((o: any) => o.label === t.trainOption)?.priceDelta || 0;
+                      const trainDelta = isDirectJoin ? 0 : (trainOpts.find((o: any) => o.label === t.trainOption)?.priceDelta || 0);
                       const roomDelta = roomOpts.find((o: any) => o.label === t.roomSharing)?.priceDelta || 0;
                       if (trainDelta === 0 && roomDelta === 0) return null;
                       return (
                         <div key={i} className="text-[10px] text-slate-400 pl-2 border-l-2 border-slate-100 space-y-0.5">
                           <span className="font-bold capitalize text-slate-500">Traveler {i+1}</span>
                           {roomDelta !== 0 && <div className="flex justify-between"><span>{t.roomSharing}</span><span className={roomDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{roomDelta > 0 ? '+' : ''}₹{roomDelta.toLocaleString()}</span></div>}
-                          {trainDelta !== 0 && <div className="flex justify-between"><span>{t.trainOption}</span><span className={trainDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{trainDelta > 0 ? '+' : ''}₹{trainDelta.toLocaleString()}</span></div>}
+                          {!isDirectJoin && trainDelta !== 0 && <div className="flex justify-between"><span>{t.trainOption}</span><span className={trainDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{trainDelta > 0 ? '+' : ''}₹{trainDelta.toLocaleString()}</span></div>}
                         </div>
                       );
                     })}

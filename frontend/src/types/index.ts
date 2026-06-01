@@ -34,6 +34,7 @@ export interface TripVariant {
   discountedPrice: number;
   image: string;
   skipDays?: number;
+  excludeTravel?: boolean;
 }
 
 export interface TravelOption {

@@ -45,9 +45,11 @@ export default function TripHighlightsList({ title, items, defaultItems = [] }: 
         
         <div className="flex flex-nowrap md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 overflow-x-auto pb-6 md:pb-0 scroll-mt-32 no-scrollbar">
           {displayedItems.map((item, i) => {
-            const name = item.name || (item as any).title || "Highlight";
-            const imageUrl = item.image || (item as any).img || (item as any).url || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6";
-            const slug = item.slug || (item as any).id || i.toString();
+            const isString = typeof item === "string";
+            const name = isString ? item : ((item as any).name || (item as any).title || "Highlight");
+            const imageUrl = isString ? "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6" : ((item as any).image || (item as any).img || (item as any).url || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6");
+            const slug = isString ? i.toString() : ((item as any).slug || (item as any).id || i.toString());
+            const desc = isString ? "" : ((item as any).description || (item as any).desc || "");
             
             return (
               <Link 
@@ -63,14 +65,14 @@ export default function TripHighlightsList({ title, items, defaultItems = [] }: 
               >
                 <div className="relative aspect-[4/3] rounded-[24px] overflow-hidden mb-4 shadow-md">
                   <OptimizedImage 
-                    src={normalizeImageUrl(imageUrl) || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6"} 
-                    alt={name} 
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                     src={normalizeImageUrl(imageUrl) || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6"} 
+                     alt={name} 
+                     loading="lazy"
+                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
                 <h3 className="font-bold text-navy text-sm mb-1">{name}</h3>
-                <p className="text-[10px] text-zinc-400 font-medium line-clamp-2">{item.description || (item as any).desc}</p>
+                {desc && <p className="text-[10px] text-zinc-400 font-medium line-clamp-2">{desc}</p>}
               </Link>
             );
           })}

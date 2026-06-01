@@ -47,7 +47,8 @@ export default function BookingOptions({
   useEffect(() => {
     const variant = variants[selectedVariant];
     const basePrice = variant?.discountedPrice || trip.price;
-    const travelDelta = travelOptions[selectedTravel]?.priceDelta || 0;
+    const isDirectJoin = variant?.excludeTravel === true;
+    const travelDelta = isDirectJoin ? 0 : (travelOptions[selectedTravel]?.priceDelta || 0);
     const roomDelta = roomOptions[selectedRoom]?.priceDelta || 0;
     
     const total = basePrice + travelDelta + roomDelta;
@@ -91,6 +92,8 @@ export default function BookingOptions({
     const message = encodeURIComponent(`Hi! I want to book the "${trip.title}" expedition from ${selectedLocation} starting at ₹${currentPrice.toLocaleString()}. Please help me with the booking.`);
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
+
+  const isDirectJoin = variants[selectedVariant]?.excludeTravel === true;
 
   return (
     <div className="space-y-6">
@@ -145,35 +148,37 @@ export default function BookingOptions({
 
         {/* Travelling & Room Options Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold text-navy">Travelling Options</h3>
-            <div className="flex flex-wrap gap-2">
-              {travelOptions.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setSelectedTravel(i);
-                    onTravelSelect?.(i);
-                  }}
-                  className={cn(
-                    "relative px-4 py-2 rounded-lg border-2 text-xs font-medium transition-all",
-                    selectedTravel === i 
-                      ? "border-primary-orange text-primary-orange bg-primary-orange/5" 
-                      : "border-zinc-100 text-zinc-400 hover:border-zinc-200"
-                  )}
-                >
-                  {opt.label}
-                  {selectedTravel === i && (
-                    <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-primary-orange rounded-full flex items-center justify-center">
-                      <Check className="w-2 h-2 text-white stroke-[4]" />
-                    </div>
-                  )}
-                </button>
-              ))}
+          {!isDirectJoin && (
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold text-navy">Travelling Options</h3>
+              <div className="flex flex-wrap gap-2">
+                {travelOptions.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedTravel(i);
+                      onTravelSelect?.(i);
+                    }}
+                    className={cn(
+                      "relative px-4 py-2 rounded-lg border-2 text-xs font-medium transition-all",
+                      selectedTravel === i 
+                        ? "border-primary-orange text-primary-orange bg-primary-orange/5" 
+                        : "border-zinc-100 text-zinc-400 hover:border-zinc-200"
+                    )}
+                  >
+                    {opt.label}
+                    {selectedTravel === i && (
+                      <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-primary-orange rounded-full flex items-center justify-center">
+                        <Check className="w-2 h-2 text-white stroke-[4]" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-4">
+          <div className={cn("space-y-4", isDirectJoin ? "md:col-span-2" : "")}>
             <h3 className="text-base font-semibold text-navy">Room Sharing</h3>
             <div className="flex flex-wrap gap-2">
               {roomOptions.map((opt, i) => (
