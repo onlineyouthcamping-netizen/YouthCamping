@@ -8,6 +8,8 @@ interface OptimizedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElem
   alt: string;
   fallbackSrc?: string;
   priority?: boolean;
+  /** Cloudinary width transform — default 1200. Use 800 for cards, 400 for thumbnails. */
+  cloudinaryWidth?: number;
 }
 
 export function OptimizedImage({ 
@@ -16,6 +18,7 @@ export function OptimizedImage({
   fallbackSrc = '/logo.png', 
   className = '', 
   priority,
+  cloudinaryWidth,
   ...props 
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -39,15 +42,27 @@ export function OptimizedImage({
     finalSrc = fallbackSrc; // Block incomplete unsplash
   } else if (!finalSrc.startsWith('http') && !finalSrc.startsWith('/')) {
     finalSrc = fallbackSrc; // Block invalid URLs
-  } else if (finalSrc.includes('res.cloudinary.com')) {
-    // 2. Cloudinary Optimization
+  }
+
+  let srcSet: string | undefined = undefined;
+
+  const isCloudinary = finalSrc && finalSrc.includes('res.cloudinary.com');
+  const hasNoExistingW = finalSrc && !finalSrc.includes('w_');
+  const hasCloudinaryWidth = cloudinaryWidth !== undefined;
+
+  if (isCloudinary && hasNoExistingW && hasCloudinaryWidth) {
     const uploadIndex = finalSrc.indexOf('/upload/');
     if (uploadIndex !== -1) {
       const before = finalSrc.substring(0, uploadIndex + 8);
       const after = finalSrc.substring(uploadIndex + 8);
-      if (!finalSrc.includes('f_auto') || !finalSrc.includes('q_auto')) {
-        finalSrc = `${before}f_auto,q_auto,w_1200,c_limit/${after}`;
-      }
+      const template = `${before}f_auto,q_auto,w_1200,c_limit/${after}`.replace(/([^:]\/)\/+/g, "$1");
+      
+      finalSrc = template.replace(/w_\d+/, `w_${cloudinaryWidth}`);
+      
+      const widths = [320, 480, 640, 800, 1200];
+      srcSet = widths
+        .map(w => `${template.replace(/w_\d+/, `w_${w}`)} ${w}w`)
+        .join(', ');
     }
   }
 
@@ -57,6 +72,8 @@ export function OptimizedImage({
     <img
       ref={imgRef}
       src={currentSrc}
+      srcSet={srcSet}
+      sizes={props.sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}

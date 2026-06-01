@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Clock, MapPin, ChevronRight, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { Trip } from "@/types";
@@ -10,6 +10,7 @@ import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
 import { useTheme } from "@/components/DynamicThemeProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface CommunityTripsProps {
   trips: Trip[];
@@ -41,14 +42,8 @@ export default function CommunityTrips({
   bottomColor = "#ffffff",
 }: CommunityTripsProps) {
   const { theme } = useTheme();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
 
   // Filter trips by IDs first if provided
   const baseTrips = tripIds && tripIds.length > 0 
@@ -156,6 +151,8 @@ export default function CommunityTrips({
   };
 
   const overlayOpacity = theme?.cardOverlayDarkness != null ? theme.cardOverlayDarkness / 100 : 0.5;
+
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   const displayTitle = (!title || title.trim() === "" || title === "-" || title === "—") 
     ? "Upcoming Community Trips" 
@@ -273,9 +270,9 @@ export default function CommunityTrips({
                 return (
                   <motion.div
                     key={trip.id}
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={reduceMotion ? false : { opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
+                    transition={reduceMotion ? { duration: 0 } : { delay: i * 0.05 }}
                     className="flex-none snap-start"
                     style={{ width: 'var(--card-width)' }}
                   >
@@ -296,6 +293,9 @@ export default function CommunityTrips({
                         src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
                         alt={trip.title} 
                         loading="lazy"
+                        cloudinaryWidth={800}
+                        width={400}
+                        height={240}
                         className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-1000", hoverScaleClass)}
                         style={{
                           filter: 'brightness(var(--card-brightness))',

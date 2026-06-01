@@ -81,7 +81,7 @@ export default function Navbar({
     <>
       <nav
         className={cn(
-          "md:fixed max-md:sticky top-0 left-0 right-0 z-50 transition-all duration-500 px-4 sm:px-6 flex items-center",
+          "fixed top-0 left-0 right-0 z-[9999] transition-all duration-500 px-4 sm:px-6 flex items-center",
           bgClass,
           blurClass
         )}
@@ -97,6 +97,8 @@ export default function Navbar({
               alt="Youthcamping Logo" 
               fetchPriority="high"
               loading="eager"
+              width={140}
+              height={40}
               className="w-auto max-w-[140px] md:max-w-none object-contain transition-transform hover:scale-105 pointer-events-auto"
               style={{
                 height: 'calc(var(--navbar-height) * 0.53)',
@@ -159,8 +161,9 @@ export default function Navbar({
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden relative z-[60] p-2"
+            className="md:hidden relative z-[60] p-2 w-11 h-11 flex items-center justify-center"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
           >
             {isMenuOpen ? (
               <X className="w-6 h-6 text-navy" />

@@ -183,4 +183,115 @@ router.get('/verify', (req, res) => {
   });
 });
 
+// ── POST /api/upload/video ──
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const videoStorage = multer.memoryStorage();
+const videoFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowed = ['.mp4', '.webm', '.mov'];
+  if (allowed.includes(ext) || file.mimetype.startsWith('video/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only MP4, WebM, and MOV videos are allowed'), false);
+  }
+};
+const uploadVideo = multer({
+  storage: videoStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: videoFilter
+});
+
+router.post('/video', (req, res) => {
+  uploadVideo.single('video')(req, res, async (err) => {
+    if (err) {
+      console.error('[UPLOAD VIDEO] Multer Error:', err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
+
+      const isCloudinaryConfigured = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+      let uploadResult;
+
+      if (isCloudinaryConfigured) {
+        uploadResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              resource_type: 'video',
+              folder: 'youthcamping/videos',
+              transformation: [{ quality: 'auto', fetch_format: 'auto' }]
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+      } else {
+        // Fallback local storage
+        const uploadDir = path.join(__dirname, '../../public/uploads/videos');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const filename = Date.now() + '-' + req.file.originalname.replace(/\s+/g, '-');
+        const filePath = path.join(uploadDir, filename);
+        fs.writeFileSync(filePath, req.file.buffer);
+        uploadResult = {
+          secure_url: `/uploads/videos/${filename}`,
+          public_id: `local_${filename}`
+        };
+      }
+
+      const videoUrl = uploadResult.secure_url;
+      const publicId = uploadResult.public_id;
+      const posterUrl = videoUrl.startsWith('http') 
+        ? videoUrl.replace(/\.[^/.]+$/, '.jpg') 
+        : '';
+
+      res.status(200).json({
+        success: true,
+        url: videoUrl,
+        publicId: publicId,
+        posterUrl: posterUrl
+      });
+    } catch (innerErr) {
+      console.error('[UPLOAD VIDEO] Processing Error:', innerErr.message);
+      res.status(500).json({ success: false, message: innerErr.message });
+    }
+  });
+});
+
+// ── DELETE /api/upload/video ──
+router.delete('/video', async (req, res) => {
+  try {
+    const { publicId } = req.body;
+    if (!publicId) {
+      return res.status(400).json({ success: false, message: 'No public ID provided' });
+    }
+
+    if (publicId.startsWith('local_')) {
+      const filename = publicId.replace(/^local_/, '');
+      const filePath = path.join(__dirname, '../../public/uploads/videos', filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } else {
+      const isCloudinaryConfigured = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+      if (isCloudinaryConfigured) {
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+      }
+    }
+
+    res.json({ success: true, message: 'Video deleted' });
+  } catch (error) {
+    console.error('[DELETE VIDEO] Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

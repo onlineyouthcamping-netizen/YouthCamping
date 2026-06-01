@@ -1,8 +1,14 @@
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import dynamic from "next/dynamic";
+
+const Footer = dynamic(() => import("@/components/Footer"), {
+  loading: () => null,
+});
+const FloatingWhatsApp = dynamic(() => import("@/components/FloatingWhatsApp"), {
+  loading: () => null,
+});
 import { DynamicThemeProvider } from "@/components/DynamicThemeProvider";
 import { fetchSettings } from "@/lib/api";
 
@@ -51,18 +57,14 @@ export default async function RootLayout({
   
   return (
     <html lang="en" className={`${montserrat.variable} h-full antialiased`}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap" rel="stylesheet" />
-      </head>
+      {/* Font loading handled by next/font/google (Montserrat import above) — no manual <link> needed */}
       <body className="min-h-full flex flex-col font-montserrat relative">
         <DynamicThemeProvider>
           <Navbar 
             logoUrl={settings?.navbar?.logoUrl} 
             navLinks={settings?.navbar?.links} 
           />
-          <main className="flex-grow">{children}</main>
+          <main className="flex-grow pt-[var(--navbar-height)] md:pt-0">{children}</main>
           <Footer 
             logoUrl={settings?.navbar?.logoUrl || settings?.footer?.logoUrl} 
             address={settings?.footer?.address} 

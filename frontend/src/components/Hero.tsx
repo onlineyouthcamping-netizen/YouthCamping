@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { useTheme } from "@/components/DynamicThemeProvider";
+
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // Custom Typewriter Component
 function Typewriter({ phrases, typingSpeed = 100, deletingSpeed = 50, pauseDelay = 2000 }: { phrases: string[], typingSpeed?: number, deletingSpeed?: number, pauseDelay?: number }) {
@@ -42,7 +44,7 @@ function Typewriter({ phrases, typingSpeed = 100, deletingSpeed = 50, pauseDelay
   }, [text, isDeleting, loopNum, phrases, typingSpeed, deletingSpeed, pauseDelay, typingSpeedState]);
 
   return (
-    <span className="text-primary-orange">{text}</span>
+    <span className="text-primary-orange" style={{ display: 'inline-block', minHeight: '1.2em' }}>{text || "\u00A0"}</span>
   );
 }
 
@@ -53,6 +55,9 @@ interface HeroProps {
   backgroundImage?: string;
   titleSize?: string | number;
   titleWeight?: string | number;
+  settings?: any;
+  videoEnabled?: boolean;
+  videoPosterUrl?: string;
 }
 
 export default function Hero({ 
@@ -62,21 +67,34 @@ export default function Hero({
   backgroundImage,
   titleSize,
   titleWeight,
+  settings,
+  videoEnabled,
+  videoPosterUrl,
 }: HeroProps) {
   const { theme } = useTheme();
-  const [isMobile, setIsMobile] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  
+  const [playClicked, setPlayClicked] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile, { passive: true });
-    return () => window.removeEventListener("resize", checkMobile);
+    setIsMounted(true);
   }, []);
 
-  const hasVideo = videoUrl && videoUrl.trim() !== "" && videoUrl.includes("http");
   const normalizedBg = normalizeImageUrl(backgroundImage);
+  
+  const selfHostedEnabled = !!((settings?.heroVideoEnabled && settings?.heroVideoUrl) || (videoEnabled && videoUrl && !videoUrl.includes('youtube') && !videoUrl.includes('youtu.be')));
+  
+  const resolvedVideoUrl = (settings?.heroVideoEnabled && settings?.heroVideoUrl) 
+    ? settings.heroVideoUrl 
+    : (videoEnabled && videoUrl && !videoUrl.includes('youtube') && !videoUrl.includes('youtu.be') ? videoUrl : "");
+    
+  const resolvedPosterUrl = (settings?.heroVideoEnabled && settings?.heroVideoPosterUrl) 
+    ? settings.heroVideoPosterUrl 
+    : (videoPosterUrl || normalizedBg);
   
   // Theme-driven animated texts with hardcoded fallback
   const defaultPhrases = [
@@ -111,12 +129,13 @@ export default function Hero({
   const alignClass = heroAlign === "left" ? "items-start text-left" : heroAlign === "right" ? "items-end text-right" : "items-center text-center";
 
   const mobileVideoHeight = theme?.mobileHeroVideoHeight || 'aspect-video';
-  const isCustomVideoSize = hasVideo && mobileVideoHeight !== 'aspect-video';
+  const isCustomVideoSize = selfHostedEnabled && mobileVideoHeight !== 'aspect-video';
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   return (
     <div 
       className={`hero-container relative w-full overflow-hidden bg-navy ${
-        hasVideo ? 'hero-has-video' : ''
+        selfHostedEnabled ? 'hero-has-video' : ''
       } ${
         isCustomVideoSize ? 'video-custom-size' : 'max-md:aspect-video'
       }`}
@@ -124,31 +143,37 @@ export default function Hero({
         transform: 'scale(1.001)',
         willChange: 'transform',
         backfaceVisibility: 'hidden',
+        aspectRatio: '16/9',
+        minHeight: '100svh',
       }}
     >
       {/* Background Media */}
       <div className="absolute inset-0 z-0" style={{ transform: 'scale(1.01)', backfaceVisibility: 'hidden' }}>
-        {hasVideo ? (
+        {selfHostedEnabled && resolvedVideoUrl ? (
           <div className="absolute inset-0 w-full h-full overflow-hidden">
-            {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
-              <div className="hero-video-wrapper">
-                <iframe
-                  className="hero-video-iframe opacity-100"
-                  src={`${videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1&loop=1&playlist=${videoUrl.split('v=')[1] || videoUrl.split('/').pop()}&controls=0&showinfo=0&rel=0&modestbranding=1`}
-                  title="Hero Video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                />
-              </div>
-            ) : (
-              <video
-                src={videoUrl}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover opacity-100 absolute inset-0"
+            {/* Poster image always underneath and visible until video is ready */}
+            {resolvedPosterUrl && !videoLoaded && (
+              <OptimizedImage
+                src={resolvedPosterUrl}
+                className="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-500"
+                alt="Hero Background Poster"
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
               />
             )}
+            
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onCanPlay={() => setVideoLoaded(true)}
+              className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ${
+                videoLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <source src={resolvedVideoUrl} type="video/mp4" />
+            </video>
           </div>
         ) : normalizedBg ? (
           <OptimizedImage 
@@ -174,18 +199,16 @@ export default function Hero({
 
       <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 py-3 md:px-10 md:py-8 text-white max-md:items-center max-md:text-center ${alignClass}`}>
           <motion.h1
-            initial={{ opacity: 0, y: 10 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 1, ease: [0.22, 1, 0.36, 1] }}
             className="hero-title mb-3 md:mb-8"
             style={{ 
-              fontSize: isMobile
-                ? 'clamp(1.1rem, 5vw, 1.45rem)'
-                : (titleSize 
-                    ? (isNaN(Number(titleSize)) 
-                        ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
-                        : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
-                    : undefined),
+              ['--title-size-desktop' as any]: titleSize 
+                ? (isNaN(Number(titleSize)) 
+                    ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
+                    : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
+                : undefined,
               fontWeight: titleWeight || undefined
             }}
           >
@@ -194,11 +217,13 @@ export default function Hero({
  
         {typingPhrases.length > 0 && (
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center font-medium mt-2 md:mt-6"
-            style={{ fontSize: isMobile ? '0.8rem' : 'clamp(1rem, 2.5vw, 1.875rem)' }}
+            transition={reduceMotion ? { duration: 0 } : { delay: 0.5, duration: 1 }}
+            className="flex items-center justify-center font-medium mt-2 md:mt-6 hero-subheadline"
+            style={{ 
+              ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
+            }}
           >
             <Typewriter phrases={typingPhrases} />
             <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>
@@ -207,20 +232,20 @@ export default function Hero({
 
         {ctaText && ctaLink && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.8 }}
+            transition={reduceMotion ? { duration: 0 } : { delay: 1, duration: 0.8 }}
             className="mt-2.5 md:mt-8"
           >
             <Link
               href={ctaLink}
-              className="inline-flex items-center gap-1.5 px-4 py-2 md:px-8 md:py-4 bg-primary-orange text-white font-semibold rounded-lg hover:opacity-90 transition-opacity text-xs md:text-base"
+              className="inline-flex items-center gap-1.5 px-4 py-2 md:px-8 md:py-4 bg-primary-orange text-white font-semibold rounded-lg hover:opacity-90 transition-opacity hero-btn"
               style={{
-                padding: isMobile ? '8px 18px' : `var(--button-padding-y) var(--button-padding-x)`,
+                ['--btn-padding' as any]: `var(--button-padding-y) var(--button-padding-x)`,
+                ['--btn-font-size' as any]: 'var(--button-font-size)',
                 borderRadius: 'var(--radius-button)',
                 textTransform: 'var(--button-text-transform)' as any,
                 letterSpacing: 'var(--button-letter-spacing)',
-                fontSize: isMobile ? '0.75rem' : 'var(--button-font-size)',
               }}
             >
               {ctaText}

@@ -1,11 +1,12 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { normalizeImageUrl } from "@/lib/api";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface Slide {
   title?: string;
@@ -44,6 +45,9 @@ export default function CTASlider({
   interval = 5000
 }: CTASliderProps) {
   const [[page, direction], setPage] = useState([0, 0]);
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   const displayItems = items.length > 0 ? items : [
     {
@@ -117,7 +121,7 @@ export default function CTASlider({
                   
                   {current.subtitle && (
                     <motion.p
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="text-white text-base md:text-lg font-medium tracking-wide mb-1 drop-shadow-md font-sans"
                     >
@@ -127,7 +131,7 @@ export default function CTASlider({
                   
                   {current.title && (
                     <motion.h2 
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="text-4xl md:text-6xl lg:text-7xl text-white leading-[1.05] mb-6 md:mb-8 capitalize tracking-tighter"
                       style={{ fontWeight: 'var(--font-weight-heading, 300)' }}
@@ -139,7 +143,7 @@ export default function CTASlider({
                   {/* Assuming 'link' or we derive 'tags' for the pill container. Using standard text for now. */}
                   {current.title === "Winter Trips" ? (
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="bg-white/95 backdrop-blur-md px-6 py-2 md:py-2.5 rounded-full shadow-xl"
                     >
@@ -149,7 +153,7 @@ export default function CTASlider({
                     </motion.div>
                   ) : current.subtitle ? (
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="bg-white/95 backdrop-blur-md px-6 py-2 md:py-2.5 rounded-full shadow-xl"
                     >
@@ -171,6 +175,7 @@ export default function CTASlider({
                   key={i}
                   onClick={() => setPage([i, i > index ? 1 : -1])}
                   className={`h-1.5 rounded-full transition-all duration-500 ${i === index ? 'w-8 bg-white shadow-md' : 'w-2 bg-white/40 hover:bg-white/60'}`}
+                  aria-label={`Go to slide ${i + 1}`}
                 />
               ))}
             </div>

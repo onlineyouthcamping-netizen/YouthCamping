@@ -14,6 +14,8 @@ import api from "@/services/api";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { register, handleSubmit, reset, watch, setValue } = useForm<any>();
 
   const navbarLinks = watch('navbarLinks') || [];
@@ -85,6 +87,84 @@ export default function SettingsPage() {
     setValue('bookingForm.trainOptions', trainOptions.filter((_: any, i: number) => i !== index));
   };
 
+  const heroVideoUrl = watch('heroVideoUrl');
+  const heroVideoEnabled = watch('heroVideoEnabled');
+  const heroVideoPosterUrl = watch('heroVideoPosterUrl');
+
+  const handleToggleVideo = async () => {
+    try {
+      const res = await api.patch('/settings/hero-video/toggle');
+      if (res.data && res.data.success) {
+        setValue('heroVideoEnabled', res.data.data.heroVideoEnabled);
+        toast.success(`Hero video ${res.data.data.heroVideoEnabled ? 'enabled' : 'disabled'}`);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to toggle hero video");
+    }
+  };
+
+  const handleDeleteVideo = async () => {
+    if (!window.confirm("Are you sure you want to remove the Hero Video? This will delete it permanently.")) {
+      return;
+    }
+    try {
+      const res = await api.delete('/settings/hero-video');
+      if (res.data && res.data.success) {
+        setValue('heroVideoUrl', null);
+        setValue('heroVideoPublicId', null);
+        setValue('heroVideoPosterUrl', null);
+        setValue('heroVideoEnabled', false);
+        toast.success("Hero video removed successfully");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete hero video");
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!['.mp4', '.webm', '.mov'].includes(ext)) {
+      toast.error("Only .mp4, .webm, and .mov files are accepted.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('video', file);
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const res = await api.post('/settings/hero-video', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(progress);
+          }
+        }
+      });
+
+      if (res.data && res.data.success) {
+        setValue('heroVideoUrl', res.data.data.heroVideoUrl);
+        setValue('heroVideoPublicId', res.data.data.heroVideoPublicId);
+        setValue('heroVideoPosterUrl', res.data.data.heroVideoPosterUrl);
+        setValue('heroVideoEnabled', res.data.data.heroVideoEnabled);
+        toast.success("Hero video uploaded successfully");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to upload video");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
   if (loading) {
     return <div className="p-10 text-center font-bold uppercase tracking-widest opacity-40">Loading System Settings...</div>;
   }
@@ -111,7 +191,7 @@ export default function SettingsPage() {
         </TabsList>
 
         {/* --- BRANDING --- */}
-        <TabsContent value="branding" className="mt-6 animate-premium">
+        <TabsContent value="branding" className="mt-6 animate-premium space-y-6">
           <Card className="admin-card border border-slate-200">
             <CardContent className="p-0 space-y-6">
               <h2 className="admin-heading">Brand & Identity</h2>
@@ -140,6 +220,98 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label className="admin-label">Logo Alt Text</Label>
                   <Input {...register("logo.alt")} className="admin-input" placeholder="Brand Logo Alt" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="admin-card border border-slate-200">
+            <CardContent className="p-0 space-y-6">
+              <h2 className="admin-heading">Hero Video Settings</h2>
+              <p className="admin-body">Upload and manage a self-hosted hero background video. If enabled, this video plays instead of the static image or YouTube video.</p>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <Label className="admin-label block font-semibold">Enable Hero Video</Label>
+                    <span className="text-xs text-slate-500">Toggle whether the self-hosted video is active.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleVideo}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                      heroVideoEnabled ? 'bg-primary-orange' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        heroVideoEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {heroVideoUrl && (
+                  <div className="space-y-2">
+                    <Label className="admin-label">Current Video Preview</Label>
+                    <div className="rounded-xl overflow-hidden border bg-slate-900 max-w-xl aspect-video relative flex items-center justify-center">
+                      <video
+                        src={heroVideoUrl}
+                        controls
+                        muted
+                        className="w-full h-full object-cover"
+                        poster={heroVideoPosterUrl || undefined}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-4 items-center">
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id="hero-video-file"
+                        accept=".mp4,.webm,.mov"
+                        className="hidden"
+                        onChange={handleVideoUpload}
+                        disabled={uploading}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => document.getElementById('hero-video-file')?.click()}
+                        disabled={uploading}
+                        className="admin-button-primary bg-primary-orange text-white"
+                      >
+                        {uploading ? `Uploading (${uploadProgress}%)` : 'Upload Video'}
+                      </Button>
+                    </div>
+
+                    {heroVideoUrl && (
+                      <Button
+                        type="button"
+                        onClick={handleDeleteVideo}
+                        variant="destructive"
+                        disabled={uploading}
+                        className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 h-10 font-semibold"
+                      >
+                        Remove Video
+                      </Button>
+                    )}
+                  </div>
+
+                  {uploading && (
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className="bg-primary-orange h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-500">
+                    Recommended: 25 seconds or less, MP4 or WebM, under 5MB. MOV files will be auto-converted.
+                  </p>
                 </div>
               </div>
             </CardContent>

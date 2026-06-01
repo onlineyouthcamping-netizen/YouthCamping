@@ -44,8 +44,8 @@ export const normalizeImageUrl = (url: any): string | undefined => {
   return url;
 };
 
-export async function fetchTrips(): Promise<Trip[]> {
-  const res = await fetch(`${API_BASE_URL}/trips`, { cache: 'no-store' });
+export async function fetchTrips(init?: RequestInit): Promise<Trip[]> {
+  const res = await fetch(`${API_BASE_URL}/trips`, init ?? { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch trips");
   const json = await res.json();
   return json.data || [];
@@ -64,15 +64,15 @@ export async function fetchItinerary(tripId: string): Promise<ItineraryDay[]> {
   return res.json();
 }
 
-export async function fetchReviews(): Promise<any[]> {
-  const res = await fetch(`${API_BASE_URL}/reviews`, { cache: 'no-store' });
+export async function fetchReviews(init?: RequestInit): Promise<any[]> {
+  const res = await fetch(`${API_BASE_URL}/reviews`, init ?? { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch reviews");
   const json = await res.json();
   return json.data || [];
 }
 
-export async function fetchBlogs(): Promise<any[]> {
-  const res = await fetch(`${API_BASE_URL}/blogs`, { cache: 'no-store' });
+export async function fetchBlogs(init?: RequestInit): Promise<any[]> {
+  const res = await fetch(`${API_BASE_URL}/blogs`, init ?? { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch blogs");
   const json = await res.json();
   return json.data || [];
@@ -97,8 +97,8 @@ export async function fetchBlogBySlug(slug: string): Promise<any | null> {
   return json.data || null;
 }
 
-export async function fetchPageBySlug(slug: string): Promise<any | null> {
-  const res = await fetch(`${API_BASE_URL}/page-builder/${slug}`, { cache: 'no-store' });
+export async function fetchPageBySlug(slug: string, init?: RequestInit): Promise<any | null> {
+  const res = await fetch(`${API_BASE_URL}/page-builder/${slug}`, init ?? { cache: 'no-store' });
   if (!res.ok) return null;
   const json = await res.json();
 
@@ -133,8 +133,8 @@ export async function fetchDraftPageBySlug(slug: string): Promise<any | null> {
   return null;
 }
 
-export async function fetchSettings(): Promise<any | null> {
-  const res = await fetch(`${API_BASE_URL}/settings`, { cache: 'no-store' });
+export async function fetchSettings(init?: RequestInit): Promise<any | null> {
+  const res = await fetch(`${API_BASE_URL}/settings`, init ?? { cache: 'no-store' });
   if (!res.ok) return null;
   const json = await res.json();
   return json.data || null;
@@ -155,8 +155,8 @@ export async function submitInquiry(data: any): Promise<{ success: boolean; mess
     message: json.message || (res.ok ? undefined : 'Failed to submit inquiry')
   };
 }
-export async function fetchTheme(): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/theme`, { cache: 'no-store' });
+export async function fetchTheme(init?: RequestInit): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/theme`, init ?? { cache: 'no-store' });
   if (!res.ok) return null;
   return res.json();
 }

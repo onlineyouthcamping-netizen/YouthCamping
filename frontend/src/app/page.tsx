@@ -65,12 +65,12 @@ export default async function Home() {
   
   try {
     const results = await Promise.allSettled([
-      fetchTrips(),
-      fetchReviews(),
-      fetchBlogs(),
-      fetchPageBySlug('home'),
-      fetchSettings(),
-      fetchTheme()
+      fetchTrips({ next: { revalidate: 30 } }),
+      fetchReviews({ next: { revalidate: 30 } }),
+      fetchBlogs({ next: { revalidate: 30 } }),
+      fetchPageBySlug('home', { next: { revalidate: 30 } }),
+      fetchSettings({ next: { revalidate: 30 } }),
+      fetchTheme({ next: { revalidate: 30 } })
     ]);
     
     const tripsData = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -92,7 +92,7 @@ export default async function Home() {
 
   // Construct dynamic section map for default template
   const sectionMap: Record<string, React.ReactNode> = {
-    hero: <Hero key="hero" />,
+    hero: <Hero key="hero" settings={settings} />,
     social_proof: <SocialProofBar key="social_proof" />,
     community_trips: <CommunityTrips key="community_trips" trips={trips} />,
     cta_banner: <CTABanner key="cta_banner" />,
@@ -117,7 +117,7 @@ export default async function Home() {
     <div className="flex flex-col min-h-screen bg-white">
       {page && page.sections && page.sections.length > 0 ? (
         <>
-          <PageRenderer sections={page.sections} trips={trips} reviews={reviews} blogs={blogs} />
+          <PageRenderer sections={page.sections} trips={trips} reviews={reviews} blogs={blogs} settings={settings} />
           {/* Force new sections if not in DB */}
           {!page.sections.some((s: any) => s.type === 'cta_slider') && <CTASlider />}
         </>

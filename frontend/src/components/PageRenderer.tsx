@@ -1,32 +1,75 @@
 "use client";
 
-import Hero from "./Hero";
-import SocialProofBar from "./SocialProofBar";
-import CommunityTrips from "./CommunityTrips";
-import BestieSection from "./BestieSection";
-import RealitySection from "./RealitySection";
-import Destinations from "./Destinations";
-import BlogSection from "./BlogSection";
-import ReviewsSection from "./ReviewsSection";
-import VibeSection from "./VibeSection";
-import CTABanner from "./CTABanner";
-import PhotoGrid from "./PhotoGrid";
-import ImageGallery from "./ImageGallery";
-import VideoSection from "./VideoSection";
-import CTASlider from "./CTASlider";
-import CinematicBanner from "./CinematicBanner";
-import PhotoSlider from "./PhotoSlider";
-
+import dynamic from "next/dynamic";
 import { Trip, Review, Blog } from "@/types";
+
+// Skeleton loader for dynamic sections — prevents CLS
+function SectionSkeleton({ height = "400px" }: { height?: string }) {
+  return (
+    <div className="w-full animate-pulse bg-zinc-50" style={{ height }} />
+  );
+}
+
+// --- Dynamic imports: SSR-enabled for SEO-relevant sections ---
+const Hero = dynamic(() => import("./Hero"), {
+  loading: () => <SectionSkeleton height="100vh" />,
+});
+const SocialProofBar = dynamic(() => import("./SocialProofBar"), {
+  loading: () => <SectionSkeleton height="80px" />,
+});
+const CommunityTrips = dynamic(() => import("./CommunityTrips"), {
+  loading: () => <SectionSkeleton height="650px" />,
+});
+const BestieSection = dynamic(() => import("./BestieSection"), {
+  loading: () => <SectionSkeleton height="500px" />,
+});
+const RealitySection = dynamic(() => import("./RealitySection"), {
+  loading: () => <SectionSkeleton height="450px" />,
+});
+const Destinations = dynamic(() => import("./Destinations"), {
+  loading: () => <SectionSkeleton height="600px" />,
+});
+const BlogSection = dynamic(() => import("./BlogSection"), {
+  loading: () => <SectionSkeleton height="550px" />,
+});
+const ReviewsSection = dynamic(() => import("./ReviewsSection"), {
+  loading: () => <SectionSkeleton height="500px" />,
+});
+const CTABanner = dynamic(() => import("./CTABanner"), {
+  loading: () => <SectionSkeleton height="500px" />,
+});
+const PhotoGrid = dynamic(() => import("./PhotoGrid"), {
+  loading: () => <SectionSkeleton height="400px" />,
+});
+const ImageGallery = dynamic(() => import("./ImageGallery"), {
+  loading: () => <SectionSkeleton height="400px" />,
+});
+const CinematicBanner = dynamic(() => import("./CinematicBanner"), {
+  loading: () => <SectionSkeleton height="500px" />,
+});
+const PhotoSlider = dynamic(() => import("./PhotoSlider"), {
+  loading: () => <SectionSkeleton height="400px" />,
+});
+const VideoSection = dynamic(() => import("./VideoSection"), {
+  loading: () => <SectionSkeleton height="450px" />,
+});
+
+const CTASlider = dynamic(() => import("./CTASlider"), {
+  loading: () => <SectionSkeleton height="400px" />,
+});
+const VibeSection = dynamic(() => import("./VibeSection"), {
+  loading: () => <SectionSkeleton height="550px" />,
+});
 
 interface PageRendererProps {
   sections: any[];
   trips?: Trip[];
   reviews?: Review[];
   blogs?: Blog[];
+  settings?: any;
 }
 
-export default function PageRenderer({ sections = [], trips = [], reviews = [], blogs = [] }: PageRendererProps) {
+export default function PageRenderer({ sections = [], trips = [], reviews = [], blogs = [], settings }: PageRendererProps) {
   if (!sections || !Array.isArray(sections)) return null;
 
   const visibleSections = sections.filter(s => s.visible !== false);
@@ -56,7 +99,7 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
 
           switch (type) {
             case 'hero':
-              return <Hero key={index} {...commonProps} />;
+              return <Hero key={index} {...commonProps} settings={settings} />;
             case 'social_proof':
               return <SocialProofBar key={index} {...commonProps} />;
             case 'trips':

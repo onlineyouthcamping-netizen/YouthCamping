@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { normalizeImageUrl } from "@/lib/api";
 import DestinationInquiryModal from "./DestinationInquiryModal";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface Destination {
   name: string;
@@ -77,6 +78,9 @@ export default function Destinations({
   const items = (destinations && destinations.length > 0) ? destinations : defaultDestinations;
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -112,10 +116,10 @@ export default function Destinations({
             </div>
           </div>
           <div className="hidden md:flex gap-3 pb-2">
-            <button onClick={() => scroll('left')} className="w-12 h-12 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-navy hover:text-white transition-all bg-white shadow-sm">
+            <button onClick={() => scroll('left')} className="w-12 h-12 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-navy hover:text-white transition-all bg-white shadow-sm" aria-label="Scroll Left">
               <ChevronRight className="w-6 h-6 rotate-180" />
             </button>
-            <button onClick={() => scroll('right')} className="w-12 h-12 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-navy hover:text-white transition-all bg-white shadow-sm">
+            <button onClick={() => scroll('right')} className="w-12 h-12 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-navy hover:text-white transition-all bg-white shadow-sm" aria-label="Scroll Right">
               <ChevronRight className="w-6 h-6" />
             </button>
           </div>
@@ -125,9 +129,9 @@ export default function Destinations({
           {items.map((dest, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 20 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.6 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1, duration: 0.6 }}
               viewport={{ once: true }}
               onClick={() => setSelectedDest(dest)}
               className="relative min-w-[280px] md:min-w-[340px] flex-1 aspect-[3/4.2] rounded-[32px] overflow-hidden group snap-start shadow-xl hover:shadow-2xl transition-all duration-700 cursor-pointer bg-white"
@@ -135,6 +139,9 @@ export default function Destinations({
               <OptimizedImage 
                 src={normalizeImageUrl(dest.img)} 
                 alt={dest.name} 
+                cloudinaryWidth={800}
+                width={400}
+                height={300}
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />

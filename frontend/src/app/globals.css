@@ -393,7 +393,7 @@
   .hero-title {
     font-family: 'Montserrat', var(--font-montserrat), sans-serif;
     font-weight: var(--heading-weight, 900) !important;
-    font-size: var(--text-heading);
+    font-size: clamp(1.1rem, 5vw, 1.45rem) !important;
     line-height: var(--heading-line-height, 1.1) !important;
     letter-spacing: var(--heading-letter-spacing, -0.03em) !important;
     text-wrap: balance !important;
@@ -404,12 +404,38 @@
     text-align: center !important;
   }
 
+  @media (min-width: 768px) {
+    .hero-title {
+      font-size: var(--title-size-desktop, var(--text-heading)) !important;
+    }
+  }
+
   @media (max-width: 768px) {
     .hero-title {
       font-weight: var(--heading-weight, 900) !important;
       max-width: 100% !important;
       width: 100% !important;
       line-height: var(--heading-line-height, 1.1) !important;
+    }
+  }
+
+  .hero-subheadline {
+    font-size: 0.8rem !important;
+  }
+  @media (min-width: 768px) {
+    .hero-subheadline {
+      font-size: var(--subheadline-size-desktop, clamp(1rem, 2.5vw, 1.875rem)) !important;
+    }
+  }
+
+  .hero-btn {
+    padding: 8px 18px !important;
+    font-size: 0.75rem !important;
+  }
+  @media (min-width: 768px) {
+    .hero-btn {
+      padding: var(--btn-padding, var(--button-padding-y) var(--button-padding-x)) !important;
+      font-size: var(--btn-font-size, var(--button-font-size)) !important;
     }
   }
 

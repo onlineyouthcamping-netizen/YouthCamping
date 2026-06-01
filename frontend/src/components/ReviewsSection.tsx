@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Star, ChevronRight, Quote, Camera } from "lucide-react";
 import Link from "next/link";
 import { Review } from "@/types";
@@ -10,6 +10,7 @@ import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import ReviewModal from "./ReviewModal";
 import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface ReviewsSectionProps {
   reviews: Review[];
@@ -39,6 +40,9 @@ export default function ReviewsSection({
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const finalAlign = 'left';
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   const openReview = (rev: Review) => {
     setSelectedReview(rev);
@@ -77,7 +81,7 @@ export default function ReviewsSection({
 
         <div className="flex gap-6 overflow-x-auto no-scrollbar pb-12 snap-x">
           {reviews.map((rev, i) => (
-            <ReviewCard key={rev._id || rev.id || i} rev={rev} i={i} onClick={() => openReview(rev)} />
+            <ReviewCard key={rev._id || rev.id || i} rev={rev} i={i} onClick={() => openReview(rev)} reduceMotion={reduceMotion} />
           ))}
           {reviews.length === 0 && (
             <div className="w-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-[40px]">
@@ -97,7 +101,7 @@ export default function ReviewsSection({
   );
 }
 
-function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () => void }) {
+function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number, onClick: () => void, reduceMotion: boolean }) {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   
   // Use photos array or fallback to user image or default
@@ -118,9 +122,9 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ delay: i * 0.1 }}
+      transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
       viewport={{ once: true }}
       onClick={onClick}
       className="flex-none w-[320px] md:w-[420px] snap-start bg-white border border-zinc-50 rounded-[32px] shadow-xl hover:shadow-2xl transition-all duration-700 flex flex-col overflow-hidden group cursor-pointer"
@@ -130,6 +134,9 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
         <OptimizedImage 
           src={normalizeImageUrl(currentImage)} 
           alt="Travel location" 
+          cloudinaryWidth={400}
+          width={400}
+          height={240}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
         
@@ -138,7 +145,7 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10">
             {images.map((_, idx) => (
               <button 
-                key={idx}
+                key={idx} 
                 onClick={() => setActiveImageIdx(idx)}
                 className={`w-1.5 h-1.5 rounded-full transition-all ${idx === activeImageIdx ? 'bg-white w-4' : 'bg-white/40 hover:bg-white/60'}`}
               />
@@ -178,6 +185,8 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
               <OptimizedImage 
                 src={profileImage} 
                 alt={rev.userName} 
+                width={48}
+                height={48}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -185,7 +194,7 @@ function ReviewCard({ rev, i, onClick }: { rev: Review, i: number, onClick: () =
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <h4 className="text-sm md:text-base font-bold text-navy leading-tight truncate">{rev.userName}</h4>
+            <p className="text-sm md:text-base font-bold text-navy leading-tight truncate">{rev.userName}</p>
             {rev.instagram && (
               <a 
                 href={rev.instagram.startsWith('http') ? rev.instagram : `https://instagram.com/${rev.instagram.replace('@', '')}`}

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { VideoUpload } from "@/components/admin/VideoUpload";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
@@ -791,20 +792,67 @@ export default function PageBuilderPage() {
                           Use commas to create an animated typing effect (e.g. "Phrase 1, Phrase 2")
                         </p>
                       </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/20 rounded-2xl border-2">
+                        <div className="space-y-4 col-span-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label className="text-xs font-black uppercase tracking-widest">Enable Self-Hosted Video</Label>
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">If enabled, this video plays instead of images/YouTube URLs.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => updateSelectedSection({ videoEnabled: !selectedSection.draft.videoEnabled })}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                                selectedSection.draft.videoEnabled ? 'bg-primary' : 'bg-slate-200'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  selectedSection.draft.videoEnabled ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <VideoUpload
+                            label="Upload Self-Hosted Video"
+                            value={selectedSection.draft.videoUrl}
+                            onUpload={({ url, publicId, posterUrl }) => {
+                              updateSelectedSection({
+                                videoUrl: url,
+                                videoPublicId: publicId,
+                                videoPosterUrl: posterUrl || selectedSection.draft.videoPosterUrl,
+                                videoEnabled: url ? true : false
+                              });
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-4">
+                          <ImageUpload
+                            label="Video Poster (Fallback Image)"
+                            value={selectedSection.draft.videoPosterUrl}
+                            onUpload={url => updateSelectedSection({ videoPosterUrl: url })}
+                          />
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                         <div className="space-y-4">
-                          <Label className="text-xs font-black uppercase tracking-widest">Background Video URL (YouTube)</Label>
+                          <Label className="text-xs font-black uppercase tracking-widest">Legacy YouTube URL (Fallback)</Label>
                           <Input 
                             value={selectedSection.draft.videoUrl || ''} 
                             onChange={e => updateSelectedSection({ videoUrl: e.target.value })}
                             placeholder="e.g. https://www.youtube.com/embed/..."
                             className="rounded-xl border-2 font-mono text-[10px]"
                           />
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest italic">Overrides background image if provided</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest italic">Use only if not uploading self-hosted video</p>
                         </div>
                         <div className="space-y-4">
                           <ImageUpload 
-                            label="Background Image (Fallback)" 
+                            label="Background Image (Static Fallback)" 
                             value={selectedSection.draft.backgroundImage} 
                             onUpload={url => updateSelectedSection({ backgroundImage: url })} 
                           />
@@ -1045,7 +1093,7 @@ export default function PageBuilderPage() {
                                       <Trash2 className="w-4 h-4 text-destructive" />
                                     </Button>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                       <Label className="text-[10px] font-black uppercase tracking-widest">Video Title</Label>
                                       <Input value={vid.title} onChange={e => {
@@ -1055,13 +1103,58 @@ export default function PageBuilderPage() {
                                       }} className="rounded-xl border-2 text-xs font-bold" />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label className="text-[10px] font-black uppercase tracking-widest">YouTube Video ID</Label>
+                                      <Label className="text-[10px] font-black uppercase tracking-widest">YouTube Video ID (Legacy Fallback)</Label>
                                       <Input value={vid.id} onChange={e => {
                                         const next = [...selectedSection.draft.videos];
                                         next[i].id = e.target.value;
                                         updateSelectedSection({ videos: next });
                                       }} placeholder="e.g. j6hb-iOZalE" className="rounded-xl border-2 text-xs font-bold" />
                                     </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <VideoUpload
+                                      label="Upload Self-Hosted Video"
+                                      value={vid.videoUrl}
+                                      onUpload={({ url, publicId, posterUrl }) => {
+                                        const next = [...selectedSection.draft.videos];
+                                        next[i].videoUrl = url;
+                                        next[i].videoPublicId = publicId;
+                                        next[i].videoPosterUrl = posterUrl || next[i].videoPosterUrl;
+                                        next[i].videoEnabled = url ? true : false;
+                                        updateSelectedSection({ videos: next });
+                                      }}
+                                    />
+                                    <ImageUpload
+                                      label="Video Poster Image"
+                                      value={vid.videoPosterUrl}
+                                      onUpload={url => {
+                                        const next = [...selectedSection.draft.videos];
+                                        next[i].videoPosterUrl = url;
+                                        updateSelectedSection({ videos: next });
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest">Enable Self-Hosted Video</Label>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const next = [...selectedSection.draft.videos];
+                                        next[i].videoEnabled = !next[i].videoEnabled;
+                                        updateSelectedSection({ videos: next });
+                                      }}
+                                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                                        vid.videoEnabled ? 'bg-primary' : 'bg-slate-200'
+                                      }`}
+                                    >
+                                      <span
+                                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                                          vid.videoEnabled ? 'translate-x-4' : 'translate-x-1'
+                                        }`}
+                                      />
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -1146,8 +1239,53 @@ export default function PageBuilderPage() {
                                       updateSelectedSection({ videos: next });
                                     }} 
                                   />
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <VideoUpload
+                                      label="Upload Self-Hosted Video"
+                                      value={vid.videoUrl}
+                                      onUpload={({ url, publicId, posterUrl }) => {
+                                        const next = [...selectedSection.draft.videos];
+                                        next[i].videoUrl = url;
+                                        next[i].videoPublicId = publicId;
+                                        next[i].videoPosterUrl = posterUrl || next[i].videoPosterUrl;
+                                        next[i].videoEnabled = url ? true : false;
+                                        updateSelectedSection({ videos: next });
+                                      }}
+                                    />
+                                    <ImageUpload
+                                      label="Video Poster Image"
+                                      value={vid.videoPosterUrl}
+                                      onUpload={url => {
+                                        const next = [...selectedSection.draft.videos];
+                                        next[i].videoPosterUrl = url;
+                                        updateSelectedSection({ videos: next });
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest">Enable Self-Hosted Video</Label>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const next = [...selectedSection.draft.videos];
+                                        next[i].videoEnabled = !next[i].videoEnabled;
+                                        updateSelectedSection({ videos: next });
+                                      }}
+                                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                                        vid.videoEnabled ? 'bg-primary' : 'bg-slate-200'
+                                      }`}
+                                    >
+                                      <span
+                                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                                          vid.videoEnabled ? 'translate-x-4' : 'translate-x-1'
+                                        }`}
+                                      />
+                                    </button>
+                                  </div>
+
                                   <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest">Video URL (Optional)</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest">Legacy YouTube URL (Optional Fallback)</Label>
                                     <Input value={vid.url} onChange={e => {
                                       const next = [...selectedSection.draft.videos];
                                       next[i].url = e.target.value;

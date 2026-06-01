@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface BlogItem {
   title: string;
@@ -47,6 +48,9 @@ export default function BlogSection({
   bottomColor = "#ffffff",
 }: BlogSectionProps) {
   const displayBlogs = blogs.length > 0 ? blogs : [];
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   const scrollRight = () => {
     const el = document.getElementById('blog-slider-container');
@@ -84,7 +88,7 @@ export default function BlogSection({
             className="flex gap-6 overflow-x-auto no-scrollbar pb-8 snap-x scroll-smooth"
           >
             {displayBlogs.map((art, i) => (
-              <BlogCard key={art.slug || i} art={art} i={i} />
+              <BlogCard key={art.slug || i} art={art} i={i} reduceMotion={reduceMotion} />
             ))}
             {displayBlogs.length === 0 && (
               <div className="w-full py-12 text-center border-2 border-dashed border-zinc-200 rounded-[32px]">
@@ -98,6 +102,7 @@ export default function BlogSection({
             <button 
               onClick={scrollRight}
               className="absolute -right-4 top-[40%] -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center justify-center text-navy hover:scale-110 transition-all z-10 opacity-0 group-hover:opacity-100"
+              aria-label="Scroll Right"
             >
               <ChevronRight className="w-6 h-6" />
             </button>
@@ -109,7 +114,7 @@ export default function BlogSection({
   );
 }
 
-function BlogCard({ art, i }: { art: BlogItem, i: number }) {
+function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMotion: boolean }) {
   const isVideo = art.content.includes('youtube.com') || art.content.includes('youtu.be') || art.content.includes('iframe');
   const linkPath = isVideo ? `/watch/${art.slug}` : `/read/${art.slug}`;
 
@@ -126,9 +131,9 @@ function BlogCard({ art, i }: { art: BlogItem, i: number }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={reduceMotion ? false : { opacity: 0, x: 20 }}
       whileInView={{ opacity: 1, x: 0 }}
-      transition={{ delay: i * 0.1 }}
+      transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
       viewport={{ once: true }}
       className="flex-none snap-start bg-white border border-zinc-50 rounded-[32px] shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col overflow-hidden group/card"
       style={{ width: '380px', height: '450px', minWidth: '380px', minHeight: '450px' }}
@@ -142,6 +147,9 @@ function BlogCard({ art, i }: { art: BlogItem, i: number }) {
           <OptimizedImage 
             src={normalizeImageUrl(art.image) || "https://images.unsplash.com/photo-1597037750734-450f6f406560"} 
             alt={art.title} 
+            cloudinaryWidth={600}
+            width={600}
+            height={340}
             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
           />
           {/* Magazine Icon Overlay */}
@@ -163,6 +171,8 @@ function BlogCard({ art, i }: { art: BlogItem, i: number }) {
                 <OptimizedImage 
                   src={normalizeImageUrl(art.authorImage)} 
                   alt={art.author} 
+                  width={40}
+                  height={40}
                   className="w-full h-full object-cover"
                 />
               ) : (

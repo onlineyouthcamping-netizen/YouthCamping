@@ -1,12 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 
 import { WavyEdges } from "./ui/WavyEdges";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface Reason {
   title: string;
@@ -66,6 +67,9 @@ export default function BestieSection({
 }: BestieSectionProps) {
   const displayReasons = (reasons && reasons.length > 0) ? reasons : defaultReasons;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   return (
     <section className="relative bg-[#BDD5D5] section-wrapper overflow-hidden">
@@ -76,7 +80,7 @@ export default function BestieSection({
         {/* ... (rest of content) */}
         <div className="mb-6 md:mb-20 text-center">
           <motion.h2 
-            initial={{ opacity: 0, y: -20 }}
+            initial={reduceMotion ? false : { opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="section-heading text-[#1B2A4A]"
@@ -89,7 +93,7 @@ export default function BestieSection({
           </motion.h2>
           {subtitle && (
             <motion.p
-              initial={{ opacity: 0 }}
+              initial={reduceMotion ? false : { opacity: 0 }}
               whileInView={{ opacity: 1 }}
               className="text-zinc-600 font-bold mt-4 tracking-widest text-[11px] md:text-sm capitalize"
             >
@@ -103,10 +107,10 @@ export default function BestieSection({
           {displayReasons.map((reason, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 20 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1, duration: 0.5 }}
               className={`w-full ${i < 3 ? 'lg:w-[calc(33.333%-16px)]' : 'md:w-[calc(50%-12px)] lg:w-[calc(42%-16px)]'} flex-none`}
             >
               <div className="bg-white p-6 md:p-8 rounded-[32px] shadow-xl hover:shadow-2xl flex flex-row items-start gap-4 md:gap-6 h-full border border-white transition-all duration-500 group/card">
@@ -115,6 +119,9 @@ export default function BestieSection({
                     <OptimizedImage 
                       src={normalizeImageUrl(reason.image)} 
                       alt={reason.title} 
+                      cloudinaryWidth={200}
+                      width={48}
+                      height={48}
                       className="w-full h-full object-cover transition-transform group-hover/card:scale-110" 
                     />
                   ) : (

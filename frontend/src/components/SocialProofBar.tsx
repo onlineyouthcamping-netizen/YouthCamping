@@ -14,7 +14,8 @@ import {
   Map,
   Camera
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const ICON_MAP: Record<string, any> = {
   Users: Users,
@@ -62,6 +63,9 @@ export default function SocialProofBar({
   stats, 
 }: SocialProofBarProps) {
   const displayStats = (stats && stats.length > 0) ? stats : defaultStats;
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
 
   return (
     <div className="bg-transparent py-10">
@@ -74,9 +78,9 @@ export default function SocialProofBar({
             return (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 10 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
+                transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
                 viewport={{ once: true }}
                 className="flex items-center gap-3 text-navy"
               >

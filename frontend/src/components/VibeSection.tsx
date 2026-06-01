@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Volume2, Play } from "lucide-react";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const reels = [
   { img: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=2070", text: "Places on Earth that don't feel real" },
@@ -25,6 +26,10 @@ export default function VibeSection({
   titleSize,
   titleWeight,
 }: VibeSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
+
   return (
     <section className="section-wrapper bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto">
@@ -42,9 +47,9 @@ export default function VibeSection({
           {reels.map((reel, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
               viewport={{ once: true }}
               className="relative min-w-[280px] h-[500px] rounded-[30px] overflow-hidden group snap-center shadow-2xl cursor-pointer"
             >

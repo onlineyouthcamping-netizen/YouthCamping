@@ -35,6 +35,8 @@ export default function TripCard({ trip, index }: TripCardProps) {
         <OptimizedImage
           src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"}
           alt={trip.title}
+          width={400}
+          height={300}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
         />
         

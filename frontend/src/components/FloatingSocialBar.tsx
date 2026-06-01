@@ -1,7 +1,6 @@
 "use client";
 
-import { MessageCircle, Camera, Play, Link as LinkIcon, Send, Globe } from "lucide-react";
-import { motion } from "framer-motion";
+// TODO: remove @fontsource/montserrat — appears unused, triple-loading font
 
 export default function FloatingSocialBar({ settings }: { settings?: any }) {
   return null;

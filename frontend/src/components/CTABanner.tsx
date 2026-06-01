@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface CTABannerProps {
   title?: string;
@@ -24,6 +25,10 @@ export default function CTABanner({
   titleSize,
   titleWeight,
 }: CTABannerProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const reduceMotion = prefersReducedMotion || isMobile;
+
   return (
     <div className="relative py-20 overflow-hidden">
       <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20">
@@ -42,7 +47,7 @@ export default function CTABanner({
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8">
             {/* Top Badge */}
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
+              initial={reduceMotion ? false : { opacity: 0, y: -20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="bg-white/95 backdrop-blur-md px-10 py-4 rounded-full mb-8 shadow-2xl"
@@ -51,10 +56,10 @@ export default function CTABanner({
             </motion.div>
             
             <motion.h2
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: 0.1 }}
               className="text-4xl md:text-6xl lg:text-7xl text-white capitalize leading-[1.05] tracking-tighter mb-4"
               style={{ 
                 fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
@@ -65,10 +70,10 @@ export default function CTABanner({
             </motion.h2>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: 0.2 }}
               className="text-white font-normal capitalize tracking-[0.2em] text-sm md:text-base mt-8 opacity-95"
             >
               {tagline}
