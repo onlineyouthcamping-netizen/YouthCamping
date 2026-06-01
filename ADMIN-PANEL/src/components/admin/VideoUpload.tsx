@@ -10,7 +10,6 @@ interface VideoUploadProps {
   label?: string;
   value?: string;
   className?: string;
-  readOnly?: boolean;
 }
 
 const formatUrl = (url: any): string => {
@@ -21,8 +20,7 @@ const formatUrl = (url: any): string => {
   return `${serverBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-export function VideoUpload({ onUpload, label, value, className, readOnly: _passedReadOnly }: VideoUploadProps) {
-  const readOnly = true;
+export function VideoUpload({ onUpload, label, value, className }: VideoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -30,7 +28,6 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList | File[]) => {
-    if (readOnly) return;
     if (!files || files.length === 0) return;
     const file = files[0];
     
@@ -70,7 +67,6 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (readOnly) return;
     if (e.target.files) {
       handleFiles(e.target.files);
       e.target.value = '';
@@ -78,35 +74,30 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
   };
 
   const handleReplace = () => {
-    if (readOnly) return;
     fileInputRef.current?.click();
   };
 
   const handleRemove = async () => {
-    if (readOnly) return;
     onUpload({ url: "", publicId: "", posterUrl: "" });
   };
 
   const onDragOver = useCallback((e: React.DragEvent) => {
-    if (readOnly) return;
     e.preventDefault();
     setIsDragging(true);
-  }, [readOnly]);
+  }, []);
 
   const onDragLeave = useCallback((e: React.DragEvent) => {
-    if (readOnly) return;
     e.preventDefault();
     setIsDragging(false);
-  }, [readOnly]);
+  }, []);
 
   const onDrop = useCallback((e: React.DragEvent) => {
-    if (readOnly) return;
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
     }
-  }, [readOnly]);
+  }, []);
 
   const displayUrl = formatUrl(value);
 
@@ -114,23 +105,21 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
     <div className={`space-y-2 ${className}`}>
       {label && <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">{label}</Label>}
       
-      {!readOnly && (
-        <Input 
-          ref={fileInputRef}
-          type="file" 
-          accept="video/mp4,video/webm,video/quicktime" 
-          onChange={handleFileChange} 
-          className="hidden" 
-          id={`video-replace-${id}`}
-        />
-      )}
+      <Input 
+        ref={fileInputRef}
+        type="file" 
+        accept="video/mp4,video/webm,video/quicktime" 
+        onChange={handleFileChange} 
+        className="hidden" 
+        id={`video-replace-${id}`}
+      />
 
       <div 
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         className={`relative flex flex-col items-center justify-center p-6 gap-4 rounded-2xl border-2 border-dashed ${
-          isDragging && !readOnly ? "border-primary bg-primary/10 scale-[1.02]" : "border-primary/20 bg-muted/50"
+          isDragging ? "border-primary bg-primary/10 scale-[1.02]" : "border-primary/20 bg-muted/50 hover:bg-muted"
         }`}
       >
         {value ? (
@@ -142,35 +131,32 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
               muted
             />
             
-            {/* Action buttons - hidden when readOnly */}
-            {!readOnly && (
-              <div className="absolute top-2 right-2 flex gap-1.5">
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-full shadow-lg bg-white/90 hover:bg-white"
-                  title="Replace video"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleReplace();
-                  }}
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-primary" />
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-full shadow-lg"
-                  title="Remove video"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemove();
-                  }}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+            <div className="absolute top-2 right-2 flex gap-1.5">
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="w-8 h-8 rounded-full shadow-lg bg-white/90 hover:bg-white"
+                title="Replace video"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReplace();
+                }}
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-primary" />
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                className="w-8 h-8 rounded-full shadow-lg"
+                title="Remove video"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove();
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="text-center space-y-2">
@@ -178,12 +164,10 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
               <Upload className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold">{readOnly ? "No video uploaded" : "Drag & drop your video here"}</p>
-              {!readOnly && (
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-                  MP4, WebM, MOV • Max 50MB
-                </p>
-              )}
+              <p className="text-xs font-bold">Drag & drop your video here</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                MP4, WebM, MOV • Max 50MB
+              </p>
             </div>
           </div>
         )}
@@ -201,24 +185,22 @@ export function VideoUpload({ onUpload, label, value, className, readOnly: _pass
           </div>
         )}
 
-        {!readOnly && (
-          <div className="flex w-full gap-2 items-center justify-center mt-2">
-            <Input 
-              type="file" 
-              accept="video/mp4,video/webm,video/quicktime" 
-              onChange={handleFileChange} 
-              className="hidden" 
-              id={`video-upload-${id}`} 
-              disabled={uploading}
-            />
-            <Label 
-              htmlFor={`video-upload-${id}`}
-              className="flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest cursor-pointer hover:opacity-90 shadow-lg shadow-primary/20 transition-all px-6 h-10"
-            >
-              Browse Video Files
-            </Label>
-          </div>
-        )}
+        <div className="flex w-full gap-2 items-center justify-center mt-2">
+          <Input 
+            type="file" 
+            accept="video/mp4,video/webm,video/quicktime" 
+            onChange={handleFileChange} 
+            className="hidden" 
+            id={`video-upload-${id}`} 
+            disabled={uploading}
+          />
+          <Label 
+            htmlFor={`video-upload-${id}`}
+            className="flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest cursor-pointer hover:opacity-90 shadow-lg shadow-primary/20 transition-all px-6 h-10"
+          >
+            Browse Video Files
+          </Label>
+        </div>
       </div>
     </div>
   );

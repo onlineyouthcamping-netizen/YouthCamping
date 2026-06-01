@@ -12,7 +12,6 @@ interface ImageUploadProps {
   multiple?: boolean;
   className?: string;
   compact?: boolean;
-  readOnly?: boolean;
 }
 
 /**
@@ -28,8 +27,7 @@ const formatUrl = (url: any): string => {
   return `${serverBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-export function ImageUpload({ onUpload, label, value, multiple = false, className, compact = false, readOnly: _passedReadOnly }: ImageUploadProps) {
-  const readOnly = true;
+export function ImageUpload({ onUpload, label, value, multiple = false, className, compact = false }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -38,7 +36,6 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList | File[]) => {
-    if (readOnly) return;
     if (!files || files.length === 0) return;
 
     if (multiple) {
@@ -110,7 +107,6 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (readOnly) return;
     if (e.target.files) {
       handleFiles(e.target.files);
       // Reset the input so the same file can be re-selected
@@ -119,12 +115,10 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
   };
 
   const handleReplace = () => {
-    if (readOnly) return;
     fileInputRef.current?.click();
   };
 
   const handleRemove = async () => {
-    if (readOnly) return;
     if (!value) return;
     
     // Only attempt server delete for local uploads
@@ -140,25 +134,22 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
   };
 
   const onDragOver = useCallback((e: React.DragEvent) => {
-    if (readOnly) return;
     e.preventDefault();
     setIsDragging(true);
-  }, [readOnly]);
+  }, []);
 
   const onDragLeave = useCallback((e: React.DragEvent) => {
-    if (readOnly) return;
     e.preventDefault();
     setIsDragging(false);
-  }, [readOnly]);
+  }, []);
 
   const onDrop = useCallback((e: React.DragEvent) => {
-    if (readOnly) return;
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
     }
-  }, [multiple, readOnly]);
+  }, [multiple]);
 
   const displayUrl = formatUrl(value);
 
@@ -167,17 +158,15 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
       {label && !compact && <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">{label}</Label>}
       
       {/* Hidden file input for replace functionality */}
-      {!readOnly && (
-        <Input 
-          ref={fileInputRef}
-          type="file" 
-          accept="image/png, image/jpeg, image/webp" 
-          multiple={multiple}
-          onChange={handleFileChange} 
-          className="hidden" 
-          id={`file-replace-${id}`}
-        />
-      )}
+      <Input 
+        ref={fileInputRef}
+        type="file" 
+        accept="image/png, image/jpeg, image/webp" 
+        multiple={multiple}
+        onChange={handleFileChange} 
+        className="hidden" 
+        id={`file-replace-${id}`}
+      />
 
       <div 
         onDragOver={onDragOver}
@@ -186,7 +175,7 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
         className={`relative flex flex-col items-center justify-center transition-all ${
           compact ? "p-2 gap-1" : "p-6 gap-4"
         } rounded-2xl border-2 border-dashed ${
-          isDragging && !readOnly ? "border-primary bg-primary/10 scale-[1.02]" : "border-primary/20 bg-muted/50"
+          isDragging ? "border-primary bg-primary/10 scale-[1.02]" : "border-primary/20 bg-muted/50 hover:bg-muted"
         }`}
       >
         {value && !multiple ? (
@@ -206,35 +195,33 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
               </div>
             )}
             
-            {/* Action buttons - hidden when readOnly */}
-            {!readOnly && (
-              <div className="absolute top-2 right-2 flex gap-1.5">
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-full shadow-lg bg-white/90 hover:bg-white"
-                  title="Replace image"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleReplace();
-                  }}
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-primary" />
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-full shadow-lg"
-                  title="Remove image"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemove();
-                  }}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+            {/* Action buttons */}
+            <div className="absolute top-2 right-2 flex gap-1.5">
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="w-8 h-8 rounded-full shadow-lg bg-white/90 hover:bg-white"
+                title="Replace image"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReplace();
+                }}
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-primary" />
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                className="w-8 h-8 rounded-full shadow-lg"
+                title="Remove image"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove();
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="text-center space-y-2">
@@ -243,12 +230,10 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
             </div>
             {!compact && (
               <div>
-                <p className="text-xs font-bold">{readOnly ? "No image uploaded" : `Drag & drop your ${multiple ? 'images' : 'image'} here`}</p>
-                {!readOnly && (
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-                    JPG, PNG, WEBP • Max 10MB
-                  </p>
-                )}
+                <p className="text-xs font-bold">Drag & drop your {multiple ? 'images' : 'image'} here</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                  JPG, PNG, WEBP • Max 10MB
+                </p>
               </div>
             )}
           </div>
@@ -267,27 +252,25 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
           </div>
         )}
 
-        {!readOnly && (
-          <div className={`flex w-full gap-2 items-center justify-center ${compact ? 'mt-0' : 'mt-2'}`}>
-            <Input 
-              type="file" 
-              accept="image/png, image/jpeg, image/webp" 
-              multiple={multiple}
-              onChange={handleFileChange} 
-              className="hidden" 
-              id={`file-upload-${id}`} 
-              disabled={uploading}
-            />
-            <Label 
-              htmlFor={`file-upload-${id}`}
-              className={`flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest cursor-pointer hover:opacity-90 shadow-lg shadow-primary/20 transition-all ${
-                compact ? 'px-2 h-6' : 'px-6 h-10'
-              }`}
-            >
-              {compact ? 'Add' : 'Browse Files'}
-            </Label>
-          </div>
-        )}
+        <div className={`flex w-full gap-2 items-center justify-center ${compact ? 'mt-0' : 'mt-2'}`}>
+          <Input 
+            type="file" 
+            accept="image/png, image/jpeg, image/webp" 
+            multiple={multiple}
+            onChange={handleFileChange} 
+            className="hidden" 
+            id={`file-upload-${id}`} 
+            disabled={uploading}
+          />
+          <Label 
+            htmlFor={`file-upload-${id}`}
+            className={`flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest cursor-pointer hover:opacity-90 shadow-lg shadow-primary/20 transition-all ${
+              compact ? 'px-2 h-6' : 'px-6 h-10'
+            }`}
+          >
+            {compact ? 'Add' : 'Browse Files'}
+          </Label>
+        </div>
       </div>
       
     </div>

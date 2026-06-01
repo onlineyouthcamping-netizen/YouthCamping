@@ -1814,14 +1814,88 @@ export default function TripFormModal({ open, onOpenChange, editing, onSave }: T
                         <div key={slot} className="space-y-2">
                           <Label className="text-[8px] font-black uppercase opacity-40">Image {slot + 1}</Label>
                           {currentUrl ? (
-                            <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 border">
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 border group">
                               <img src={formatUrl(currentUrl)} className="w-full h-full object-cover" alt={`Cover ${slot + 1}`} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  id={`cover-replace-${slot}`}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const fd = new FormData();
+                                    fd.append("image", file);
+                                    try {
+                                      const res = await api.post("/upload/single", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                                      if (res.data.success) {
+                                        const updated = [...(form.images || [])];
+                                        while (updated.length <= slot) updated.push("");
+                                        updated[slot] = res.data.url;
+                                        setForm({ ...form, images: updated });
+                                      }
+                                    } catch (err) { console.error(err); }
+                                    e.target.value = '';
+                                  }}
+                                />
+                                <Label htmlFor={`cover-replace-${slot}`} className="cursor-pointer bg-white/90 text-black px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-white transition-all">
+                                  Replace
+                                </Label>
+                                <button
+                                  className="bg-destructive/90 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-destructive transition-all"
+                                  onClick={() => {
+                                    const updated = [...(form.images || [])];
+                                    updated.splice(slot, 1);
+                                    setForm({ ...form, images: updated });
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <div className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50">
-                              <span className="text-[9px] font-bold text-zinc-400 uppercase">No cover image</span>
+                            <div className="relative">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                id={`cover-upload-${slot}`}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const fd = new FormData();
+                                  fd.append("image", file);
+                                  try {
+                                    const res = await api.post("/upload/single", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                                    if (res.data.success) {
+                                      const updated = [...(form.images || [])];
+                                      while (updated.length <= slot) updated.push("");
+                                      updated[slot] = res.data.url;
+                                      setForm({ ...form, images: updated });
+                                    }
+                                  } catch (err) { console.error(err); }
+                                  e.target.value = '';
+                                }}
+                              />
+                              <Label htmlFor={`cover-upload-${slot}`} className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 cursor-pointer hover:bg-zinc-100 hover:border-primary/30 transition-all">
+                                <Upload className="w-5 h-5 text-zinc-300 mb-1" />
+                                <span className="text-[9px] font-bold text-zinc-400 uppercase">Add Image</span>
+                              </Label>
                             </div>
                           )}
+                          {/* URL Input for pasting external URLs */}
+                          <Input
+                            value={currentUrl}
+                            placeholder="Or paste URL..."
+                            onChange={(e) => {
+                              const updated = [...(form.images || [])];
+                              while (updated.length <= slot) updated.push("");
+                              updated[slot] = e.target.value;
+                              setForm({ ...form, images: updated });
+                            }}
+                            className="h-7 text-[9px] bg-zinc-50 border-zinc-100 rounded-lg"
+                          />
                         </div>
                       );
                     })}
@@ -1838,6 +1912,40 @@ export default function TripFormModal({ open, onOpenChange, editing, onSave }: T
                       <h3 className="text-xl font-black text-navy uppercase italic">Extended Gallery</h3>
                       <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">Full photo collection shown in the "Explore All" modal</p>
                     </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="file" 
+                        id="gallery-upload-v2" 
+                        multiple 
+                        className="hidden" 
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files || files.length === 0) return;
+                          const formData = new FormData();
+                          for (let i = 0; i < files.length; i++) formData.append("images", files[i]);
+                          try {
+                            const res = await api.post("/upload/multiple", formData, {
+                              headers: { "Content-Type": "multipart/form-data" }
+                            });
+                            if (res.data.success) {
+                              const existingGallery = form.gallery || [];
+                              const newItems = res.data.urls.map((url: string, idx: number) => ({
+                                url,
+                                alt: "",
+                                order: existingGallery.length + idx
+                              }));
+                              setForm({ ...form, gallery: [...existingGallery, ...newItems] });
+                            }
+                          } catch (err) {
+                            console.error(err);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <Label htmlFor="gallery-upload-v2" className="h-10 px-6 bg-primary text-black text-[10px] font-black uppercase rounded-xl flex items-center gap-2 cursor-pointer border hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+                        <Upload className="w-3.5 h-3.5" /> Upload Photos
+                      </Label>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 max-h-[500px] overflow-y-auto p-4 bg-zinc-50 rounded-[32px] border border-zinc-100">
@@ -1849,13 +1957,20 @@ export default function TripFormModal({ open, onOpenChange, editing, onSave }: T
                         <div className="flex-1 grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                              <Label className="text-[8px] font-black uppercase opacity-40">Alt Description</Label>
-                             <Input value={img.alt || ""} placeholder="e.g. Campfire in Manali" readOnly className="h-9 text-xs font-bold bg-zinc-50 border-none" />
+                             <Input value={img.alt || ""} placeholder="e.g. Campfire in Manali" onChange={(e) => {
+                               const updated = [...form.gallery]; updated[i] = { ...updated[i], alt: e.target.value }; setForm({ ...form, gallery: updated });
+                             }} className="h-9 text-xs font-bold bg-zinc-50 border-none" />
                           </div>
                           <div className="space-y-1">
                              <Label className="text-[8px] font-black uppercase opacity-40">Sort Order</Label>
-                             <Input type="number" value={img.order || 0} placeholder="Order" readOnly className="h-9 text-xs font-bold bg-zinc-50 border-none" />
+                             <Input type="number" value={img.order || 0} placeholder="Order" onChange={(e) => {
+                               const updated = [...form.gallery]; updated[i] = { ...updated[i], order: Number(e.target.value) }; setForm({ ...form, gallery: updated });
+                             }} className="h-9 text-xs font-bold bg-zinc-50 border-none" />
                           </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="text-destructive h-10 w-10 hover:bg-destructive/10 rounded-full" onClick={() => setForm({ ...form, gallery: form.gallery.filter((_:any, idx:number) => idx !== i) })}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
                     {(form.gallery || []).length === 0 && (

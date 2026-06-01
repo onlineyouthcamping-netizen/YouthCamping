@@ -756,14 +756,63 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                       return (
                         <div key={slot} className="space-y-2">
                           {currentUrl ? (
-                            <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-150 border">
+                            <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-150 border group">
                               <img src={formatUrl(currentUrl)} className="w-full h-full object-cover" alt="" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 transition-all">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...(form.images || [])];
+                                    updated.splice(slot, 1);
+                                    setForm({ ...form, images: updated });
+                                  }}
+                                  className="bg-destructive text-white text-[9px] px-2 py-1 rounded uppercase font-bold hover:bg-destructive/80"
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <div className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50">
-                              <span className="text-[9px] text-zinc-400 font-bold uppercase">No cover image</span>
+                            <div>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                id={`cover-upload-details-${slot}`}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const fd = new FormData();
+                                  fd.append("image", file);
+                                  try {
+                                    const res = await api.post("/upload/single", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                                    if (res.data.success) {
+                                      const updated = [...(form.images || [])];
+                                      while (updated.length <= slot) updated.push("");
+                                      updated[slot] = res.data.url;
+                                      setForm({ ...form, images: updated });
+                                    }
+                                  } catch (err) { console.error(err); }
+                                  e.target.value = '';
+                                }}
+                              />
+                              <Label htmlFor={`cover-upload-details-${slot}`} className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 cursor-pointer hover:bg-zinc-100 transition-all">
+                                <Upload className="w-4 h-4 text-zinc-400 mb-1" />
+                                <span className="text-[9px] text-zinc-400 font-bold uppercase">Add</span>
+                              </Label>
                             </div>
                           )}
+                          <Input
+                            value={currentUrl}
+                            placeholder="Or paste URL..."
+                            onChange={(e) => {
+                              const updated = [...(form.images || [])];
+                              while (updated.length <= slot) updated.push("");
+                              updated[slot] = e.target.value;
+                              setForm({ ...form, images: updated });
+                            }}
+                            className="h-7 text-[9px] bg-zinc-50 border-zinc-250 focus-visible:ring-[#FF5400]"
+                          />
                         </div>
                       );
                     })}
@@ -773,6 +822,38 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold text-slate-700">Extended Gallery</Label>
+                    <Input 
+                      type="file" 
+                      id="details-gallery-upload" 
+                      multiple 
+                      className="hidden" 
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (!files || files.length === 0) return;
+                        const formData = new FormData();
+                        for (let i = 0; i < files.length; i++) formData.append("images", files[i]);
+                        try {
+                          const res = await api.post("/upload/multiple", formData, {
+                            headers: { "Content-Type": "multipart/form-data" }
+                          });
+                          if (res.data.success) {
+                            const existingGallery = form.gallery || [];
+                            const newItems = res.data.urls.map((url: string, idx: number) => ({
+                              url,
+                              alt: "",
+                              order: existingGallery.length + idx
+                            }));
+                            setForm({ ...form, gallery: [...existingGallery, ...newItems] });
+                          }
+                        } catch (err) {
+                          console.error(err);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <Label htmlFor="details-gallery-upload" className="h-8 px-4 bg-slate-900 text-white text-[10px] font-bold uppercase rounded flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 transition-all">
+                      <Upload className="w-3.5 h-3.5" /> Upload Photos
+                    </Label>
                   </div>
 
                   <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto p-3 bg-zinc-50 rounded border border-zinc-150 pr-1">
@@ -784,13 +865,20 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                         <div className="flex-1 grid grid-cols-2 gap-2">
                            <div>
                               <Label className="text-[8px] uppercase opacity-45">Alt Description</Label>
-                              <Input value={img.alt || ""} placeholder="Alt text" readOnly className="h-7 text-[10px] border-zinc-200" />
+                              <Input value={img.alt || ""} placeholder="Alt text" onChange={(e) => {
+                                const updated = [...form.gallery]; updated[i] = { ...updated[i], alt: e.target.value }; setForm({ ...form, gallery: updated });
+                              }} className="h-7 text-[10px] border-zinc-200" />
                            </div>
                            <div>
                               <Label className="text-[8px] uppercase opacity-45">Sort Order</Label>
-                              <Input type="number" value={img.order || 0} placeholder="Order" readOnly className="h-7 text-[10px] border-zinc-200" />
+                              <Input type="number" value={img.order || 0} placeholder="Order" onChange={(e) => {
+                                const updated = [...form.gallery]; updated[i] = { ...updated[i], order: Number(e.target.value) }; setForm({ ...form, gallery: updated });
+                              }} className="h-7 text-[10px] border-zinc-200" />
                            </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8 hover:bg-destructive/5 rounded-full" onClick={() => setForm({ ...form, gallery: form.gallery.filter((_:any, idx:number) => idx !== i) })}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     ))}
                     {(form.gallery || []).length === 0 && (
@@ -798,7 +886,7 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                     )}
                   </div>
                 </div>
-              </div>
+             </div>
           </TabsContent>
 
           <TabsContent value="multicity">
@@ -1509,7 +1597,7 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                     <Input value={day.stay} placeholder="Stay (e.g. Luxury Camp)" onChange={(e) => updateDay(idx, "stay", e.target.value)} className="h-8 text-[10px]" />
                     <Input value={day.meals} placeholder="Meals (e.g. B, D)" onChange={(e) => updateDay(idx, "meals", e.target.value)} className="h-8 text-[10px]" />
                   </div>
-                  <div className="grid grid-cols-1 gap-4 pt-3 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t">
                     <div className="space-y-2">
                       <Label className="text-[9px] uppercase opacity-50 font-black tracking-widest">Uploaded Photos</Label>
                       <div className="flex gap-3 overflow-x-auto pb-2 min-h-[96px] bg-slate-50/50 p-2.5 rounded-xl border border-dashed border-slate-200">
@@ -1519,12 +1607,24 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                             <div key={pIdx} className="relative group shrink-0 w-20 flex flex-col items-center">
                               <div className="relative w-20 h-20 rounded-xl overflow-hidden border bg-white shadow-sm transition-all hover:border-primary/50">
                                 <img src={formatUrl(url)} className="w-full h-full object-cover" />
+                                <button 
+                                  type="button"
+                                  className="absolute top-1 right-1 bg-destructive text-white rounded-full p-0.5 shadow hover:bg-destructive/90 transition-all z-10"
+                                  onClick={() => removeDayPhoto(idx, pIdx)}
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
                               </div>
                               <Input 
                                 value={caption}
                                 placeholder="Photo Name"
-                                readOnly
-                                className="h-6 text-[9px] px-1 py-0.5 rounded-lg border border-slate-200 w-full text-center mt-1 bg-zinc-50 font-medium"
+                                onChange={(e) => {
+                                  const newCaption = e.target.value.replace(/\|/g, ""); // prevent breaking split
+                                  const newPhotos = [...(day.photos || [])];
+                                  newPhotos[pIdx] = newCaption ? `${url}|${newCaption}` : url;
+                                  updateDay(idx, "photos", newPhotos);
+                                }}
+                                className="h-6 text-[9px] px-1 py-0.5 rounded-lg border border-slate-200 w-full text-center mt-1 focus-visible:ring-primary focus-visible:border-primary bg-white font-medium"
                               />
                             </div>
                           );
@@ -1536,6 +1636,14 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase opacity-50 font-black tracking-widest">Add Photos</Label>
+                      <ImageUpload 
+                        multiple
+                        onUpload={url => updateDay(idx, "photos", [...(day.photos || []), url])} 
+                      />
                     </div>
                   </div>
                 </div>
