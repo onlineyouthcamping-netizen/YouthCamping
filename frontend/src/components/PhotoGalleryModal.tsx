@@ -70,7 +70,7 @@ export default function PhotoGalleryModal({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-0 z-[100] bg-white flex flex-col"
+        className="fixed inset-0 z-[10000] bg-white flex flex-col"
       >
         <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-white sticky top-0 z-10">
           <button 
