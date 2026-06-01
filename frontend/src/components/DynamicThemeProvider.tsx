@@ -172,8 +172,14 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
     loadTheme();
   }, []);
 
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return;
 
     const adjustWrappedHeadings = () => {
       const headings = document.querySelectorAll('.hero-title, .section-heading, .main-heading, h1, h2');
@@ -233,7 +239,8 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
         });
       });
     };
-    // Run immediately
+
+    // Run immediately since we are guaranteed to be mounted/hydrated
     adjustWrappedHeadings();
 
     // Listen to window resize events with throttling/passive listener
@@ -262,7 +269,7 @@ export const DynamicThemeProvider = ({ children }: { children: React.ReactNode }
       clearTimeout(resizeTimer);
       clearTimeout(resizeTimeout);
     };
-  }, []);
+  }, [mounted]);
 
   const [isMobile, setIsMobile] = useState(false);
 
