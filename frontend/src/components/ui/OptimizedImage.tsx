@@ -21,15 +21,17 @@ export function OptimizedImage({
   cloudinaryWidth,
   ...props 
 }: OptimizedImageProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(priority ? true : false);
   const [errorObj, setErrorObj] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    if (imgRef.current?.complete) {
+    if (priority) {
+      setIsLoaded(true);
+    } else if (imgRef.current?.complete) {
       setIsLoaded(true);
     }
-  }, [src]);
+  }, [src, priority]);
 
   // 1. Validation and Normalization (Synchronous)
   let finalSrc = src;
@@ -47,10 +49,22 @@ export function OptimizedImage({
   let srcSet: string | undefined = undefined;
 
   const isCloudinary = finalSrc && finalSrc.includes('res.cloudinary.com');
-  const hasNoExistingW = finalSrc && !finalSrc.includes('w_');
+  const isUnsplash = finalSrc && finalSrc.includes('images.unsplash.com');
   const hasCloudinaryWidth = cloudinaryWidth !== undefined;
 
-  if (isCloudinary && hasNoExistingW && hasCloudinaryWidth) {
+  if (isUnsplash && hasCloudinaryWidth) {
+    const cloudName = "ddkndagvp";
+    const baseFetch = `https://res.cloudinary.com/${cloudName}/image/fetch/f_auto,q_auto,c_limit`;
+    const cleanUrl = finalSrc;
+    
+    // Form fetch url
+    finalSrc = `${baseFetch},w_${cloudinaryWidth}/${cleanUrl}`;
+    
+    const widths = [320, 480, 640, 800, 1200];
+    srcSet = widths
+      .map(w => `${baseFetch},w_${w}/${cleanUrl} ${w}w`)
+      .join(', ');
+  } else if (isCloudinary && !finalSrc.includes('w_') && hasCloudinaryWidth) {
     const uploadIndex = finalSrc.indexOf('/upload/');
     if (uploadIndex !== -1) {
       const before = finalSrc.substring(0, uploadIndex + 8);

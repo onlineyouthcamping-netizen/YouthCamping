@@ -155,6 +155,8 @@ export default function Hero({
             {resolvedPosterUrl && !videoLoaded && (
               <OptimizedImage
                 src={resolvedPosterUrl}
+                priority={true}
+                cloudinaryWidth={1920}
                 className="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-500"
                 alt="Hero Background Poster"
                 style={{ objectFit: 'cover', objectPosition: 'center' }}
@@ -178,6 +180,8 @@ export default function Hero({
         ) : normalizedBg ? (
           <OptimizedImage 
             src={normalizedBg} 
+            priority={true}
+            cloudinaryWidth={1920}
             className="w-full h-full object-cover" 
             alt="Hero Background"
             style={{ objectFit: 'cover', objectPosition: 'center' }}

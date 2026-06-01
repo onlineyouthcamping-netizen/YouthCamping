@@ -53,7 +53,8 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
           <OptimizedImage 
             src={errorImages[0] ? fallbacks[0] : (normalizeImageUrl(finalImages[0]) || fallbacks[0])} 
             alt={trip.title} 
-            
+            priority={true}
+            cloudinaryWidth={1200}
             className="w-full h-full object-cover" 
           />
           {/* Floating photo count badge */}
@@ -65,7 +66,7 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
             <span className="text-[10px] font-bold capitalize tracking-widest text-navy">{totalPhotos}+ Photos</span>
           </button>
         </div>
-
+ 
         {/* Desktop: Multi-image grid */}
         <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-4 aspect-[21/9] w-full rounded-[40px] overflow-hidden group shadow-2xl bg-zinc-50">
           {/* Main Large Image */}
@@ -76,7 +77,8 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
             <OptimizedImage 
               src={errorImages[0] ? fallbacks[0] : (normalizeImageUrl(finalImages[0]) || fallbacks[0])} 
               alt={trip.title} 
-              
+              priority={true}
+              cloudinaryWidth={1200}
               className="w-full h-full object-cover transition-transform duration-1000 group-hover/item:scale-110" 
             />
             <div className="absolute inset-0 bg-black/10 group-hover/item:bg-transparent transition-colors duration-500" />

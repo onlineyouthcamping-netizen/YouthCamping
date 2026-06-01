@@ -144,19 +144,6 @@ export default function Navbar({
             >
               Contact
             </Link>
-            <Link
-              href="/login"
-              className="px-6 py-2.5 rounded-full font-medium transition-all bg-navy text-white hover:bg-primary-orange shadow-lg h-11 flex items-center justify-center"
-              style={{
-                borderRadius: 'var(--radius-button)',
-                padding: 'var(--button-padding-y) var(--button-padding-x)',
-                fontSize: 'var(--button-font-size)',
-                textTransform: 'var(--button-text-transform)' as any,
-                letterSpacing: 'var(--button-letter-spacing)',
-              }}
-            >
-              Login
-            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -195,19 +182,6 @@ export default function Navbar({
           className="text-2xl font-medium text-navy capitalize tracking-tighter"
         >
           Contact
-        </Link>
-        <Link
-          href="/login"
-          onClick={() => setIsMenuOpen(false)}
-          className="mt-4 bg-navy text-white py-4 rounded-2xl text-center font-medium capitalize tracking-widest"
-          style={{
-            borderRadius: 'var(--radius-button)',
-            fontSize: 'var(--button-font-size)',
-            textTransform: 'var(--button-text-transform)' as any,
-            letterSpacing: 'var(--button-letter-spacing)',
-          }}
-        >
-          Login
         </Link>
       </div>
     </>
