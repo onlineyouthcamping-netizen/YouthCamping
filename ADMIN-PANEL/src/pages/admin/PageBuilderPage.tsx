@@ -767,31 +767,6 @@ export default function PageBuilderPage() {
                 <div className={selectedSection.locked ? 'opacity-50 pointer-events-none' : ''}>
                   {selectedSection.type === 'hero' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="space-y-4">
-                          <div className="flex justify-between">
-                            <Label className="text-xs font-black uppercase tracking-widest">Main Headline</Label>
-                            <span className="text-[10px] font-bold opacity-30">{(selectedSection.draft.headline || '').length}/80</span>
-                          </div>
-                          <Input 
-                            maxLength={80}
-                            value={selectedSection.draft.headline || ''} 
-                            onChange={e => updateSelectedSection({ headline: e.target.value })}
-                            className="text-lg font-bold h-12 rounded-xl border-2"
-                          />
-                        </div>
-                      <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-widest">Subheadline / Tagline (Animated)</Label>
-                        <Textarea 
-                          value={selectedSection.draft.subheadline || ''} 
-                          onChange={e => updateSelectedSection({ subheadline: e.target.value })}
-                          className="min-h-[100px] rounded-2xl border-2 font-medium"
-                          maxLength={200}
-                          placeholder="e.g. Spreading Happiness, Connecting Travelers, Curating Vibes"
-                        />
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest italic text-primary-orange">
-                          Use commas to create an animated typing effect (e.g. "Phrase 1, Phrase 2")
-                        </p>
-                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/20 rounded-2xl border-2">
                         <div className="space-y-4 col-span-2">
                           <div className="flex items-center justify-between">

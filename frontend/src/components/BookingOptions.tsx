@@ -118,7 +118,7 @@ export default function BookingOptions({
                 <div className="relative aspect-square rounded-[14px] overflow-hidden mb-3">
                   <OptimizedImage 
                     src={normalizeImageUrl(v.image) || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6"} 
-                    alt={v.location} className="object-cover" 
+                    alt={v.location} className="absolute inset-0 w-full h-full object-cover" 
                   />
                 </div>
                 <div className="flex flex-col gap-1">

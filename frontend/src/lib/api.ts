@@ -81,13 +81,15 @@ export async function fetchBlogs(init?: RequestInit): Promise<any[]> {
 export async function fetchAttractions(): Promise<any[]> {
   const res = await fetch(`${API_BASE_URL}/attractions`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch attractions");
-  return res.json();
+  const json = await res.json();
+  return json.data || [];
 }
 
 export async function fetchAttractionBySlug(slug: string): Promise<any | null> {
   const res = await fetch(`${API_BASE_URL}/attractions/slug/${slug}`, { cache: 'no-store' });
   if (!res.ok) return null;
-  return res.json();
+  const json = await res.json();
+  return json.data || null;
 }
 
 export async function fetchBlogBySlug(slug: string): Promise<any | null> {

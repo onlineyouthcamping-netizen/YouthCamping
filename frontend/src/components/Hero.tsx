@@ -105,15 +105,20 @@ export default function Hero({
     "Escape Routines",
     "Explore Deeply"
   ];
-  const typingPhrases: string[] = theme?.heroAnimatedTexts?.length
-    ? theme.heroAnimatedTexts
-    : defaultPhrases;
 
-  // Props override theme, theme overrides defaults
-  const resolvedHeadline = headline !== "One Trip At a Time" ? headline : (theme?.heroTitle || headline);
-  const displayHeadline = !resolvedHeadline || resolvedHeadline === "Every great story starts with someone who decided to go." || resolvedHeadline === "Global Community of Travelers"
-    ? "One Trip At a Time"
-    : resolvedHeadline;
+  // Subheadline: theme animated texts > subheadline prop (comma-separated) > defaults
+  let typingPhrases: string[] = [];
+  if (theme?.heroAnimatedTexts?.length) {
+    typingPhrases = theme.heroAnimatedTexts;
+  } else if (subheadline && typeof subheadline === 'string' && subheadline.includes(',')) {
+    typingPhrases = subheadline.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (!typingPhrases.length) {
+    typingPhrases = defaultPhrases;
+  }
+
+  // Headline priority: theme heroTitle > prop from page builder > default
+  const displayHeadline = theme?.heroTitle || headline || "One Trip At a Time";
 
   // Hero overlay: theme value (0-100) converted to 0-1 opacity, CSS var as fallback
   const overlayOpacity = theme?.heroOverlayDarkness != null
@@ -201,12 +206,12 @@ export default function Hero({
         />
       </div>
 
-      <div className={`absolute inset-0 z-10 flex flex-col justify-center px-4 py-3 md:px-10 md:py-8 text-white max-md:items-center max-md:text-center ${alignClass}`}>
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4 py-3 md:px-10 md:py-8 text-white">
           <motion.h1
             initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={reduceMotion ? { duration: 0 } : { duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="hero-title mb-3 md:mb-8"
+            className="hero-title mb-0"
             style={{ 
               ['--title-size-desktop' as any]: titleSize 
                 ? (isNaN(Number(titleSize)) 
@@ -224,8 +229,9 @@ export default function Hero({
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={reduceMotion ? { duration: 0 } : { delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center font-medium mt-2 md:mt-6 hero-subheadline"
+            className="flex items-center justify-center font-medium hero-subheadline"
             style={{ 
+              marginTop: '10px',
               ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
             }}
           >

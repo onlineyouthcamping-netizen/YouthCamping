@@ -40,10 +40,12 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative h-[70vh] w-full">
+      <section className="relative h-[70vh] w-full overflow-hidden">
         <OptimizedImage 
           src={normalizeImageUrl(attraction.image) || "https://images.unsplash.com/photo-1520209759395-820217e92824"} 
-          alt={attraction.name} className="object-cover"
+          alt={attraction.name} 
+          className="absolute inset-0 w-full h-full object-cover"
+          cloudinaryWidth={1920}
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -53,7 +55,7 @@ export default async function AttractionPage({ params }: { params: Promise<{ slu
                 <MapPin className="w-4 h-4" /> {attraction.location}
              </div>
              <h1 className="text-5xl md:text-8xl font-bold tracking-tighter italic capitalize leading-[0.8]">{attraction.name}</h1>
-             <p className="text-lg md:text-xl font-medium opacity-80 max-w-2xl">{attraction.category} • {attraction.altitude}</p>
+             <p className="text-lg md:text-xl font-medium opacity-80 max-w-2xl">{attraction.category}{attraction.altitude ? ` • ${attraction.altitude}` : ''}</p>
           </div>
         </div>
       </section>

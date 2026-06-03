@@ -200,7 +200,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
                                 <div className="relative aspect-square rounded-[14px] md:rounded-[18px] overflow-hidden mb-2 border-2 border-white shadow-sm transition-transform group-hover/photo:scale-105">
                                   <OptimizedImage 
                                     src={normalizeImageUrl(url) || ""} 
-                                    alt={displayName} className="object-cover" 
+                                    alt={displayName} className="absolute inset-0 w-full h-full object-cover" 
                                   />
                                 </div>
                                 <p className="text-[8px] md:text-[9px] font-bold text-navy capitalize tracking-widest px-1 line-clamp-1">

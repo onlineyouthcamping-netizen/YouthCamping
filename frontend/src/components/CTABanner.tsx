@@ -30,7 +30,7 @@ export default function CTABanner({
   const reduceMotion = prefersReducedMotion || isMobile;
 
   return (
-    <div className="relative py-20 overflow-hidden">
+    <div className="relative overflow-hidden bg-[#e5e5e5] -mt-[60px] md:-mt-[80px] lg:-mt-[120px] -mb-[60px] md:-mb-[80px] lg:-mb-[120px] py-[140px] md:py-[160px] lg:py-[200px] z-10">
       <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20">
         <div className="relative h-[400px] md:h-[500px] w-full rounded-[32px] overflow-hidden shadow-2xl group border border-zinc-50">
           {/* Background Image */}
