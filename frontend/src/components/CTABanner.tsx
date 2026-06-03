@@ -30,10 +30,11 @@ export default function CTABanner({
   const reduceMotion = prefersReducedMotion || isMobile;
 
   return (
-    <div className="relative overflow-hidden bg-transparent -mt-[60px] md:-mt-[80px] lg:-mt-[120px] -mb-[60px] md:-mb-[80px] lg:-mb-[120px] py-[140px] md:py-[160px] lg:py-[200px] z-10">
-      {/* Grey shade on top half — banner straddles grey/white split */}
-      <div className="absolute inset-x-0 top-0 bg-[#e5e5e5]" style={{ height: '60%' }} />
-      <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20">
+    <div className="relative bg-transparent z-10">
+      {/* Grey background section representing the upper overlap region */}
+      <div className="absolute inset-x-0 top-0 bg-[#e5e5e5] h-[200px] md:h-[250px] lg:h-[300px]" />
+      
+      <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20 -mt-[120px] md:-mt-[160px] lg:-mt-[200px] pb-12 md:pb-16 lg:pb-20">
         <div className="relative h-[400px] md:h-[500px] w-full rounded-[32px] overflow-hidden shadow-2xl group border border-zinc-50">
           {/* Background Image */}
           <div className="absolute inset-0">
