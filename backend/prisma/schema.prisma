@@ -388,6 +388,31 @@ model Theme {
   @@index([name])
 }
 
+model Attraction {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  name          String
+  slug          String   @unique
+  image         String?
+  description   String?
+  location      String?
+  altitude      String?
+  bestTime      String?
+  category      String   @default("nature")
+  visitingHours String?
+  entryFee      String?
+  etiquette     Json?
+  faqs          Json?
+  isFeatured    Boolean  @default(false)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([slug])
+}
+
+
 // ==========================================
 // FUTURE EXPANSION: STRIPE / RAZORPAY PAYMENT HARDENING SCHEMA
 // ==========================================
