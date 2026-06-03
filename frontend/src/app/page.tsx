@@ -128,7 +128,7 @@ export default async function Home() {
             const alternateClass = isAlternate && idx % 2 === 1 ? "bg-zinc-50/50" : "bg-transparent";
             
             // Skip spacing wrapper for hero/cta to keep layouts full-screen
-            if (key === 'hero' || key === 'cta_banner') {
+            if (key === 'hero' || key === 'cta_banner' || key === 'cta_slider') {
               return sectionMap[key];
             }
             

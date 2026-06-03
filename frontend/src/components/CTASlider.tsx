@@ -81,7 +81,12 @@ export default function CTASlider({
   const current = displayItems[index];
 
   return (
-    <section className="relative py-20 overflow-hidden">
+    <section 
+      className="relative py-20 overflow-hidden"
+      style={{
+        background: 'linear-gradient(to bottom, #f3f3f3 0%, #f3f3f3 50%, #ffffff 50%, #ffffff 100%)'
+      }}
+    >
       <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20">
         <div className="relative h-[300px] md:h-[400px] w-full rounded-[32px] overflow-hidden group shadow-2xl bg-zinc-900 border border-zinc-50">
           <AnimatePresence initial={false} custom={direction}>

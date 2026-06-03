@@ -82,7 +82,7 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
         const getBgColor = (idx: number) => {
           const s = visibleSections[idx];
           if (!s) return '#ffffff';
-          if (['hero', 'cta_banner', 'cinematic_banner'].includes(s.type)) return 'transparent';
+          if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner'].includes(s.type)) return 'transparent';
           
           const patterns = ['#ffffff', '#f6f6f6'];
           return patterns[idx % patterns.length];
@@ -161,7 +161,7 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
         };
 
         const getBackgroundClass = (idx: number) => {
-          if (['hero', 'cta_banner', 'cinematic_banner'].includes(type)) return 'bg-transparent';
+          if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner'].includes(type)) return 'bg-transparent';
           
           const patterns = ['bg-[#ffffff]', 'bg-[#f6f6f6]'];
           return patterns[idx % patterns.length];
