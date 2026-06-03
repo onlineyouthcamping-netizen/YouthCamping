@@ -207,7 +207,7 @@ export default function Hero({
       </div>
 
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4 py-3 md:px-10 md:py-8 text-white">
-        <div className="flex flex-col items-center w-full max-w-4xl mx-auto transform translate-y-[25%]">
+        <div className="flex flex-col items-center w-full max-w-4xl mx-auto transform translate-y-[40%]">
           {/* Title + Subtitle Group */}
           <div className="flex flex-col items-center mb-6 md:mb-8">
             <motion.h1
