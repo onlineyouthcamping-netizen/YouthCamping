@@ -8,6 +8,9 @@ export interface BookingLinkRecord {
   pickupCity: string | null;
   paymentMode: string | null;
   customAmount: number | null;
+  customTime: string | null;
+  headerTitle: string | null;
+  headerSubtitle: string | null;
   expiresAt: string | null;
   status: string;
   tokenPrefix: string;
@@ -25,6 +28,9 @@ export const bookingLinksService = {
     paymentMode: string; // "Full Payment" | "Partial Payment"
     customAmount: number;
     pickupCity: string;
+    customTime?: string; // e.g. "9:00 AM – 6:00 PM IST"
+    headerTitle?: string; // e.g. "Talk That Damn Point"
+    headerSubtitle?: string; // e.g. "Join the wait list for Before Monday Begins"
     expiresAt?: string | null; // optional
   }): Promise<BookingLinkRecord> {
     const res = await api.post("/booking-links", data);

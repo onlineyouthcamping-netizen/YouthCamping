@@ -132,7 +132,7 @@ export default function Footer({
 
         {/* Company Name & Details */}
         <div className="flex flex-col items-center mb-6 px-4">
-          <h2 className="text-base md:text-lg font-bold tracking-widest text-white mb-3 uppercase">{brandName}</h2>
+          <h2 suppressHydrationWarning className="text-base md:text-lg font-bold tracking-widest text-white mb-3 uppercase">{brandName}</h2>
           <p className="text-zinc-400 text-xs md:text-sm font-medium leading-relaxed max-w-md text-center">
             {address}
           </p>

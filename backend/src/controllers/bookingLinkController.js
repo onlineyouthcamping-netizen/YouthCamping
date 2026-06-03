@@ -24,7 +24,7 @@ const getIpHash = (req) => {
 // ────────────────────────────────────────────
 exports.createBookingLink = async (req, res, next) => {
   try {
-    const { tripId, departureDate, paymentMode, customAmount, pickupCity, expiresAt } = req.body;
+    const { tripId, departureDate, paymentMode, customAmount, pickupCity, expiresAt, customTime, headerTitle, headerSubtitle } = req.body;
     if (!tripId || !departureDate || !paymentMode || pickupCity === undefined || pickupCity === null) {
       return res.status(400).json({
         success: false,
@@ -71,6 +71,9 @@ exports.createBookingLink = async (req, res, next) => {
         pickupCity: String(pickupCity),
         paymentMode: String(paymentMode),
         customAmount: customAmount !== undefined && customAmount !== null ? Number(customAmount) : null,
+        customTime: customTime || null,
+        headerTitle: headerTitle || null,
+        headerSubtitle: headerSubtitle || null,
         expiresAt: finalExpiresAt,
         status: 'active',
         tokenHash,
@@ -141,6 +144,9 @@ exports.getBookingLinks = async (req, res, next) => {
         pickupCity: true,
         paymentMode: true,
         customAmount: true,
+        customTime: true,
+        headerTitle: true,
+        headerSubtitle: true,
         expiresAt: true,
         status: true,
         tokenPrefix: true,
@@ -284,6 +290,9 @@ exports.resolveBookingLink = async (req, res, next) => {
         pickupCity: link.pickupCity,
         paymentMode: link.paymentMode,
         customAmount: link.customAmount,
+        customTime: link.customTime,
+        headerTitle: link.headerTitle,
+        headerSubtitle: link.headerSubtitle,
         expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
       },
     });

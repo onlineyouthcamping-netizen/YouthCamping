@@ -113,17 +113,11 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
 
   const selectedTrip = trips.find(t => t.id === form.tripId || t.tripCode === form.tripId);
   const gstRate = (selectedTrip?.gstPercentage ?? 5) / 100;
-  const gstOption = settings?.bookingForm?.gstOption || 'full';
 
   const base = parseFloat(form.basePrice) || 0;
   const advance = parseFloat(form.advancePaid) || 0;
 
-  let gst = 0;
-  if (gstOption === 'advance' && form.paymentStatus === 'Partial') {
-    gst = Math.round(advance - (advance / (1 + gstRate)));
-  } else {
-    gst = Math.round(base * gstRate);
-  }
+  const gst = Math.round(base * gstRate);
   const total = base + gst;
   const remaining = total - advance;
 

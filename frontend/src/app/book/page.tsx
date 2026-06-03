@@ -7,7 +7,8 @@ import {
   User, Phone, Mail, Users, Bed, Train, 
   ChevronRight, ChevronLeft, Calendar, MapPin, CheckCircle2,
   Loader2, AlertCircle, Info, Navigation, ShieldCheck, Star, 
-  Headset, Lock, Check, Sparkles, AlertTriangle, CreditCard, Building
+  Headset, Lock, Check, Sparkles, AlertTriangle, CreditCard, Building,
+  Tag, ArrowLeft
 } from 'lucide-react';
 import { API_BASE_URL, normalizeImageUrl, fetchSettings } from '@/lib/api';
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
@@ -22,6 +23,51 @@ const FALLBACK_JOINING_POINTS = [
   { cityName: 'Pune', deductionAmount: 1500, skipDays: 1, pickupPoint: 'Pune Railway Station' },
   { cityName: 'Direct Join', deductionAmount: 2500, skipDays: 2, pickupPoint: 'Base Camp / Destination' }
 ];
+
+
+
+const parseTripDate = (dateStr?: string) => {
+  if (!dateStr) {
+    return { 
+      day: 'Flexible', 
+      month: 'DATE', 
+      weekday: 'Flexible', 
+      fullDate: 'Flexible Departure Date', 
+      time: 'Date selected during checkout' 
+    };
+  }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      return { 
+        day: '?', 
+        month: 'DATE', 
+        weekday: 'Flexible', 
+        fullDate: dateStr, 
+        time: 'Date selected during checkout' 
+      };
+    }
+    const shortMonths = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    return {
+      day: d.getDate().toString(),
+      month: shortMonths[d.getMonth()],
+      weekday: weekdays[d.getDay()],
+      fullDate: `${weekdays[d.getDay()]}, ${d.getDate()} ${fullMonths[d.getMonth()]}`,
+      time: '9:00 AM – 6:00 PM IST'
+    };
+  } catch (e) {
+    return { 
+      day: '?', 
+      month: 'DATE', 
+      weekday: 'Flexible', 
+      fullDate: dateStr, 
+      time: 'Date selected during checkout' 
+    };
+  }
+};
 
 
 
@@ -41,6 +87,9 @@ function BookingForm() {
       const payMode = searchParams.get('payMode');
       const bookAmt = searchParams.get('bookAmt');
       const sourceBookingLinkId = searchParams.get('sourceBookingLinkId');
+      const customTime = searchParams.get('customTime');
+      const headerTitle = searchParams.get('headerTitle');
+      const headerSubtitle = searchParams.get('headerSubtitle');
 
       const sanitize = (val: string | null) => 
         val ? decodeURIComponent(val.replace(/\+/g, ' ')).trim() : '';
@@ -54,6 +103,9 @@ function BookingForm() {
         payMode: sanitize(payMode),
         bookAmt: bookAmt ? (Number.isFinite(parseFloat(bookAmt)) ? parseFloat(bookAmt) : null) : null,
         sourceBookingLinkId: sanitize(sourceBookingLinkId),
+        customTime: sanitize(customTime),
+        headerTitle: sanitize(headerTitle),
+        headerSubtitle: sanitize(headerSubtitle),
         basePrice: price ? parseInt(price) : 0
       };
     } catch (e) {
@@ -67,6 +119,9 @@ function BookingForm() {
         payMode: '',
         bookAmt: null,
         sourceBookingLinkId: '',
+        customTime: '',
+        headerTitle: '',
+        headerSubtitle: '',
         basePrice: 0 
       };
     }
@@ -348,33 +403,29 @@ function BookingForm() {
 
     // GST Calculation — use trip-configured GST rate, fallback to 5%
     const gstRate = (tripData?.gstPercentage ?? 5) / 100;
-    const gstOption = settings?.bookingForm?.gstOption || 'full'; // 'full' or 'advance'
     
     let gstAmount = 0;
     let finalTotal = 0;
     let advancePaid = 0;
     let remainingBalance = 0;
 
+    // Full-package GST (used for total trip cost and remaining balance)
+    const fullPackageGst = Math.round(netBase * gstRate);
+    const fullPackageTotal = netBase + fullPackageGst;
+
     if (paymentMode === 'Full Payment') {
-      gstAmount = Math.round(netBase * gstRate);
-      finalTotal = netBase + gstAmount;
+      gstAmount = fullPackageGst;
+      finalTotal = fullPackageTotal;
       advancePaid = finalTotal;
       remainingBalance = 0;
     } else {
       // Partial Payment
-      if (gstOption === 'advance') {
-        // Option B: GST = Advance Amount * GST Rate
-        gstAmount = Math.round(partialBaseAmount * gstRate);
-        finalTotal = partialBaseAmount + gstAmount;
-        advancePaid = finalTotal;
-        remainingBalance = netBase - partialBaseAmount; // Package Amount - Advance Amount
-      } else {
-        // Option A: GST = Package Amount * GST Rate
-        gstAmount = Math.round(netBase * gstRate);
-        finalTotal = partialBaseAmount;
-        advancePaid = finalTotal;
-        remainingBalance = (netBase + gstAmount) - advancePaid;
-      }
+      // GST is calculated ON the booking/deposit amount (not included in it)
+      // e.g. deposit ₹5,000 → GST ₹250 → pay ₹5,250
+      gstAmount = Math.round(partialBaseAmount * gstRate);
+      finalTotal = partialBaseAmount + gstAmount;
+      advancePaid = finalTotal;
+      remainingBalance = fullPackageTotal - finalTotal;
     }
 
     return {
@@ -386,7 +437,9 @@ function BookingForm() {
       finalTotal,
       advancePaid,
       remainingBalance,
-      totalAmount: netBase + gstAmount
+      fullPackageGst,
+      fullPackageTotal,
+      totalAmount: fullPackageTotal
     };
   }, [basePrice, selectedCity, formData.participants, formData.participantsList, paymentMode, customDepositPerPax, tripData, isDirectJoin, settings]);
 
@@ -510,84 +563,199 @@ function BookingForm() {
     }
   };
 
+  const parsedDate = useMemo(() => parseTripDate(initialParams.date), [initialParams.date]);
+
   return (
     <div className="bg-[#FAFAFA] min-h-screen text-slate-900 pb-32 lg:pb-20">
-      
-            {/* Top Banner / Backdrop (Premium Light Layout) */}
-      <div className="relative w-full overflow-hidden bg-slate-900 py-10 md:py-16 flex flex-col justify-end min-h-[240px] h-auto">
-        {tripData?.images?.[0] ? (
-          <OptimizedImage 
-            src={normalizeImageUrl(tripData.images[0])} 
-            alt={initialParams.tripName} 
-            className="absolute inset-0 w-full h-full object-cover opacity-45 scale-105"
-          />
-        ) : (
-          <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-slate-800 to-slate-900 opacity-60" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-        
-        <div className="relative max-w-7xl mx-auto px-6 z-10 w-full mt-auto space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center px-3 py-1 bg-[#FF5B00]/10 rounded-full text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00]">
-              Premium Expeditions
-            </span>
-          </div>
-
-          <h1 className="text-3xl md:text-5xl font-black capitalize tracking-tight leading-tight text-white max-w-4xl break-words">
-            {initialParams.tripName || 'Adventure Checkout'}
-          </h1>
-
-                    {/* Highlighted Departure Date Card */}
-          <div className="inline-flex flex-col sm:flex-row sm:items-center gap-6 bg-white border border-slate-200/80 rounded-2xl p-5 max-w-fit pr-10">
-            <div className="text-left space-y-1">
-              <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-450">DEPARTURE DATE</p>
-              <p className="text-sm font-bold text-slate-800 leading-tight">{initialParams.date || 'Flexible'}</p>
-            </div>
-            <div className="hidden sm:block w-px h-8 bg-slate-250" />
-            <div className="text-left space-y-1">
-              <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-455">TRIP CODE</p>
-              <p className="text-xs font-bold text-slate-600 leading-tight">{initialParams.tripId || 'N/A'}</p>
-            </div>
-          </div>
+      {/* Top logo & waitlist header */}
+      <header className="bg-white border-b border-slate-100 py-3.5 px-6 sticky top-0 z-40 flex items-center justify-between">
+        <div className="font-extrabold text-sm tracking-tight text-slate-900 font-serif">
+          {initialParams.headerTitle || 'Talk That Damn Point'}
         </div>
-      </div>
+        <a 
+          href="#" 
+          onClick={(e) => e.preventDefault()}
+          className="bg-slate-950 text-white hover:bg-slate-900 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
+        >
+          {initialParams.headerSubtitle || 'Join the wait list for Before Monday Begins'}
+        </a>
+      </header>
 
-      {/* Progress Bar Container */}
-      <div className="max-w-7xl mx-auto px-6 mb-10 -mt-6 relative z-10">
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar shadow-md">
-          {[
-            { step: 1, label: 'Lead Contact' },
-            { step: 2, label: 'Travelers List' },
-            { step: 3, label: 'Pricing Summary' },
-            { step: 4, label: 'Verification' }
-          ].map((item) => (
-            <div key={item.step} className="flex items-center gap-3 shrink-0">
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all",
-                currentStep >= item.step 
-                  ? "bg-[#FF5B00] text-white shadow-lg shadow-[#FF5B00]/25" 
-                  : "bg-slate-100 text-slate-400 border border-slate-200"
-              )}>
-                {currentStep > item.step ? <Check size={12} strokeWidth={4} /> : item.step}
-              </div>
-              <span className={cn(
-                "text-[10px] capitalize font-bold tracking-widest",
-                currentStep >= item.step ? "text-slate-900" : "text-slate-400"
-              )}>
-                {item.label}
-              </span>
-              {item.step < 4 && <div className={cn("w-8 md:w-16 h-[2px] bg-slate-100", currentStep > item.step && "bg-[#FF5B00]")} />}
-            </div>
-          ))}
-        </div>
-      </div>
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        {/* Back Button */}
+        <button 
+          onClick={() => router.back()} 
+          className="flex items-center gap-1.5 text-slate-800 hover:text-slate-950 font-bold text-sm mb-6 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4 stroke-[3px]" /> Back
+        </button>
 
-      {/* Main Form Content */}
-      <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Area: Inputs */}
-          <div className="lg:col-span-7 space-y-8">
+          {/* Left Area: Event Details + Inputs */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Trip Poster Card */}
+            <div className="relative w-full rounded-[24px] overflow-hidden bg-slate-950 shadow-md aspect-[16/10] md:aspect-[16/9] flex items-center justify-center p-4 md:p-8">
+              {/* background image blurred */}
+              {tripData?.images?.[0] ? (
+                <OptimizedImage 
+                  src={normalizeImageUrl(tripData.images[0])} 
+                  alt={initialParams.tripName} 
+                  className="absolute inset-0 w-full h-full object-cover opacity-20 blur-md scale-105"
+                />
+              ) : (
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
+              )}
+
+              {/* Pink Price Tag */}
+              <div className="absolute top-4 right-4 bg-rose-600 text-white px-3.5 py-1.5 rounded-full text-xs font-black tracking-widest flex items-center gap-1 shadow-md z-10">
+                <Tag className="w-3.5 h-3.5 fill-white" /> From ₹{tripData?.price || basePrice}
+              </div>
+
+              {/* Framed Side-by-Side Images */}
+              <div className="relative z-10 flex items-center justify-center gap-4 w-full h-full">
+                {/* Left Image in White Border Frame */}
+                <div className="border-[6px] border-white shadow-2xl overflow-hidden w-[45%] aspect-[4/5] bg-slate-800 rounded-sm transform -rotate-2 hover:rotate-0 transition-transform duration-300">
+                  {tripData?.images?.[0] ? (
+                    <OptimizedImage 
+                      src={normalizeImageUrl(tripData.images[0])} 
+                      alt="Trip preview 1" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-white/20 text-xs">No Image</div>
+                  )}
+                </div>
+
+                {/* Right Image / Styled Poster fallback */}
+                <div className="w-[50%] aspect-[4/5] overflow-hidden bg-white shadow-2xl rounded-sm p-4 flex flex-col justify-between border border-slate-100">
+                  {tripData?.images?.[1] ? (
+                    <OptimizedImage 
+                      src={normalizeImageUrl(tripData.images[1])} 
+                      alt="Trip preview 2" 
+                      className="w-full h-full object-cover rounded-xs"
+                    />
+                  ) : (
+                    // Elegant text poster fallback
+                    <div className="flex flex-col h-full justify-between text-slate-900">
+                      <div>
+                        <p className="text-[7px] font-extrabold uppercase tracking-widest text-[#FF5B00]">Expedition</p>
+                        <h4 className="text-xs md:text-sm font-black tracking-tight leading-tight mt-1 line-clamp-3">
+                          {initialParams.tripName || 'Storytelling Night'}
+                        </h4>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">
+                          DATE: {parsedDate.month} {parsedDate.day}
+                        </div>
+                        <div className="text-[7px] font-bold text-slate-500 uppercase tracking-wider line-clamp-1">
+                          VENUE: {selectedCity?.cityName || tripData?.location || 'TBD'}
+                        </div>
+                      </div>
+                      <div className="border-t border-dashed border-slate-200 pt-1.5 flex justify-between items-center text-[7px] font-bold">
+                        <span className="text-slate-400">Price</span>
+                        <span className="text-slate-900 font-extrabold">₹{(tripData?.price || basePrice).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Trip Title */}
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight capitalize">
+              {initialParams.tripName || 'Adventure Expedition'}
+            </h1>
+
+            {/* Date and Location Info Card */}
+            <div className="bg-white border border-slate-200/80 rounded-[20px] p-5 shadow-sm space-y-4">
+              {/* Date */}
+              <div className="flex items-center gap-4">
+                {/* Calendar Badge */}
+                <div className="w-12 h-14 rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs flex flex-col shrink-0">
+                  <div className="bg-rose-500 text-white text-[8px] font-bold py-0.5 text-center uppercase tracking-widest">
+                    {parsedDate.month}
+                  </div>
+                  <div className="flex-1 flex items-center justify-center font-bold text-lg text-slate-800 leading-none">
+                    {parsedDate.day}
+                  </div>
+                </div>
+                {/* Date text */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm md:text-base font-extrabold text-slate-900 leading-tight">
+                    {parsedDate.fullDate}
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                    {initialParams.customTime || parsedDate.time}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Location */}
+              <div className="flex items-center gap-4">
+                {/* Location Icon Badge */}
+                <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                </div>
+                {/* Location text */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm md:text-base font-extrabold text-slate-900 leading-tight capitalize">
+                    {selectedCity?.cityName || tripData?.location || 'Delhi'}
+                  </p>
+                  <a 
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCity?.cityName || tripData?.location || 'Delhi')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-rose-500 hover:text-rose-600 font-bold mt-0.5 inline-flex items-center gap-0.5 transition-colors"
+                  >
+                    Open in Maps <ChevronRight className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* About the Experience Card */}
+            <div className="bg-white border border-slate-200/80 rounded-[20px] p-5 shadow-sm space-y-2.5">
+              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-450">
+                ABOUT THE EXPERIENCE
+              </h3>
+              <p className="text-xs md:text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-line">
+                {tripData?.description || 'Join us for an incredible adventure designed to wow you at every step. Filled with curated stays, comfortable travel options, and exciting activities.'}
+              </p>
+            </div>
+
+            {/* Progress Bar Container */}
+            <div className="bg-white border border-slate-200/80 rounded-[20px] p-5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar shadow-sm">
+              {[
+                { step: 1, label: 'Lead Contact' },
+                { step: 2, label: 'Travelers List' },
+                { step: 3, label: 'Pricing Summary' },
+                { step: 4, label: 'Verification' }
+              ].map((item) => (
+                <div key={item.step} className="flex items-center gap-2 shrink-0">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all",
+                    currentStep >= item.step 
+                      ? "bg-[#FF5B00] text-white shadow-sm" 
+                      : "bg-slate-100 text-slate-400 border border-slate-200"
+                  )}>
+                    {currentStep > item.step ? <Check size={10} strokeWidth={4} /> : item.step}
+                  </div>
+                  <span className={cn(
+                    "text-[8px] uppercase font-bold tracking-widest",
+                    currentStep >= item.step ? "text-slate-900" : "text-slate-400"
+                  )}>
+                    {item.label}
+                  </span>
+                  {item.step < 4 && <div className={cn("w-4 md:w-8 h-[2px] bg-slate-100", currentStep > item.step && "bg-[#FF5B00]")} />}
+                </div>
+              ))}
+            </div>
+
             <AnimatePresence mode="wait">
               {currentStep === 1 && (
                 <motion.div
@@ -954,10 +1122,11 @@ function BookingForm() {
                         <div className="bg-gradient-to-br from-[#FF5B00] to-[#FF8A00] p-4 rounded-2xl flex flex-col justify-between text-white shadow-md min-h-[70px]">
                           <span className="text-[9px] font-extrabold uppercase tracking-widest opacity-90 block">PAY NOW</span>
                           <p className="text-xl font-bold tracking-tighter leading-tight">₹{pricing.finalTotal.toLocaleString()}</p>
+                          <p className="text-[9px] font-semibold opacity-80 mt-0.5">₹{(pricing.finalTotal - pricing.gstAmount).toLocaleString()} + ₹{pricing.gstAmount.toLocaleString()} GST</p>
                         </div>
                       </div>
 
-                                            {/* General Booking Breakdown */}
+                      {/* General Booking Breakdown */}
                       <div className="bg-white border border-slate-205 rounded-2xl p-5 space-y-4 shadow-sm text-xs">
                         <div className="flex justify-between items-center border-b pb-2">
                           <h5 className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">RESERVATION DETAILS</h5>
@@ -983,23 +1152,44 @@ function BookingForm() {
                             <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">TRAVELERS</p>
                             <p className="font-bold text-slate-800 mt-1">{formData.participants} Pax</p>
                           </div>
-                          <div>
-                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PACKAGE PRICE</p>
-                            <p className="font-bold text-slate-800 mt-1">₹{pricing.originalTotalBase.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">GST @ {tripData?.gstPercentage ?? 5}%</p>
-                            <p className="font-bold text-slate-800 mt-1">₹{pricing.gstAmount.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PAY NOW</p>
-                            <p className="font-bold text-[#FF5B00] mt-1">₹{pricing.finalTotal.toLocaleString()}</p>
-                          </div>
-                          {paymentMode === 'Partial Payment' && (
-                            <div className="col-span-2 md:col-span-1">
-                              <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">REMAINING BALANCE</p>
-                              <p className="font-extrabold text-rose-600 mt-1">₹{pricing.remainingBalance.toLocaleString()}</p>
-                            </div>
+                          {paymentMode === 'Full Payment' ? (
+                            <>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PACKAGE PRICE</p>
+                                <p className="font-bold text-slate-800 mt-1">₹{pricing.originalTotalBase.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">GST @ {tripData?.gstPercentage ?? 5}%</p>
+                                <p className="font-bold text-slate-800 mt-1">₹{pricing.gstAmount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PAY NOW</p>
+                                <p className="font-bold text-[#FF5B00] mt-1">₹{pricing.finalTotal.toLocaleString()}</p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">TOTAL TRIP COST (INC. GST)</p>
+                                <p className="font-bold text-slate-800 mt-1">₹{pricing.fullPackageTotal.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">BOOKING DEPOSIT (BASE)</p>
+                                <p className="font-bold text-slate-800 mt-1">₹{pricing.partialBaseAmount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">DEPOSIT GST @ {tripData?.gstPercentage ?? 5}%</p>
+                                <p className="font-bold text-slate-800 mt-1">₹{pricing.gstAmount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PAY NOW</p>
+                                <p className="font-bold text-[#FF5B00] mt-1">₹{pricing.finalTotal.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">REMAINING BALANCE</p>
+                                <p className="font-extrabold text-rose-600 mt-1">₹{pricing.remainingBalance.toLocaleString()}</p>
+                              </div>
+                            </>
                           )}
                         </div>
                       </div>
@@ -1016,22 +1206,22 @@ function BookingForm() {
                             Edit
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+                          <div className="min-w-0">
                             <p className="text-[9px] text-slate-400 uppercase font-medium">Name</p>
-                            <p className="font-bold text-slate-800 capitalize">{formData.name}</p>
+                            <p className="font-bold text-slate-800 capitalize break-words">{formData.name}</p>
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[9px] text-slate-400 uppercase font-medium">Phone</p>
-                            <p className="font-bold text-slate-800">{formData.phone}</p>
+                            <p className="font-bold text-slate-800 break-words">{formData.phone}</p>
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[9px] text-slate-400 uppercase font-medium">Email</p>
-                            <p className="font-bold text-slate-800">{formData.email || 'N/A'}</p>
+                            <p className="font-bold text-slate-800 break-all">{formData.email || 'N/A'}</p>
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[9px] text-slate-400 uppercase font-medium">City/State</p>
-                            <p className="font-bold text-slate-800 capitalize">{formData.cityState}</p>
+                            <p className="font-bold text-slate-800 capitalize break-words">{formData.cityState}</p>
                           </div>
                         </div>
                       </div>
@@ -1221,8 +1411,8 @@ function BookingForm() {
                       <span className="text-[9px] font-extrabold uppercase tracking-widest opacity-90 block">PAY NOW</span>
                       <div className="flex items-end justify-between mt-1">
                         <span className="text-3xl font-black tracking-tighter">₹{pricing.finalTotal.toLocaleString()}</span>
-                        <span className="text-[9px] font-bold opacity-75">Inclusive of GST</span>
                       </div>
+                      <p className="text-[10px] font-semibold opacity-80 mt-1">₹{(pricing.finalTotal - pricing.gstAmount).toLocaleString()} + ₹{pricing.gstAmount.toLocaleString()} GST</p>
                     </div>
 
                     {paymentMode === 'Partial Payment' && (
@@ -1253,29 +1443,43 @@ function BookingForm() {
         </div>
 
           {/* Mobile Sticky Bottom Pricing Bar */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-4 flex items-center justify-between z-50 lg:hidden">
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total Due Now</p>
-              <p className="text-xl font-bold text-slate-900">₹{pricing.finalTotal.toLocaleString()}</p>
-              <p className="text-[9px] text-slate-450 font-medium">Incl. {tripData?.gstPercentage ?? 5}% GST</p>
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3.5 z-50 lg:hidden">
+            {/* Price row */}
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <div>
+                <p className="text-lg font-black text-slate-900 tracking-tight leading-none">₹{pricing.finalTotal.toLocaleString()}</p>
+                <p className="text-[9px] text-slate-500 font-semibold mt-0.5">₹{(pricing.finalTotal - pricing.gstAmount).toLocaleString()} + ₹{pricing.gstAmount.toLocaleString()} GST</p>
+              </div>
+              <a
+                href={`https://wa.me/919999999999?text=Hi,%20I%20have%20a%20question%20about%2520booking%20the%2520trip%20${encodeURIComponent(initialParams.tripName || 'Expedition')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border border-[#10B981] text-[#10B981] hover:bg-[#10B981]/5 px-4 py-2.5 rounded-full text-[10px] font-bold flex items-center gap-1.5 transition-colors shrink-0"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M20.4 3.6C18.2 1.4 15.2 0.2 12.1 0.2c-6.2 0-11.2 5-11.2 11.2 0 2 .5 3.9 1.5 5.6L1 23l6.3-1.6c1.6.9 3.5 1.3 5.4 1.3 6.2 0 11.2-5 11.2-11.2 0-3-.1-5.9-2.3-7.9zM12.1 21c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7.9 1-3.6-.2-.4c-1-1.6-1.5-3.5-1.5-5.5 0-5.2 4.2-9.4 9.4-9.4 2.5 0 4.9 1 6.7 2.8 1.8 1.8 2.8 4.2 2.8 6.7-.1 5.1-4.3 9.2-9.3 9.2z" />
+                </svg>
+                Ask
+              </a>
             </div>
+            {/* Action button */}
             {currentStep < 4 ? (
               <button
                 onClick={handleNext}
                 type="button"
-                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-4 min-h-[44px] px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20"
+                className="w-full bg-gradient-to-r from-[#FF5B00] to-[#FF8A00] hover:from-[#E65200] hover:to-[#FF7700] text-white rounded-full py-4 px-6 font-extrabold text-xs text-center transition-all shadow-lg shadow-[#FF5B00]/20 uppercase tracking-wider"
               >
-                Continue <ChevronRight size={14} />
+                Book My Spot
               </button>
             ) : (
               <button
                 onClick={handleFinalSubmit}
                 disabled={loading}
                 type="button"
-                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-4 min-h-[44px] px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20 disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-[#FF5B00] to-[#FF8A00] hover:from-[#E65200] hover:to-[#FF7700] text-white rounded-full py-4 px-6 font-extrabold text-xs text-center transition-all shadow-lg shadow-[#FF5B00]/20 disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
               >
-                {loading ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
-                {loading ? 'Processing...' : 'Confirm'}
+                {loading ? <Loader2 className="animate-spin text-white w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                {loading ? 'Confirming...' : 'Confirm Booking'}
               </button>
             )}
           </div>

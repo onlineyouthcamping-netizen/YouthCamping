@@ -37,6 +37,9 @@ export default function BookingLinkResolvePage({ params }: { params: Promise<{ t
         if (data.customAmount !== undefined && data.customAmount !== null) {
           qs.set('bookAmt', String(data.customAmount));
         }
+        if (data.customTime) qs.set('customTime', String(data.customTime));
+        if (data.headerTitle) qs.set('headerTitle', String(data.headerTitle));
+        if (data.headerSubtitle) qs.set('headerSubtitle', String(data.headerSubtitle));
         if (data.bookingLinkId) qs.set('sourceBookingLinkId', String(data.bookingLinkId));
 
         router.replace(`/book?${qs.toString()}`);

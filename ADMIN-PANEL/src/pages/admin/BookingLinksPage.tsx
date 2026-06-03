@@ -69,6 +69,9 @@ export default function BookingLinksPage() {
     paymentMode: "Full Payment" as "Full Payment" | "Partial Payment",
     customAmount: 2000,
     pickupCity: "",
+    customTime: "9:00 AM – 6:00 PM IST",
+    headerTitle: "Talk That Damn Point",
+    headerSubtitle: "Join the wait list for Before Monday Begins",
     expiresAt: "",
   });
 
@@ -148,6 +151,9 @@ export default function BookingLinksPage() {
         paymentMode: formData.paymentMode,
         customAmount: Number(formData.customAmount) || 0,
         pickupCity: formData.pickupCity,
+        customTime: formData.customTime || undefined,
+        headerTitle: formData.headerTitle || undefined,
+        headerSubtitle: formData.headerSubtitle || undefined,
         expiresAt: formData.expiresAt ? formData.expiresAt : null,
       });
 
@@ -463,6 +469,45 @@ export default function BookingLinksPage() {
                 type="number"
                 value={formData.customAmount}
                 onChange={(e) => setFormData((p) => ({ ...p, customAmount: Number(e.target.value) || 0 }))}
+                className="h-12 rounded-xl font-bold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Event Time (shown on booking page)
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g. 9:00 AM – 6:00 PM IST"
+                value={formData.customTime}
+                onChange={(e) => setFormData((p) => ({ ...p, customTime: e.target.value }))}
+                className="h-12 rounded-xl font-bold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Header Title (booking page logo text)
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g. Talk That Damn Point"
+                value={formData.headerTitle}
+                onChange={(e) => setFormData((p) => ({ ...p, headerTitle: e.target.value }))}
+                className="h-12 rounded-xl font-bold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Header Subtitle (CTA button text)
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g. Join the wait list for Before Monday Begins"
+                value={formData.headerSubtitle}
+                onChange={(e) => setFormData((p) => ({ ...p, headerSubtitle: e.target.value }))}
                 className="h-12 rounded-xl font-bold"
               />
             </div>

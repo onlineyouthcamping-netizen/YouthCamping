@@ -305,6 +305,9 @@ model BookingLink {
   pickupCity String?
   paymentMode String?
   customAmount Float?
+  customTime   String?
+  headerTitle  String?
+  headerSubtitle String?
 
   expiresAt DateTime?
   status    String   @default("active") // active|revoked|expired

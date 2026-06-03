@@ -176,13 +176,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     gstDiscount = 0;
   }
   
-  const gstOption = settings?.bookingForm?.gstOption || 'full';
-  let gstAmount = 0;
-  if (gstOption === 'advance' && (booking.paymentStatus === 'Partial' || booking.remainingAmount > 0)) {
-    gstAmount = Math.round(booking.advancePaid - (booking.advancePaid / (1 + gstRate)));
-  } else {
-    gstAmount = Math.round(basePrice * gstRate);
-  }
+  const gstAmount = Math.round(basePrice * gstRate);
   const totalWithGST = basePrice + gstAmount;
   const calculatedTotal = totalWithGST - gstDiscount;
 
@@ -203,12 +197,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   const previewBasePrice = basePreviewItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
   const previewGstDiscount = discountPreviewItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
   
-  let previewGstAmount = 0;
-  if (gstOption === 'advance' && (booking.paymentStatus === 'Partial' || booking.remainingAmount > 0)) {
-    previewGstAmount = Math.round(booking.advancePaid - (booking.advancePaid / (1 + gstRate)));
-  } else {
-    previewGstAmount = Math.round(previewBasePrice * gstRate);
-  }
+  const previewGstAmount = Math.round(previewBasePrice * gstRate);
   const previewTotalWithGST = previewBasePrice + previewGstAmount;
   const previewFinalTotal = previewTotalWithGST - previewGstDiscount;
 
@@ -521,14 +510,8 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
       const discountItems = activeItems.filter(item => item.name.toLowerCase().includes("discount") || item.rate < 0);
 
       const calculatedBase = baseItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
-      const gstOption = settings?.bookingForm?.gstOption || 'full';
       const gstRate = (fullTrip?.gstPercentage ?? 5) / 100;
-      let calculatedGst = 0;
-      if (gstOption === 'advance' && (booking.paymentStatus === 'Partial' || booking.remainingAmount > 0)) {
-        calculatedGst = Math.round(booking.advancePaid - (booking.advancePaid / (1 + gstRate)));
-      } else {
-        calculatedGst = Math.round(calculatedBase * gstRate);
-      }
+      const calculatedGst = Math.round(calculatedBase * gstRate);
       const calculatedDiscount = discountItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
 
       const totalAmount = calculatedBase + calculatedGst - calculatedDiscount;
