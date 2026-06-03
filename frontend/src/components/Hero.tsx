@@ -207,62 +207,67 @@ export default function Hero({
       </div>
 
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4 py-3 md:px-10 md:py-8 text-white">
-          <motion.h1
-            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="hero-title mb-0"
-            style={{ 
-              ['--title-size-desktop' as any]: titleSize 
-                ? (isNaN(Number(titleSize)) 
-                    ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
-                    : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
-                : undefined,
-              fontWeight: titleWeight || undefined
-            }}
-          >
-            {displayHeadline}
-          </motion.h1>
- 
-        {typingPhrases.length > 0 && (
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={reduceMotion ? { duration: 0 } : { delay: 0.5, duration: 1 }}
-            className="flex items-center justify-center font-medium hero-subheadline"
-            style={{ 
-              marginTop: '10px',
-              ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
-            }}
-          >
-            <Typewriter phrases={typingPhrases} />
-            <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>
-          </motion.div>
-        )}
-
-        {ctaText && ctaLink && (
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={reduceMotion ? { duration: 0 } : { delay: 1, duration: 0.8 }}
-            className="mt-2.5 md:mt-8"
-          >
-            <Link
-              href={ctaLink}
-              className="inline-flex items-center gap-1.5 px-4 py-2 md:px-8 md:py-4 bg-primary-orange text-white font-semibold rounded-lg hover:opacity-90 transition-opacity hero-btn"
-              style={{
-                ['--btn-padding' as any]: `var(--button-padding-y) var(--button-padding-x)`,
-                ['--btn-font-size' as any]: 'var(--button-font-size)',
-                borderRadius: 'var(--radius-button)',
-                textTransform: 'var(--button-text-transform)' as any,
-                letterSpacing: 'var(--button-letter-spacing)',
+        <div className="flex flex-col items-center w-full max-w-4xl mx-auto transform translate-y-[6%]">
+          {/* Title + Subtitle Group */}
+          <div className="flex flex-col items-center mb-6 md:mb-8">
+            <motion.h1
+              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 1, ease: [0.22, 1, 0.36, 1] }}
+              className="hero-title mb-0"
+              style={{ 
+                ['--title-size-desktop' as any]: titleSize 
+                  ? (isNaN(Number(titleSize)) 
+                      ? `calc(var(--title-size-multiplier, 1) * ${titleSize})` 
+                      : `calc(var(--title-size-multiplier, 1) * ${titleSize}px)`) 
+                  : undefined,
+                fontWeight: titleWeight || undefined
               }}
             >
-              {ctaText}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-        )}
+              {displayHeadline}
+            </motion.h1>
+   
+            {typingPhrases.length > 0 && (
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={reduceMotion ? { duration: 0 } : { delay: 0.5, duration: 1 }}
+                className="flex items-center justify-center font-medium hero-subheadline"
+                style={{ 
+                  marginTop: '14px', // Perfectly centered gap of 14px
+                  ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
+                }}
+              >
+                <Typewriter phrases={typingPhrases} />
+                <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>
+              </motion.div>
+            )}
+          </div>
+
+          {ctaText && ctaLink && (
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: 1, duration: 0.8 }}
+              className="mt-0"
+            >
+              <Link
+                href={ctaLink}
+                className="inline-flex items-center gap-1.5 px-4 py-2 md:px-8 md:py-4 bg-primary-orange text-white font-semibold rounded-lg hover:opacity-90 transition-opacity hero-btn"
+                style={{
+                  ['--btn-padding' as any]: `var(--button-padding-y) var(--button-padding-x)`,
+                  ['--btn-font-size' as any]: 'var(--button-font-size)',
+                  borderRadius: 'var(--radius-button)',
+                  textTransform: 'var(--button-text-transform)' as any,
+                  letterSpacing: 'var(--button-letter-spacing)',
+                }}
+              >
+                {ctaText}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+          )}
+        </div>
       </div></div>
   );
 }
