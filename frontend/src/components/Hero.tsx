@@ -234,7 +234,7 @@ export default function Hero({
                 transition={reduceMotion ? { duration: 0 } : { delay: 0.5, duration: 1 }}
                 className="flex items-center justify-center font-medium hero-subheadline"
                 style={{ 
-                  marginTop: '14px', // Perfectly centered gap of 14px
+                  marginTop: '6px', // Reduced gap between title and subtitle
                   ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
                 }}
               >
