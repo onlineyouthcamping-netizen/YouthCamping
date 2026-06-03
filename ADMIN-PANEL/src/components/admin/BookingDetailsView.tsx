@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { bookingsService } from "@/services/bookings.service";
 import { paymentsService } from "@/services/payments.service";
 import { tripsService } from "@/services/trips.service";
+import { settingsService } from "@/services/settings.service";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -40,6 +41,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   });
   
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
   const [paymentTab, setPaymentTab] = useState<'successful' | 'outstanding' | 'failed'>('successful');
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -150,7 +152,76 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     }
   };
 
+  // Math helpers matching correct GST + Discount Calculation Order
+  const qty = booking.numberOfTravelers || 1;
+  const gstRate = (fullTrip?.gstPercentage ?? 5) / 100;
+  const packageAmt = booking.baseAmount || (booking.gstAmount ? (booking.totalAmount - booking.gstAmount) : (booking.totalAmount / (1 + gstRate)));
+  const itemRate = packageAmt / qty;
+
+  const meta = (booking as any)?.sourceMeta || {};
+  const storedItems = meta.bookingItems || [];
+  
+  let basePrice = 0;
+  let gstDiscount = 0;
+  
+  if (storedItems.length > 0) {
+    const activeItems = storedItems.filter((item: any) => item.qty > 0 || item.rate < 0);
+    const baseItems = activeItems.filter((item: any) => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
+    const discountItems = activeItems.filter((item: any) => item.name.toLowerCase().includes("discount") || item.rate < 0);
+    
+    basePrice = baseItems.reduce((acc: number, item: any) => acc + (item.rate * item.qty), 0);
+    gstDiscount = discountItems.reduce((acc: number, item: any) => acc + Math.abs(item.rate * item.qty), 0);
+  } else {
+    basePrice = booking.baseAmount || packageAmt;
+    gstDiscount = 0;
+  }
+  
+  const gstOption = settings?.bookingForm?.gstOption || 'full';
+  let gstAmount = 0;
+  if (gstOption === 'advance' && (booking.paymentStatus === 'Partial' || booking.remainingAmount > 0)) {
+    gstAmount = Math.round(booking.advancePaid - (booking.advancePaid / (1 + gstRate)));
+  } else {
+    gstAmount = Math.round(basePrice * gstRate);
+  }
+  const totalWithGST = basePrice + gstAmount;
+  const calculatedTotal = totalWithGST - gstDiscount;
+
+  // Live preview values during editing
+  const previewItems = [...bookingItems];
+  if (customDescription && customRate) {
+    previewItems.push({
+      name: customDescription,
+      rate: parseFloat(customRate) || 0,
+      qty: parseInt(customQty) || 1
+    });
+  }
+  
+  const activePreviewItems = previewItems.filter(item => item.qty > 0 || item.rate < 0);
+  const basePreviewItems = activePreviewItems.filter(item => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
+  const discountPreviewItems = activePreviewItems.filter(item => item.name.toLowerCase().includes("discount") || item.rate < 0);
+  
+  const previewBasePrice = basePreviewItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
+  const previewGstDiscount = discountPreviewItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
+  
+  let previewGstAmount = 0;
+  if (gstOption === 'advance' && (booking.paymentStatus === 'Partial' || booking.remainingAmount > 0)) {
+    previewGstAmount = Math.round(booking.advancePaid - (booking.advancePaid / (1 + gstRate)));
+  } else {
+    previewGstAmount = Math.round(previewBasePrice * gstRate);
+  }
+  const previewTotalWithGST = previewBasePrice + previewGstAmount;
+  const previewFinalTotal = previewTotalWithGST - previewGstDiscount;
+
   useEffect(() => {
+    const fetchGlobalSettings = async () => {
+      try {
+        const data = await settingsService.get();
+        if (data) setSettings(data);
+      } catch (e) {
+        console.error("Failed to load settings", e);
+      }
+    };
+    fetchGlobalSettings();
     fetchEmailLogs();
     fetchPayments();
     setNotesValue(booking.notes || "");
@@ -450,7 +521,14 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
       const discountItems = activeItems.filter(item => item.name.toLowerCase().includes("discount") || item.rate < 0);
 
       const calculatedBase = baseItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
-      const calculatedGst = calculatedBase * 0.05;
+      const gstOption = settings?.bookingForm?.gstOption || 'full';
+      const gstRate = (fullTrip?.gstPercentage ?? 5) / 100;
+      let calculatedGst = 0;
+      if (gstOption === 'advance' && (booking.paymentStatus === 'Partial' || booking.remainingAmount > 0)) {
+        calculatedGst = Math.round(booking.advancePaid - (booking.advancePaid / (1 + gstRate)));
+      } else {
+        calculatedGst = Math.round(calculatedBase * gstRate);
+      }
       const calculatedDiscount = discountItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
 
       const totalAmount = calculatedBase + calculatedGst - calculatedDiscount;
@@ -468,6 +546,8 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
         totalAmount,
         remainingAmount,
         numberOfTravelers: totalQty || booking.numberOfTravelers || 1,
+        baseAmount: calculatedBase,
+        gstAmount: calculatedGst,
         sourceMeta: newMeta
       });
 
@@ -682,15 +762,33 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Trip Package &mdash; ${booking.tripName || booking.tripId} (${booking.trainClass})</td>
-                  <td>1 Traveller</td>
-                  <td style="text-align:right; font-weight:700">&#8377;${booking.totalAmount.toLocaleString('en-IN')}</td>
-                </tr>
+                ${(() => {
+                  const activeItems = bookingItems.filter((item: any) => item.qty > 0 || item.rate < 0);
+                  if (activeItems.length > 0) {
+                    return activeItems.map((item: any) => `
+                      <tr>
+                        <td>${item.name}</td>
+                        <td>${item.qty} Traveller(s)</td>
+                        <td style="text-align:right; font-weight:700">&#8377;${(item.rate * item.qty).toLocaleString('en-IN')}</td>
+                      </tr>
+                    `).join('');
+                  } else {
+                    return `
+                      <tr>
+                        <td>Trip Package &mdash; ${booking.tripName || booking.tripId} (${booking.trainClass || 'Standard'})</td>
+                        <td>${booking.numberOfTravelers || 1} Traveller(s)</td>
+                        <td style="text-align:right; font-weight:700">&#8377;${basePrice.toLocaleString('en-IN')}</td>
+                      </tr>
+                    `;
+                  }
+                })()}
               </tbody>
             </table>
             <div class="totals-wrap">
               <div class="totals-box">
+                <div class="total-row"><span class="lbl">Subtotal</span><span class="val">&#8377;${basePrice.toLocaleString('en-IN')}</span></div>
+                <div class="total-row"><span class="lbl">GST @ ${Math.round(gstRate * 100)}%</span><span class="val">&#8377;${gstAmount.toLocaleString('en-IN')}</span></div>
+                ${gstDiscount > 0 ? `<div class="total-row"><span class="lbl" style="color:#e11d48">GST Discount</span><span class="val" style="color:#e11d48">&minus;&#8377;${gstDiscount.toLocaleString('en-IN')}</span></div>` : ''}
                 <div class="total-row"><span class="lbl">Total Amount</span><span class="val">&#8377;${booking.totalAmount.toLocaleString('en-IN')}</span></div>
                 <div class="total-row"><span class="lbl">Advance Paid</span><span class="val" style="color:#059669">&minus;&#8377;${booking.advancePaid.toLocaleString('en-IN')}</span></div>
                 <div class="total-row grand"><span class="lbl">Balance Due</span><span class="val">&#8377;${booking.remainingAmount.toLocaleString('en-IN')}</span></div>
@@ -711,53 +809,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
     printWindow.document.close();
   };
 
-  // Math helpers matching correct GST + Discount Calculation Order
-  const qty = booking.numberOfTravelers || 1;
-  const packageAmt = booking.totalAmount / 1.05;
-  const itemRate = packageAmt / qty;
 
-  const meta = (booking as any)?.sourceMeta || {};
-  const storedItems = meta.bookingItems || [];
-  
-  let basePrice = 0;
-  let gstDiscount = 0;
-  
-  if (storedItems.length > 0) {
-    const activeItems = storedItems.filter((item: any) => item.qty > 0 || item.rate < 0);
-    const baseItems = activeItems.filter((item: any) => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
-    const discountItems = activeItems.filter((item: any) => item.name.toLowerCase().includes("discount") || item.rate < 0);
-    
-    basePrice = baseItems.reduce((acc: number, item: any) => acc + (item.rate * item.qty), 0);
-    gstDiscount = discountItems.reduce((acc: number, item: any) => acc + Math.abs(item.rate * item.qty), 0);
-  } else {
-    basePrice = booking.baseAmount || packageAmt;
-    gstDiscount = 0;
-  }
-  
-  const gstAmount = basePrice * 0.05;
-  const totalWithGST = basePrice + gstAmount;
-  const calculatedTotal = totalWithGST - gstDiscount;
-
-  // Live preview values during editing
-  const previewItems = [...bookingItems];
-  if (customDescription && customRate) {
-    previewItems.push({
-      name: customDescription,
-      rate: parseFloat(customRate) || 0,
-      qty: parseInt(customQty) || 1
-    });
-  }
-  
-  const activePreviewItems = previewItems.filter(item => item.qty > 0 || item.rate < 0);
-  const basePreviewItems = activePreviewItems.filter(item => !(item.name.toLowerCase().includes("discount") || item.rate < 0));
-  const discountPreviewItems = activePreviewItems.filter(item => item.name.toLowerCase().includes("discount") || item.rate < 0);
-  
-  const previewBasePrice = basePreviewItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
-  const previewGstDiscount = discountPreviewItems.reduce((acc, item) => acc + Math.abs(item.rate * item.qty), 0);
-  
-  const previewGstAmount = previewBasePrice * 0.05;
-  const previewTotalWithGST = previewBasePrice + previewGstAmount;
-  const previewFinalTotal = previewTotalWithGST - previewGstDiscount;
 
   return (
     <div className="space-y-4 animate-premium pb-16">
@@ -1133,7 +1185,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                         <td className="px-5 py-2.5 text-right font-mono font-bold text-slate-700">₹ {previewBasePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                       <tr className="bg-slate-550/5">
-                        <td colSpan={3} className="px-5 py-2.5 text-right font-semibold text-slate-500 text-[10px] uppercase tracking-wider">GST (5%) Preview</td>
+                        <td colSpan={3} className="px-5 py-2.5 text-right font-semibold text-slate-500 text-[10px] uppercase tracking-wider">GST ({Math.round(gstRate * 100)}%) Preview</td>
                         <td className="px-5 py-2.5 text-right font-mono font-bold text-slate-700">₹ {previewGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                       {previewGstDiscount > 0 && (
@@ -1357,7 +1409,7 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
                     </tr>
                     <tr className="bg-slate-50/20">
                       <td colSpan={3} className="px-6 py-2.5 font-semibold text-right text-slate-500 text-[10px] uppercase tracking-wider">
-                        GST (Reg no. 24CRFPP3172G1ZT) @ 5%
+                        GST (Reg no. 24CRFPP3172G1ZT) @ {Math.round(gstRate * 100)}%
                       </td>
                       <td className="px-6 py-2.5 text-right font-semibold font-mono text-slate-800">
                         ₹ {gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

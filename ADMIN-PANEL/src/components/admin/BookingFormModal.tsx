@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { bookingsService } from "@/services/bookings.service";
+import { settingsService } from "@/services/settings.service";
 import { toast } from "sonner";
 import { Loader2, User, MapPin, CreditCard, FileText, X } from "lucide-react";
 
@@ -42,6 +43,8 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
     joiningDate: ""
   });
 
+  const [settings, setSettings] = useState<any>(null);
+
   useEffect(() => {
     if (open) {
       const loadTrips = async () => {
@@ -51,6 +54,14 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
         } catch (e) { console.error(e); }
       };
       loadTrips();
+
+      const loadSettings = async () => {
+        try {
+          const s = await settingsService.get();
+          setSettings(s);
+        } catch (e) { console.error(e); }
+      };
+      loadSettings();
 
       if (booking) {
         setForm({
@@ -100,10 +111,20 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
     }
   }, [open, booking]);
 
+  const selectedTrip = trips.find(t => t.id === form.tripId || t.tripCode === form.tripId);
+  const gstRate = (selectedTrip?.gstPercentage ?? 5) / 100;
+  const gstOption = settings?.bookingForm?.gstOption || 'full';
+
   const base = parseFloat(form.basePrice) || 0;
-  const gst = base * 0.05;
-  const total = base + gst;
   const advance = parseFloat(form.advancePaid) || 0;
+
+  let gst = 0;
+  if (gstOption === 'advance' && form.paymentStatus === 'Partial') {
+    gst = Math.round(advance - (advance / (1 + gstRate)));
+  } else {
+    gst = Math.round(base * gstRate);
+  }
+  const total = base + gst;
   const remaining = total - advance;
 
   const handleSubmit = async () => {
@@ -298,7 +319,7 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
                 <Input type="number" value={form.basePrice} onChange={e => setForm({...form, basePrice: e.target.value})} placeholder="₹ 0.00" className="font-bold text-gray-900" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-bold uppercase text-gray-400">GST (5%)</Label>
+                <Label className="text-[10px] font-bold uppercase text-gray-400">GST ({Math.round(gstRate * 100)}%)</Label>
                 <div className="h-10 px-3 flex items-center bg-gray-50 border rounded-md font-bold text-gray-400">
                   ₹ {gst.toLocaleString()}
                 </div>

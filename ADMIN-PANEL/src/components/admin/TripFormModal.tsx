@@ -785,9 +785,25 @@ export default function TripFormModal({ open, onOpenChange, editing, onSave }: T
                            <Input value={v.duration} placeholder="Duration (e.g. 5D/4N)" onChange={(e) => { const updated = [...form.variants]; updated[i].duration = e.target.value; setForm({ ...form, variants: updated }); }} className="h-9 text-xs" />
                          </div>
                          <div className="grid grid-cols-2 gap-3">
-                           <Input type="number" value={v.originalPrice} placeholder="Orig. Price" onChange={(e) => { const updated = [...form.variants]; updated[i].originalPrice = Number(e.target.value); setForm({ ...form, variants: updated }); }} className="h-9 text-xs" />
-                           <Input type="number" value={v.discountedPrice} placeholder="Disc. Price" onChange={(e) => { const updated = [...form.variants]; updated[i].discountedPrice = Number(e.target.value); setForm({ ...form, variants: updated }); }} className="h-9 text-xs" />
-                         </div>
+                            <Input type="number" value={v.originalPrice} placeholder="Orig. Price" onChange={(e) => { const updated = [...form.variants]; updated[i].originalPrice = Number(e.target.value); setForm({ ...form, variants: updated }); }} className="h-9 text-xs" />
+                            <Input type="number" value={v.discountedPrice} placeholder="Disc. Price" onChange={(e) => { const updated = [...form.variants]; updated[i].discountedPrice = Number(e.target.value); setForm({ ...form, variants: updated }); }} className="h-9 text-xs" />
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <input 
+                              type="checkbox" 
+                              id={`excludeTravel-modal-${i}`}
+                              checked={v.excludeTravel || false} 
+                              onChange={(e) => {
+                                const updated = [...form.variants];
+                                updated[i].excludeTravel = e.target.checked;
+                                setForm({ ...form, variants: updated });
+                              }} 
+                              className="accent-[#FF5400] h-4 w-4 cursor-pointer"
+                            />
+                            <label htmlFor={`excludeTravel-modal-${i}`} className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                              Direct Join (Exclude Travel/Train Options)
+                            </label>
+                          </div>
                        </div>
                      </div>
                    </div>
@@ -1038,24 +1054,73 @@ export default function TripFormModal({ open, onOpenChange, editing, onSave }: T
           <TabsContent value="highlights">
             <div className="space-y-6 pt-4">
               <div className="space-y-4">
-                <Label className="text-xs font-black uppercase tracking-widest opacity-50">Trip Highlights</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="e.g. 5 High Altitude Passes" 
-                    value={newHighlight} 
-                    onChange={(e) => setNewHighlight(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addToList("highlights", newHighlight, setNewHighlight)}
-                    className="rounded-xl"
-                  />
-                  <Button onClick={() => addToList("highlights", newHighlight, setNewHighlight)} className="rounded-xl"><Plus className="h-4 w-4" /></Button>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-black uppercase tracking-widest opacity-50">Trip Highlights</Label>
+                  <Button variant="outline" size="sm" onClick={() => setForm({ ...form, highlights: [...(form.highlights || []), { name: "", image: "", description: "" }] })} className="h-8 text-[10px] font-black uppercase rounded-xl">
+                    <Plus className="h-3 w-3 mr-1" />Add Highlight
+                  </Button>
                 </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {form.highlights?.map((h: string, i: number) => (
-                    <div key={i} className="flex items-center justify-between px-4 py-2 bg-muted/30 rounded-xl border text-xs">
-                      <span className="font-medium">{h}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeFromList("highlights", i)}><X className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-1">
+                  {form.highlights?.map((h: any, i: number) => {
+                    const isStr = typeof h === "string";
+                    const item = isStr ? { name: h, image: "", description: "" } : h;
+                    return (
+                      <div key={i} className="border bg-muted/20 rounded-2xl p-4 space-y-3 relative group">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute top-2 right-2 h-6 w-6 text-destructive opacity-0 group-hover:opacity-100" 
+                          onClick={() => {
+                            const updated = form.highlights.filter((_: any, idx: number) => idx !== i);
+                            setForm({ ...form, highlights: updated });
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                        <div className="flex gap-4">
+                          <div className="w-20 shrink-0">
+                            <ImageUpload 
+                              value={item.image || ""}
+                              onUpload={(url) => {
+                                const updated = [...form.highlights];
+                                const currentItem = typeof updated[i] === "string" ? { name: updated[i], image: "", description: "" } : { ...updated[i] };
+                                currentItem.image = url;
+                                updated[i] = currentItem;
+                                setForm({ ...form, highlights: updated });
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <Input 
+                              value={item.name || ""} 
+                              placeholder="Highlight Name" 
+                              onChange={(e) => {
+                                const updated = [...form.highlights];
+                                const currentItem = typeof updated[i] === "string" ? { name: updated[i], image: "", description: "" } : { ...updated[i] };
+                                currentItem.name = e.target.value;
+                                currentItem.slug = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                                updated[i] = currentItem;
+                                setForm({ ...form, highlights: updated });
+                              }} 
+                              className="h-8 text-xs font-semibold" 
+                            />
+                            <Input 
+                              value={item.description || ""} 
+                              placeholder="Description (Optional)" 
+                              onChange={(e) => {
+                                const updated = [...form.highlights];
+                                const currentItem = typeof updated[i] === "string" ? { name: updated[i], image: "", description: "" } : { ...updated[i] };
+                                currentItem.description = e.target.value;
+                                updated[i] = currentItem;
+                                setForm({ ...form, highlights: updated });
+                              }} 
+                              className="h-8 text-[11px]" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

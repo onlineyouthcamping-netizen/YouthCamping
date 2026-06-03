@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -33,6 +34,12 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
       onChange(editor.getHTML());
     },
   });
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 
@@ -101,7 +108,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
           />
         </div>
       </div>
-      <EditorContent editor={editor} className="p-4 min-h-[200px] prose prose-sm max-w-none focus:outline-none" />
+      <EditorContent editor={editor} className="p-4 min-h-[200px] prose prose-sm max-w-none focus:outline-none select-text cursor-text" />
     </div>
   );
 }

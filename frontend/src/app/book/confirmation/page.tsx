@@ -136,8 +136,8 @@ function ConfirmationContent() {
           </motion.div>
           
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold capitalize tracking-widest text-amber-400">
-              <Sparkles size={10} /> Booking Success
+                        <span className="inline-flex items-center px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-extrabold uppercase tracking-widest text-amber-400">
+              Booking Success
             </span>
             <h1 className="text-3xl md:text-5xl font-bold capitalize tracking-tight leading-none pt-2">
               Your Spot is Reserved!
@@ -169,10 +169,12 @@ function ConfirmationContent() {
                 {booking.tripId || 'Expedition'}
               </span>
               <h2 className="text-2xl font-bold capitalize tracking-tight text-white">{booking.tripName}</h2>
-              <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400 pt-1">
-                <div className="flex items-center gap-1.5"><Calendar size={14} className="text-[#FF5B00]" /> Departure Date: {booking.departureDate ? new Date(booking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</div>
-                <div className="flex items-center gap-1.5"><MapPin size={14} className="text-[#FF5B00]" /> {booking.pickupCity || 'Delhi (Direct Join)'}</div>
-                <div className="flex items-center gap-1.5"><Users size={14} className="text-[#FF5B00]" /> {booking.passengers?.length || 1} Travelers</div>
+                            <div className="flex flex-wrap gap-6 text-xs text-slate-400 pt-2 font-medium">
+                <div>DEPARTURE DATE: <span className="font-bold text-white">{booking.departureDate ? new Date(booking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</span></div>
+                <div className="hidden md:block w-px h-4 bg-slate-800" />
+                <div>JOINING CITY: <span className="font-bold text-white capitalize">{booking.pickupCity || 'Delhi (Direct Join)'}</span></div>
+                <div className="hidden md:block w-px h-4 bg-slate-800" />
+                <div>TRAVELERS: <span className="font-bold text-white">{booking.passengers?.length || 1} Pax</span></div>
               </div>
             </div>
 

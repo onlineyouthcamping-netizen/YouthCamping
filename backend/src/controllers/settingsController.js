@@ -24,7 +24,8 @@ exports.getSettings = async (req, res) => {
               { label: '3AC', priceAdjustment: 2500 },
               { label: 'No', priceAdjustment: -1500 }
             ],
-            submitButtonText: 'Confirm Booking'
+            submitButtonText: 'Confirm Booking',
+            gstOption: 'full'
           }
         } 
       });

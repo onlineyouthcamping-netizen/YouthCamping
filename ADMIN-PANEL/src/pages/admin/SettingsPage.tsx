@@ -477,6 +477,14 @@ export default function SettingsPage() {
                 <textarea {...register("bookingForm.checkoutNotes")} className="admin-input h-20 py-2" placeholder="Enter special policies or warnings shown during checkout..." />
               </div>
 
+              <div className="space-y-2">
+                <Label className="admin-label">GST Calculation Rule</Label>
+                <select {...register("bookingForm.gstOption")} className="admin-input">
+                  <option value="full">Calculate GST on Full Package Amount (Option A)</option>
+                  <option value="advance">Calculate GST only on Booking/Advance Amount (Option B)</option>
+                </select>
+              </div>
+
               {/* Room Sharing options */}
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center justify-between">

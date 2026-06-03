@@ -151,6 +151,8 @@ exports.createPublicBooking = async (req, res, next) => {
         gstAmount: parseFloat(gstAmount) || 0,
         totalAmount: parseFloat(totalAmount) || 0,
         amount: parseFloat(totalAmount) || 0,
+        advancePaid: req.body.advancePaid !== undefined ? parseFloat(req.body.advancePaid) : 0,
+        remainingAmount: req.body.remainingAmount !== undefined ? parseFloat(req.body.remainingAmount) : ((parseFloat(totalAmount) || 0) - (req.body.advancePaid ? parseFloat(req.body.advancePaid) : 0)),
         departureDate: (() => {
           if (!date) return null;
           const d = new Date(date);
@@ -161,7 +163,7 @@ exports.createPublicBooking = async (req, res, next) => {
         adjustedPrice: req.body.adjustedPrice !== undefined ? parseFloat(req.body.adjustedPrice) : null,
         joiningDate: req.body.joiningDate ? new Date(req.body.joiningDate) : null,
         status: 'pending',
-        paymentStatus: 'Pending',
+        paymentStatus: req.body.paymentStatus || 'Pending',
         notes: specialRequests || '',
         passengers: {
           details: {

@@ -176,9 +176,12 @@ exports.createBooking = async (req, res, next) => {
     const bookingId = req.body.bookingId || `BK-${Date.now().toString().slice(-6)}`;
     const targetName = name || fullName;
     const targetPhone = phone || mobile;
-    const amountValue = Number(amount || 0);
-    const totalAmountValue = Number(totalAmount || amountValue || 0);
-    const advanceValue = Number(advancePaid || 0) || 0;
+    const totalAmountValue = req.body.totalAmount !== undefined ? Number(req.body.totalAmount) : Number(req.body.amount || 0);
+    const amountValue = req.body.amount !== undefined ? Number(req.body.amount) : totalAmountValue;
+    const advanceValue = req.body.advancePaid !== undefined ? Number(req.body.advancePaid) : 0;
+    const baseAmountValue = req.body.baseAmount !== undefined ? Number(req.body.baseAmount) : (totalAmountValue - (req.body.gstAmount ? Number(req.body.gstAmount) : 0));
+    const gstAmountValue = req.body.gstAmount !== undefined ? Number(req.body.gstAmount) : 0;
+    const remainingValue = req.body.remainingAmount !== undefined ? Number(req.body.remainingAmount) : (totalAmountValue - advanceValue);
 
     const tenantId = req.user?.tenantId || 'default';
     
@@ -254,7 +257,7 @@ exports.createBooking = async (req, res, next) => {
           amount: amountValue,
           totalAmount: totalAmountValue,
           advancePaid: advanceValue,
-          remainingAmount: totalAmountValue - advanceValue,
+          remainingAmount: remainingValue,
           status: status || 'pending',
           paymentStatus: paymentStatus || 'Pending',
           paymentMode: paymentMode || 'UPI',
@@ -268,8 +271,8 @@ exports.createBooking = async (req, res, next) => {
           age: req.body.age ? parseInt(req.body.age) : null,
           gender: req.body.gender || null,
           numberOfTravelers: req.body.passengers?.length || 1,
-          baseAmount: amountValue,
-          gstAmount: req.body.gstAmount ? parseFloat(req.body.gstAmount) : null,
+          baseAmount: baseAmountValue,
+          gstAmount: gstAmountValue,
           passengers: {
             details: {
               trainClass: req.body.trainClass,
@@ -727,12 +730,12 @@ exports.submitBookingForm = async (req, res, next) => {
         age: req.body.age ? parseInt(req.body.age) : null,
         gender: req.body.gender || null,
         numberOfTravelers: req.body.passengers?.length || 1,
-        baseAmount: parsedAmount,
-        gstAmount: req.body.gstAmount ? parseFloat(req.body.gstAmount) : null,
-        amount: parsedAmount,
-        totalAmount: parsedAmount,
-        advancePaid: Number(req.body.advancePaid) || 0,
-        remainingAmount: parsedAmount - (Number(req.body.advancePaid) || 0),
+        baseAmount: req.body.baseAmount !== undefined ? parseFloat(req.body.baseAmount) : (parsedAmount - (req.body.gstAmount ? parseFloat(req.body.gstAmount) : 0)),
+        gstAmount: req.body.gstAmount ? parseFloat(req.body.gstAmount) : 0,
+        amount: req.body.amount !== undefined ? parseFloat(req.body.amount) : parsedAmount,
+        totalAmount: req.body.totalAmount !== undefined ? parseFloat(req.body.totalAmount) : parsedAmount,
+        advancePaid: req.body.advancePaid !== undefined ? parseFloat(req.body.advancePaid) : 0,
+        remainingAmount: req.body.remainingAmount !== undefined ? parseFloat(req.body.remainingAmount) : (parsedAmount - (Number(req.body.advancePaid) || 0)),
         status: req.body.status || 'pending',
         paymentStatus: req.body.paymentStatus || 'Pending',
         paymentMode: req.body.paymentMode || null,

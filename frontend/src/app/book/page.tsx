@@ -9,7 +9,7 @@ import {
   Loader2, AlertCircle, Info, Navigation, ShieldCheck, Star, 
   Headset, Lock, Check, Sparkles, AlertTriangle, CreditCard, Building
 } from 'lucide-react';
-import { API_BASE_URL, normalizeImageUrl } from '@/lib/api';
+import { API_BASE_URL, normalizeImageUrl, fetchSettings } from '@/lib/api';
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +57,7 @@ function BookingForm() {
         basePrice: price ? parseInt(price) : 0
       };
     } catch (e) {
-      console.error("❌ Failed to parse URL parameters:", e);
+      console.error("Failed to parse URL parameters:", e);
       return { 
         tripName: '', 
         date: '', 
@@ -80,12 +80,28 @@ function BookingForm() {
   const [tripData, setTripData] = useState<any>(null);
   const [basePrice, setBasePrice] = useState(initialParams.basePrice || 13999);
   const [travelerAutoFilled, setTravelerAutoFilled] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
 
-  // Dynamic joining points loaded from tripData or fallback
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await fetchSettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (err) {
+        console.warn("Could not fetch global settings in booking form.", err);
+      }
+    };
+    loadSettings();
+  }, []);
+
+    // Dynamic joining points loaded from tripData or fallback
   const joiningPoints = useMemo(() => {
+    const baselinePrice = tripData?.price || basePrice || 13999;
+    
     // 1. Primary Source: Location Variants (variants)
     if (tripData?.variants && Array.isArray(tripData.variants) && tripData.variants.length > 0) {
-      const baselinePrice = tripData.price || Math.max(...tripData.variants.map((v: any) => v.discountedPrice || 0), basePrice);
       return tripData.variants.map((v: any) => {
         const variantPrice = Number(v.discountedPrice) || Number(v.originalPrice) || 0;
         const deduction = Math.max(0, baselinePrice - variantPrice);
@@ -93,36 +109,57 @@ function BookingForm() {
           cityName: v.location || 'Unknown Point',
           deductionAmount: deduction,
           skipDays: Number(v.skipDays) || 0,
-          pickupPoint: v.duration || ''
+          pickupPoint: v.duration || '',
+          price: variantPrice
         };
       });
     }
 
     // 2. Secondary Source: Pickup Cities
     if (tripData?.pickupCities && Array.isArray(tripData.pickupCities) && tripData.pickupCities.length > 0) {
-      return tripData.pickupCities.map((c: any) => ({
-        cityName: c.cityName || 'Unknown Point',
-        deductionAmount: Number(c.deductionAmount) || 0,
-        skipDays: Number(c.skipDays) || 0,
-        pickupPoint: c.pickupPoint || 'Assigned Landmark'
-      }));
+      return tripData.pickupCities.map((c: any) => {
+        const deduction = Number(c.deductionAmount) || 0;
+        const price = Math.max(0, baselinePrice - deduction);
+        return {
+          cityName: c.cityName || 'Unknown Point',
+          deductionAmount: deduction,
+          skipDays: Number(c.skipDays) || 0,
+          pickupPoint: c.pickupPoint || 'Assigned Landmark',
+          price: price
+        };
+      });
     }
 
     // 3. Fallback
-    return FALLBACK_JOINING_POINTS;
+    return FALLBACK_JOINING_POINTS.map(p => ({
+      ...p,
+      price: Math.max(0, baselinePrice - p.deductionAmount)
+    }));
   }, [tripData, basePrice]);
 
-  const [selectedCity, setSelectedCity] = useState<typeof FALLBACK_JOINING_POINTS[0]>(FALLBACK_JOINING_POINTS[0]);
+  const [selectedCity, setSelectedCity] = useState<any>(FALLBACK_JOINING_POINTS[0]);
   
-  // Keep selectedCity synced once joiningPoints are resolved, matching the url price param if applicable
+  // Keep selectedCity synced once joiningPoints are resolved, matching the url price param or localStorage if applicable
   useEffect(() => {
     if (joiningPoints.length > 0) {
+      const tripId = tripData?.id || initialParams.tripId || 'default';
+      const storageKey = `selected_joining_point_${tripId}`;
+      const persistedCityName = localStorage.getItem(storageKey);
+
+      if (persistedCityName) {
+        const matched = joiningPoints.find((j: any) => j.cityName === persistedCityName);
+        if (matched) {
+          setSelectedCity(matched);
+          return;
+        }
+      }
+
       // If token/link prefilled a pickup city, use it as the source of truth
       if (initialParams.pickupCity) {
         const normalize = (s: string) =>
           (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
         const target = normalize(initialParams.pickupCity);
-        const matched = joiningPoints.find((j: { cityName: string; deductionAmount: number; skipDays: number; pickupPoint: string }) => normalize(j.cityName) === target);
+        const matched = joiningPoints.find((j: any) => normalize(j.cityName) === target);
         if (matched) {
           setSelectedCity(matched);
           return;
@@ -131,8 +168,8 @@ function BookingForm() {
 
       if (initialParams.basePrice && tripData?.variants && Array.isArray(tripData.variants)) {
         const matchingVariantIdx = tripData.variants.findIndex((v: any) => v.discountedPrice === initialParams.basePrice);
-        if (matchingVariantIdx !== -1 && joiningPoints[matchingVariantIdx]) {
-          setSelectedCity(joiningPoints[matchingVariantIdx]);
+        if (matchingVariantIdx !== -1 && matchingVariantIdx < joiningPoints.length && joiningPoints[matchingVariantIdx]) {
+          setSelectedCity(matchingVariantIdx);
           return;
         }
       }
@@ -269,12 +306,12 @@ function BookingForm() {
     return selectedVariant?.excludeTravel === true;
   }, [tripData, selectedCity]);
 
-  // Pricing calculations
+    // Pricing calculations
   const pricing = useMemo(() => {
     let originalTotalBase = 0;
 
     formData.participantsList.forEach((p) => {
-      let travelerPrice = basePrice;
+      let travelerPrice = selectedCity?.price ?? basePrice;
       
       // Train options adjustment
       if (!isDirectJoin) {
@@ -300,10 +337,6 @@ function BookingForm() {
         travelerPrice += Number(selectedRoomOpt.priceDelta) || 0;
       }
 
-      // Joining point deductions
-      const deduction = selectedCity?.deductionAmount || 0;
-      travelerPrice = Math.max(0, travelerPrice - deduction);
-
       originalTotalBase += travelerPrice;
     });
 
@@ -315,22 +348,33 @@ function BookingForm() {
 
     // GST Calculation — use trip-configured GST rate, fallback to 5%
     const gstRate = (tripData?.gstPercentage ?? 5) / 100;
+    const gstOption = settings?.bookingForm?.gstOption || 'full'; // 'full' or 'advance'
     
-    // Always calculate GST on the full package base
-    const gstAmount = Math.round(netBase * gstRate);
-    
-    // Absorbed by company: discount exactly equals GST
-    const gstDiscount = gstAmount; 
-
+    let gstAmount = 0;
     let finalTotal = 0;
     let advancePaid = 0;
+    let remainingBalance = 0;
 
     if (paymentMode === 'Full Payment') {
-      finalTotal = netBase; // (netBase + gstAmount) - gstDiscount
+      gstAmount = Math.round(netBase * gstRate);
+      finalTotal = netBase + gstAmount;
       advancePaid = finalTotal;
+      remainingBalance = 0;
     } else {
-      finalTotal = partialBaseAmount; // Just the deposit amount flat
-      advancePaid = finalTotal;
+      // Partial Payment
+      if (gstOption === 'advance') {
+        // Option B: GST = Advance Amount * GST Rate
+        gstAmount = Math.round(partialBaseAmount * gstRate);
+        finalTotal = partialBaseAmount + gstAmount;
+        advancePaid = finalTotal;
+        remainingBalance = netBase - partialBaseAmount; // Package Amount - Advance Amount
+      } else {
+        // Option A: GST = Package Amount * GST Rate
+        gstAmount = Math.round(netBase * gstRate);
+        finalTotal = partialBaseAmount;
+        advancePaid = finalTotal;
+        remainingBalance = (netBase + gstAmount) - advancePaid;
+      }
     }
 
     return {
@@ -338,12 +382,13 @@ function BookingForm() {
       netBase,
       partialBaseAmount,
       gstAmount,
-      gstDiscount,
+      gstDiscount: 0,
       finalTotal,
       advancePaid,
-      remainingBalance: netBase - advancePaid
+      remainingBalance,
+      totalAmount: netBase + gstAmount
     };
-  }, [basePrice, selectedCity, formData.participants, formData.participantsList, paymentMode, customDepositPerPax, tripData, isDirectJoin]);
+  }, [basePrice, selectedCity, formData.participants, formData.participantsList, paymentMode, customDepositPerPax, tripData, isDirectJoin, settings]);
 
 
 
@@ -418,13 +463,15 @@ function BookingForm() {
         tripId: tripData?.id || initialParams.tripId || 'manual',
         tripName: initialParams.tripName || tripData?.title || 'Expedition',
         departureDate: initialParams.date ? new Date(initialParams.date) : null,
-        sourceBookingLinkId: initialParams.sourceBookingLinkId || null,
+                sourceBookingLinkId: initialParams.sourceBookingLinkId || null,
         pickupCity: selectedCity.cityName,
         skipDays: selectedCity.skipDays,
-        adjustedPrice: pricing.originalTotalBase / formData.participants,
-        amount: pricing.netBase,
-        totalAmount: pricing.remainingBalance + pricing.advancePaid,
+        adjustedPrice: selectedCity?.price ?? (pricing.originalTotalBase / formData.participants),
+        baseAmount: pricing.netBase,
+        amount: pricing.totalAmount,
+        totalAmount: pricing.totalAmount,
         advancePaid: pricing.advancePaid,
+        remainingAmount: pricing.remainingBalance,
         status: 'pending',
         paymentStatus: paymentMode === 'Full Payment' ? 'Paid' : 'Partial',
         paymentMode: 'UPI',
@@ -466,29 +513,42 @@ function BookingForm() {
   return (
     <div className="bg-[#FAFAFA] min-h-screen text-slate-900 pb-32 lg:pb-20">
       
-      {/* Top Banner / Backdrop (Premium Light Layout) */}
-      <div className="relative h-[250px] w-full overflow-hidden bg-slate-900">
+            {/* Top Banner / Backdrop (Premium Light Layout) */}
+      <div className="relative w-full overflow-hidden bg-slate-900 py-10 md:py-16 flex flex-col justify-end min-h-[240px] h-auto">
         {tripData?.images?.[0] ? (
           <OptimizedImage 
             src={normalizeImageUrl(tripData.images[0])} 
             alt={initialParams.tripName} 
-            className="w-full h-full object-cover opacity-45 scale-105"
+            className="absolute inset-0 w-full h-full object-cover opacity-45 scale-105"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-r from-slate-800 to-slate-900 opacity-60" />
+          <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-slate-800 to-slate-900 opacity-60" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-8 max-w-7xl mx-auto px-6">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FF5B00]/20 rounded-full text-[10px] font-bold capitalize tracking-widest text-[#FF5B00] mb-2">
-            <Sparkles size={10} /> Premium Expeditions
-          </span>
-          <h1 className="text-3xl md:text-5xl font-bold capitalize tracking-tight leading-none text-white">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+        
+        <div className="relative max-w-7xl mx-auto px-6 z-10 w-full mt-auto space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center px-3 py-1 bg-[#FF5B00]/10 rounded-full text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00]">
+              Premium Expeditions
+            </span>
+          </div>
+
+          <h1 className="text-3xl md:text-5xl font-black capitalize tracking-tight leading-tight text-white max-w-4xl break-words">
             {initialParams.tripName || 'Adventure Checkout'}
           </h1>
-          <p className="text-white/80 text-xs font-bold capitalize tracking-wider mt-1.5 flex items-center gap-4">
-            <span>Departure Date: {initialParams.date || 'Flexible'}</span>
-            <span>Code: {initialParams.tripId || 'N/A'}</span>
-          </p>
+
+                    {/* Highlighted Departure Date Card */}
+          <div className="inline-flex flex-col sm:flex-row sm:items-center gap-6 bg-white border border-slate-200/80 rounded-2xl p-5 max-w-fit pr-10">
+            <div className="text-left space-y-1">
+              <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-450">DEPARTURE DATE</p>
+              <p className="text-sm font-bold text-slate-800 leading-tight">{initialParams.date || 'Flexible'}</p>
+            </div>
+            <div className="hidden sm:block w-px h-8 bg-slate-250" />
+            <div className="text-left space-y-1">
+              <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-455">TRIP CODE</p>
+              <p className="text-xs font-bold text-slate-600 leading-tight">{initialParams.tripId || 'N/A'}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -538,14 +598,10 @@ function BookingForm() {
                   className="space-y-6"
                 >
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 md:p-10 space-y-6 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#FF5B00]/10 rounded-2xl flex items-center justify-center text-[#FF5B00]">
-                        <User size={20} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">Lead Contact Details</h2>
-                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">Primary booking supervisor</p>
-                      </div>
+                                        <div className="border-b border-slate-100 pb-5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] mb-1.5">STEP 1 OF 4</p>
+                      <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Lead Contact Details</h2>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">Primary booking supervisor</p>
                     </div>
 
                     <div className="space-y-4">
@@ -613,38 +669,44 @@ function BookingForm() {
                 >
                   {/* Joining Point Selection */}
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 md:p-10 space-y-6 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#FF5B00]/10 rounded-2xl flex items-center justify-center text-[#FF5B00]">
-                        <Navigation size={20} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">{tripData?.bookingFormLabels?.joiningPoint || 'Joining Point'}</h2>
-                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">Select where you want to meet us (Loaded from Trip info)</p>
-                      </div>
+                                        <div className="border-b border-slate-100 pb-5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] mb-1.5">ROUTE SELECTION</p>
+                      <h2 className="text-xl font-extrabold tracking-tight text-slate-900">{tripData?.bookingFormLabels?.joiningPoint || 'Joining Point'}</h2>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">Select where you want to meet us</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {joiningPoints.map((city: any) => {
                         const active = selectedCity?.cityName === city.cityName;
                         return (
                           <button
                             key={city.cityName}
                             type="button"
-                            onClick={() => setSelectedCity(city)}
+                            onClick={() => {
+                              setSelectedCity(city);
+                              const tripId = tripData?.id || initialParams.tripId || 'default';
+                              localStorage.setItem(`selected_joining_point_${tripId}`, city.cityName);
+                            }}
                             className={cn(
-                              "text-left p-5 rounded-2xl border-2 transition-all flex flex-col justify-between min-h-[110px]",
+                              "text-left p-4 md:p-5 rounded-2xl border-2 transition-all flex flex-col justify-between min-h-[110px] h-auto w-full gap-2",
                               active 
-                                ? "border-[#FF5B00] bg-[#FF5B00]/5" 
-                                : "border-slate-100 bg-slate-50/50 hover:border-slate-350"
+                                ? "border-[#FF5B00] bg-[#FF5B00]/5 shadow-sm" 
+                                : "border-slate-100 bg-slate-50/50 hover:border-slate-300"
                             )}
                           >
-                            <div className="flex justify-between w-full items-start">
-                              <div>
-                                <p className="text-xs font-bold capitalize text-slate-800">{city.cityName}</p>
-                                <p className="text-[9px] text-slate-500 font-bold capitalize tracking-wider mt-0.5">{city.pickupPoint}</p>
+                            <div className="flex justify-between w-full items-start gap-2 min-w-0">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs md:text-sm font-bold capitalize text-slate-800 whitespace-normal break-words">{city.cityName}</p>
+                                <p className="text-[10px] text-slate-500 font-medium capitalize tracking-wider mt-1 whitespace-normal break-words leading-tight">{city.pickupPoint}</p>
                               </div>
-                              {active && <Check size={14} className="text-[#FF5B00]" />}
+                              {active && <Check size={14} className="text-[#FF5B00] shrink-0 mt-0.5" />}
                             </div>
+                            {city.price !== undefined && (
+                              <div className="mt-auto pt-2 border-t border-slate-100/50 w-full flex justify-between items-center text-[10px]">
+                                <span className="uppercase tracking-wider text-slate-400 font-bold">Package Price</span>
+                                <span className="font-extrabold text-slate-800 font-mono">₹{city.price.toLocaleString()}</span>
+                              </div>
+                            )}
                           </button>
                         );
                       })}
@@ -653,14 +715,10 @@ function BookingForm() {
 
                   {/* Travelers Manifest Inputs */}
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 md:p-10 space-y-6 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#FF5B00]/10 rounded-2xl flex items-center justify-center text-[#FF5B00]">
-                        <Users size={20} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">{tripData?.bookingFormLabels?.travelers || 'Traveler Manifest'}</h2>
-                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">{tripData?.bookingFormLabels?.travelersDescription || 'Fill info for all tour members'}</p>
-                      </div>
+                                        <div className="border-b border-slate-100 pb-5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] mb-1.5">MANIFEST</p>
+                      <h2 className="text-xl font-extrabold tracking-tight text-slate-900">{tripData?.bookingFormLabels?.travelers || 'Traveler Manifest'}</h2>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">{tripData?.bookingFormLabels?.travelersDescription || 'Fill info for all tour members'}</p>
                     </div>
 
                     {/* Quick Traveler Count Select */}
@@ -689,7 +747,7 @@ function BookingForm() {
                     <div className="space-y-4 pt-2">
                       {formData.participantsList.map((traveler, index) => (
                         <div key={index} className="p-5 bg-slate-50/50 border border-slate-200 rounded-2xl space-y-4">
-                          <span className="text-[9px] font-bold capitalize tracking-widest text-[#FF5B00]">Traveler {index + 1} details</span>
+                          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00]">TRAVELER {index + 1} DETAILS</span>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input
                               required
@@ -726,10 +784,10 @@ function BookingForm() {
                             </select>
                           </div>
 
-                          {/* Room Sharing Option for this traveler */}
+                                                    {/* Room Sharing Option for this traveler */}
                           <div className="space-y-1.5 pt-1">
-                            <label className="text-[8px] font-bold capitalize tracking-wider text-slate-500 flex items-center gap-1"><Bed size={10} /> {tripData?.bookingFormLabels?.roomSharing || 'Room Sharing Option'}</label>
-                            <div className="grid grid-cols-3 gap-2">
+                            <label className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">{tripData?.bookingFormLabels?.roomSharing || 'Room Sharing Option'}</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                               {(tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
                                 { label: 'Double Sharing' }, { label: 'Triple Sharing' }, { label: 'Quad Sharing' }
                               ]).map((room: any) => (
@@ -738,7 +796,7 @@ function BookingForm() {
                                   type="button"
                                   onClick={() => handleParticipantChange(index, 'roomSharing', room.label)}
                                   className={cn(
-                                    "py-2 rounded-lg font-bold text-[9px] border text-center transition-all",
+                                    "py-2.5 rounded-lg font-bold text-[10px] border text-center transition-all min-h-[44px] flex items-center justify-center whitespace-normal break-words px-2 w-full",
                                     traveler.roomSharing === room.label ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
                                   )}
                                 >
@@ -748,11 +806,11 @@ function BookingForm() {
                             </div>
                           </div>
 
-                          {/* Train Class Option for this traveler */}
+                                                    {/* Train Class Option for this traveler */}
                           {!isDirectJoin && (
                              <div className="space-y-1.5 pt-1">
-                               <label className="text-[8px] font-bold capitalize tracking-wider text-slate-500 flex items-center gap-1"><Train size={10} /> {tripData?.bookingFormLabels?.travelOption || 'Train Ticket Option'}</label>
-                               <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+                               <label className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">{tripData?.bookingFormLabels?.travelOption || 'Train Ticket Option'}</label>
+                               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                  {(tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
                                    { label: 'Sleeper' }, { label: '3AC' }, { label: 'No Train' }
                                  ]).map((train: any) => (
@@ -761,7 +819,7 @@ function BookingForm() {
                                      type="button"
                                      onClick={() => handleParticipantChange(index, 'trainOption', train.label)}
                                      className={cn(
-                                       "py-2 rounded-lg font-bold text-[9px] border text-center transition-all",
+                                       "py-2.5 rounded-lg font-bold text-[10px] border text-center transition-all min-h-[44px] flex items-center justify-center whitespace-normal break-words px-2 w-full",
                                        traveler.trainOption === train.label ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
                                      )}
                                    >
@@ -779,7 +837,7 @@ function BookingForm() {
 
                   {/* Special Requests textarea (optional) */}
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-6 space-y-4 shadow-sm">
-                    <span className="text-[9px] font-bold capitalize tracking-wider text-slate-500 flex items-center gap-2"><Info size={12}/> Special Requests (Optional)</span>
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">Special Requests (Optional)</span>
                     <textarea 
                       className="w-full bg-slate-50 border border-slate-200 rounded-[2rem] p-6 text-xs font-bold text-slate-800 placeholder-slate-400 outline-none focus:bg-white focus:border-[#FF5B00] min-h-[100px] transition-all"
                       placeholder="Tell us about food allergies, physical requirements, room requests, or other details..."
@@ -800,21 +858,17 @@ function BookingForm() {
                 >
                   {/* Payment Plan */}
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 md:p-10 space-y-6 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#FF5B00]/10 rounded-2xl flex items-center justify-center text-[#FF5B00]">
-                        <CreditCard size={20} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">Payment Plan</h2>
-                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">Choose your payment plan</p>
-                      </div>
+                                        <div className="border-b border-slate-100 pb-5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] mb-1.5">STEP 3 OF 4</p>
+                      <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Payment Plan</h2>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">Choose your payment plan</p>
                     </div>
 
 
 
                     {/* Payment Mode Selection */}
                     <div className="space-y-4">
-                      <label className="text-[9px] font-bold capitalize tracking-wider text-slate-500 block flex items-center gap-1.5"><CreditCard size={12} /> Payment Plan Selection</label>
+                      <label className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">Payment Plan Selection</label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                           type="button"
@@ -860,14 +914,10 @@ function BookingForm() {
                   className="space-y-6"
                 >
                   <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 md:p-10 space-y-6 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#FF5B00]/10 rounded-2xl flex items-center justify-center text-[#FF5B00]">
-                        <ShieldCheck size={20} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold capitalize tracking-tight text-slate-900">Terms & Verification</h2>
-                        <p className="text-[10px] text-slate-400 font-bold capitalize tracking-wider">Confirm final submission</p>
-                      </div>
+                    <div className="border-b border-slate-100 pb-5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] mb-1.5">STEP 4 OF 4</p>
+                      <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Terms & Verification</h2>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">Confirm final submission</p>
                     </div>
 
                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 text-xs font-medium text-slate-500 leading-relaxed">
@@ -881,9 +931,77 @@ function BookingForm() {
 
                     {/* Complete Booking Summary */}
                     <div className="bg-slate-50 border border-slate-150 rounded-[2rem] p-6 space-y-6">
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Booking Summary</h4>
-                        <span className="text-[9px] bg-[#FF5B00]/10 text-[#FF5B00] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Please Review</span>
+                                            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">BOOKING SUMMARY</h4>
+                        <span className="text-[9px] bg-[#FF5B00]/10 text-[#FF5B00] px-2.5 py-0.5 rounded-lg font-extrabold uppercase tracking-widest text-orange-600">PLEASE REVIEW</span>
+                      </div>
+
+                                                                  {/* Visual Priority Highlights */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Visual Priority 1: Departure Date */}
+                        <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-r-2xl space-y-1 shadow-sm">
+                          <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-800 block">DEPARTURE DATE</span>
+                          <p className="text-sm font-bold text-slate-900 leading-tight">{initialParams.date || 'Flexible'}</p>
+                        </div>
+
+                        {/* Visual Priority 2: Package Price */}
+                        <div className="bg-[#FF5B00]/5 border-l-4 border-[#FF5B00] p-4 rounded-r-2xl space-y-1 shadow-sm">
+                          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] block">PACKAGE PRICE</span>
+                          <p className="text-base font-bold text-slate-900 leading-tight">₹{pricing.originalTotalBase.toLocaleString()}</p>
+                        </div>
+
+                        {/* Visual Priority 3: Amount Payable / Pay Now */}
+                        <div className="bg-gradient-to-br from-[#FF5B00] to-[#FF8A00] p-4 rounded-2xl flex flex-col justify-between text-white shadow-md min-h-[70px]">
+                          <span className="text-[9px] font-extrabold uppercase tracking-widest opacity-90 block">PAY NOW</span>
+                          <p className="text-xl font-bold tracking-tighter leading-tight">₹{pricing.finalTotal.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                                            {/* General Booking Breakdown */}
+                      <div className="bg-white border border-slate-205 rounded-2xl p-5 space-y-4 shadow-sm text-xs">
+                        <div className="flex justify-between items-center border-b pb-2">
+                          <h5 className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">RESERVATION DETAILS</h5>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(2)}
+                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-extrabold uppercase tracking-wider transition-all"
+                          >
+                            Edit
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">JOINING CITY</p>
+                            <p className="font-bold text-slate-800 capitalize mt-1">{selectedCity?.cityName || 'Delhi'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">DEPARTURE DATE</p>
+                            <p className="font-bold text-slate-800 mt-1">{initialParams.date || 'Flexible'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">TRAVELERS</p>
+                            <p className="font-bold text-slate-800 mt-1">{formData.participants} Pax</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PACKAGE PRICE</p>
+                            <p className="font-bold text-slate-800 mt-1">₹{pricing.originalTotalBase.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">GST @ {tripData?.gstPercentage ?? 5}%</p>
+                            <p className="font-bold text-slate-800 mt-1">₹{pricing.gstAmount.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">PAY NOW</p>
+                            <p className="font-bold text-[#FF5B00] mt-1">₹{pricing.finalTotal.toLocaleString()}</p>
+                          </div>
+                          {paymentMode === 'Partial Payment' && (
+                            <div className="col-span-2 md:col-span-1">
+                              <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">REMAINING BALANCE</p>
+                              <p className="font-extrabold text-rose-600 mt-1">₹{pricing.remainingBalance.toLocaleString()}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Section 1: Lead Contact Details */}
@@ -918,37 +1036,6 @@ function BookingForm() {
                         </div>
                       </div>
 
-                      {/* Section 2: Trip & Joining details */}
-                      <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
-                        <div className="flex justify-between items-center">
-                          <h5 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">2. Trip Details</h5>
-                          <button
-                            type="button"
-                            onClick={() => setCurrentStep(2)}
-                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-bold flex items-center gap-1 transition-all"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div className="col-span-2">
-                            <p className="text-[9px] text-slate-400 uppercase font-medium">Trip Name</p>
-                            <p className="font-extrabold text-slate-900 capitalize text-sm">{initialParams.tripName || tripData?.title || 'Expedition'}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-slate-400 uppercase font-medium">Departure Date</p>
-                            <p className="font-bold text-slate-850 flex items-center gap-1"><Calendar size={12} className="text-[#FF5B00]" /> {initialParams.date || 'Flexible'}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-[9px] text-slate-400 uppercase font-medium">Joining Point</p>
-                            <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100/80 text-slate-800 rounded-xl text-xs font-bold border border-slate-200 capitalize">
-                              <MapPin size={12} className="text-[#FF5B00]" />
-                              {selectedCity?.cityName || 'Delhi'} {selectedCity?.pickupPoint ? `(${selectedCity.pickupPoint})` : ''}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Section 3: Traveler Details */}
                       <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
                         <div className="flex justify-between items-center">
@@ -974,38 +1061,6 @@ function BookingForm() {
                               </div>
                             </div>
                           ))}
-                        </div>
-                      </div>
-
-                      {/* Section 4: Payment Details */}
-                      <div className="bg-white border border-slate-205 rounded-2xl p-4.5 space-y-3 shadow-sm">
-                        <div className="flex justify-between items-center">
-                          <h5 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">4. Payment Details</h5>
-                          <button
-                            type="button"
-                            onClick={() => setCurrentStep(3)}
-                            className="text-[10px] text-[#FF5B00] hover:text-[#E65200] font-bold flex items-center gap-1 transition-all"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Base Price</span>
-                            <span className="font-bold text-slate-800">₹{pricing.originalTotalBase.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">GST @ {tripData?.gstPercentage ?? 5}%</span>
-                            <span className="font-bold text-slate-800">+₹{pricing.gstAmount.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Payment Plan</span>
-                            <span className="font-bold text-amber-605 capitalize bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded text-[10px]">{paymentMode}</span>
-                          </div>
-                          <div className="flex justify-between bg-[#FF5B00]/5 rounded-xl p-3 -mx-1">
-                            <span className="font-bold text-slate-900">Total Payable Amount Due Now</span>
-                            <span className="font-extrabold text-[#FF5B00] text-base">₹{pricing.finalTotal.toLocaleString()}</span>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -1087,103 +1142,93 @@ function BookingForm() {
           <div className="lg:col-span-5">
             <div className="sticky top-10 space-y-6">
               
-              {/* Summary Card */}
+                            {/* Summary Card */}
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] overflow-hidden shadow-md">
-                <div className="p-8 space-y-6">
+                <div className="p-6 md:p-8 space-y-6">
                   
-                  <div className="space-y-2">
-                    <span className="text-[9px] text-[#FF5B00] font-bold capitalize tracking-widest flex items-center gap-1.5">
-                      <Sparkles size={10} /> Live Expedition Summary
+                                    <div className="space-y-3">
+                    <span className="text-[9px] text-[#FF5B00] font-extrabold uppercase tracking-widest block">
+                      LIVE EXPEDITION SUMMARY
                     </span>
                     <h3 className="text-xl font-black capitalize tracking-tight text-slate-900 leading-tight">
                       {initialParams.tripName || 'Trip Checkout'}
                     </h3>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <span className="flex items-center gap-1 px-2.5 py-1 bg-[#FF5B00]/10 text-[#FF5B00] rounded-lg text-[10px] font-bold">
-                        <Calendar size={11} /> Departure Date: {initialParams.date || 'Flexible'}
-                      </span>
-                      <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold border border-slate-200">
-                        <Users size={11} /> {formData.participants} Travelers
-                      </span>
-                    </div>
                   </div>
 
                   <div className="h-px bg-slate-100" />
 
-                  {/* Calculations breakdown */}
-                  <div className="space-y-3.5 text-xs">
-                    <div className="flex justify-between items-center text-slate-500">
-                      <span>Package Base Total</span>
-                      <span className="font-bold text-slate-900">₹{pricing.originalTotalBase.toLocaleString()}</span>
+                                    {/* High Visual Priority Section */}
+                  <div className="space-y-3">
+                    {/* Visual Priority 1: Departure Date */}
+                    <div className="bg-amber-500/10 border-l-4 border-amber-500 p-3.5 rounded-r-2xl space-y-1">
+                      <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-800 block">DEPARTURE DATE</span>
+                      <p className="text-sm font-bold text-slate-900 leading-tight">{initialParams.date || 'Flexible'}</p>
+                    </div>
+
+                    {/* Visual Priority 2: Package Price */}
+                    <div className="bg-[#FF5B00]/5 border-l-4 border-[#FF5B00] p-3.5 rounded-r-2xl space-y-1">
+                      <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] block">PACKAGE PRICE</span>
+                      <p className="text-base font-bold text-slate-900 leading-tight">₹{pricing.originalTotalBase.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* General Details List */}
+                  <div className="space-y-3 text-xs border-t border-b border-slate-100 py-4">
+                    <div className="flex items-center justify-between text-slate-650 gap-2 min-w-0">
+                      <span className="flex items-center font-extrabold shrink-0 text-[10px] uppercase tracking-wider text-slate-500">JOINING CITY</span>
+                      <span className="font-extrabold text-slate-900 capitalize text-right break-words max-w-[60%]">{selectedCity?.cityName || 'Delhi'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-slate-650 gap-2 min-w-0">
+                      <span className="flex items-center font-extrabold shrink-0 text-[10px] uppercase tracking-wider text-slate-500">TRAVELERS</span>
+                      <span className="font-extrabold text-slate-900 shrink-0">{formData.participants} Pax</span>
                     </div>
 
                     {/* Per-traveler options breakdown */}
-                    {formData.participantsList.map((t, i) => {
-                      const trainOpts = tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
-                        { label: 'Sleeper', priceDelta: 0 }, { label: '3AC', priceDelta: 2000 }, { label: 'No Train', priceDelta: -1500 }
-                      ];
-                      const roomOpts = tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
-                        { label: 'Triple Sharing', priceDelta: 0 }, { label: 'Double Sharing', priceDelta: 1500 }, { label: 'Quad Sharing', priceDelta: -500 }
-                      ];
-                      const trainDelta = isDirectJoin ? 0 : (trainOpts.find((o: any) => o.label === t.trainOption)?.priceDelta || 0);
-                      const roomDelta = roomOpts.find((o: any) => o.label === t.roomSharing)?.priceDelta || 0;
-                      if (trainDelta === 0 && roomDelta === 0) return null;
-                      return (
-                        <div key={i} className="text-[10px] text-slate-400 pl-2 border-l-2 border-slate-100 space-y-0.5">
-                          <span className="font-bold capitalize text-slate-500">Traveler {i+1}</span>
-                          {roomDelta !== 0 && <div className="flex justify-between"><span>{t.roomSharing}</span><span className={roomDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{roomDelta > 0 ? '+' : ''}₹{roomDelta.toLocaleString()}</span></div>}
-                          {!isDirectJoin && trainDelta !== 0 && <div className="flex justify-between"><span>{t.trainOption}</span><span className={trainDelta > 0 ? 'text-slate-700' : 'text-emerald-600'}>{trainDelta > 0 ? '+' : ''}₹{trainDelta.toLocaleString()}</span></div>}
-                        </div>
-                      );
-                    })}
-
-                    <div className="flex flex-col gap-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
-                      <span className="text-[9px] font-bold text-slate-450 uppercase tracking-wider block">Joining Point</span>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 capitalize">
-                        <MapPin size={12} className="text-[#FF5B00]" />
-                        {selectedCity?.cityName || 'Delhi'} {selectedCity?.pickupPoint ? `(${selectedCity.pickupPoint})` : ''}
-                      </div>
-                    </div>
-
-                    {selectedCity?.deductionAmount > 0 && (
-                      <div className="flex justify-between items-center text-emerald-600">
-                        <span>Pickup City Discount</span>
-                        <span className="font-bold">-₹{(selectedCity.deductionAmount * formData.participants).toLocaleString()}</span>
+                    {formData.participantsList.some(t => t.roomSharing !== 'Triple Sharing' || (!isDirectJoin && t.trainOption !== 'Sleeper')) && (
+                      <div className="space-y-1.5 pl-3 border-l-2 border-slate-200">
+                        {formData.participantsList.map((t, i) => {
+                          const trainOpts = tripData?.travelOptions?.length > 0 ? tripData.travelOptions : [
+                            { label: 'Sleeper', priceDelta: 0 }, { label: '3AC', priceDelta: 2000 }, { label: 'No Train', priceDelta: -1500 }
+                          ];
+                          const roomOpts = tripData?.roomOptions?.length > 0 ? tripData.roomOptions : [
+                            { label: 'Triple Sharing', priceDelta: 0 }, { label: 'Double Sharing', priceDelta: 1500 }, { label: 'Quad Sharing', priceDelta: -500 }
+                          ];
+                          const trainDelta = isDirectJoin ? 0 : (trainOpts.find((o: any) => o.label === t.trainOption)?.priceDelta || 0);
+                          const roomDelta = roomOpts.find((o: any) => o.label === t.roomSharing)?.priceDelta || 0;
+                          if (trainDelta === 0 && roomDelta === 0) return null;
+                          return (
+                            <div key={i} className="text-[10px] text-slate-400 space-y-0.5">
+                              <span className="font-bold capitalize text-slate-500">Traveler {i+1} Adjustments</span>
+                              {roomDelta !== 0 && <div className="flex justify-between gap-2"><span>{t.roomSharing}</span><span className={roomDelta > 0 ? 'text-slate-600 font-bold' : 'text-emerald-600 font-bold'}>{roomDelta > 0 ? '+' : ''}₹{roomDelta.toLocaleString()}</span></div>}
+                              {!isDirectJoin && trainDelta !== 0 && <div className="flex justify-between gap-2"><span>{t.trainOption}</span><span className={trainDelta > 0 ? 'text-slate-600 font-bold' : 'text-emerald-600 font-bold'}>{trainDelta > 0 ? '+' : ''}₹{trainDelta.toLocaleString()}</span></div>}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 
-
-                    <div className="flex justify-between items-center text-slate-500">
-                      <span>GST @ {tripData?.gstPercentage ?? 5}%</span>
-                      <span className="font-bold text-slate-900">+₹{pricing.gstAmount.toLocaleString()}</span>
+                    <div className="flex items-center justify-between text-slate-650 gap-2 min-w-0">
+                      <span className="flex items-center font-extrabold shrink-0 text-[10px] uppercase tracking-wider text-slate-500">GST @ {tripData?.gstPercentage ?? 5}%</span>
+                      <span className="font-extrabold text-slate-900 shrink-0">+₹{pricing.gstAmount.toLocaleString()}</span>
                     </div>
+                  </div>
 
-                    <div className="h-px bg-slate-100 my-2" />
-
-                    {/* Plan description */}
-                    <div className="bg-slate-50 p-4 rounded-xl space-y-1.5 border border-slate-200/60">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-bold capitalize text-slate-400 tracking-wider">Plan Selected</span>
-                        <span className="text-[9px] font-extrabold text-amber-600 bg-amber-50 border border-amber-250 px-2 py-0.5 rounded uppercase tracking-wider">{paymentMode}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 font-bold leading-tight capitalize">
-                        {paymentMode === 'Full Payment' ? 'Immediate full checkout' : `Reserve at deposit of ₹${(customDepositPerPax && customDepositPerPax > 0 ? customDepositPerPax : 2000).toLocaleString()}/pax. Balance due before trip start.`}
-                      </p>
-                    </div>
-
-                    {/* Grand Total */}
-                    <div className="bg-[#FF5B00] bg-gradient-to-br from-[#FF5B00] to-[#FF8A00] p-6 rounded-2xl flex flex-col justify-between text-white shadow-xl shadow-[#FF5B00]/10">
-                      <span className="text-[9px] font-bold capitalize tracking-wider opacity-70">Total Amount Due Now</span>
+                  {/* Calculations & Total */}
+                  <div className="space-y-4 pt-1">
+                    {/* Visual Priority 3: Pay Now / Grand Total */}
+                    <div className="bg-gradient-to-br from-[#FF5B00] to-[#FF8A00] p-5 rounded-3xl flex flex-col justify-between text-white shadow-xl shadow-[#FF5B00]/15">
+                      <span className="text-[9px] font-extrabold uppercase tracking-widest opacity-90 block">PAY NOW</span>
                       <div className="flex items-end justify-between mt-1">
-                        <span className="text-3xl font-bold tracking-tighter">₹{pricing.finalTotal.toLocaleString()}</span>
-                        <span className="text-[9px] font-bold opacity-60">Inclusive of GST</span>
+                        <span className="text-3xl font-black tracking-tighter">₹{pricing.finalTotal.toLocaleString()}</span>
+                        <span className="text-[9px] font-bold opacity-75">Inclusive of GST</span>
                       </div>
                     </div>
 
                     {paymentMode === 'Partial Payment' && (
-                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold capitalize tracking-widest pt-1">
-                        <span>Remaining Balance Later</span>
-                        <span className="text-slate-800">₹{pricing.remainingBalance.toLocaleString()}</span>
+                      <div className="flex justify-between items-center bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-3.5 text-xs">
+                        <span className="flex items-center font-extrabold text-[10px] uppercase tracking-wider text-slate-500">REMAINING BALANCE</span>
+                        <span className="font-black text-slate-900 text-sm">₹{pricing.remainingBalance.toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -1212,13 +1257,13 @@ function BookingForm() {
             <div>
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total Due Now</p>
               <p className="text-xl font-bold text-slate-900">₹{pricing.finalTotal.toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 font-medium">Incl. {tripData?.gstPercentage ?? 5}% GST</p>
+              <p className="text-[9px] text-slate-450 font-medium">Incl. {tripData?.gstPercentage ?? 5}% GST</p>
             </div>
             {currentStep < 4 ? (
               <button
                 onClick={handleNext}
                 type="button"
-                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-3.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-4 min-h-[44px] px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20"
               >
                 Continue <ChevronRight size={14} />
               </button>
@@ -1227,7 +1272,7 @@ function BookingForm() {
                 onClick={handleFinalSubmit}
                 disabled={loading}
                 type="button"
-                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-3.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20 disabled:opacity-50"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-4 min-h-[44px] px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
                 {loading ? 'Processing...' : 'Confirm'}
