@@ -53,16 +53,22 @@ export function OptimizedImage({
   const hasCloudinaryWidth = cloudinaryWidth !== undefined;
 
   if (isUnsplash && hasCloudinaryWidth) {
-    const cloudName = "ddkndagvp";
-    const baseFetch = `https://res.cloudinary.com/${cloudName}/image/fetch/f_auto,q_auto,c_limit`;
-    const cleanUrl = finalSrc;
+    // Directly adjust Unsplash query parameters instead of routing through Cloudinary fetch
+    const cleanUrl = finalSrc.includes('?') ? finalSrc.split('?')[0] : finalSrc;
+    const params = new URLSearchParams(finalSrc.includes('?') ? finalSrc.split('?')[1] : '');
+    params.set('auto', 'format');
+    params.set('fit', 'crop');
+    params.set('q', '80');
     
-    // Form fetch url
-    finalSrc = `${baseFetch},w_${cloudinaryWidth}/${cleanUrl}`;
+    params.set('w', cloudinaryWidth.toString());
+    finalSrc = `${cleanUrl}?${params.toString()}`;
     
     const widths = [320, 480, 640, 800, 1200];
     srcSet = widths
-      .map(w => `${baseFetch},w_${w}/${cleanUrl} ${w}w`)
+      .map(w => {
+        params.set('w', w.toString());
+        return `${cleanUrl}?${params.toString()} ${w}w`;
+      })
       .join(', ');
   } else if (isCloudinary && !finalSrc.includes('w_') && hasCloudinaryWidth) {
     const uploadIndex = finalSrc.indexOf('/upload/');

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const ADMIN_URL = 'http://localhost:8080';
-const FRONTEND_URL = 'http://localhost:5173';
+const FRONTEND_URL = 'http://localhost:3000';
 
 test.describe('Admin to Frontend Synchronization', () => {
   test('should create a trip in Admin and verify it on Frontend', async ({ page }) => {
@@ -12,10 +12,10 @@ test.describe('Admin to Frontend Synchronization', () => {
     await page.locator('input[type="email"]').fill('admin@youthcamping.in');
     await page.locator('input[type="password"]').fill('admin@123456');
     
-    // Click Sign In and wait for response
+    // Click Log in / Sign In and wait for response
     await Promise.all([
       page.waitForResponse(res => res.url().includes('/admin/login') && res.status() === 200),
-      page.click('button:has-text("Sign In")')
+      page.click('button:has-text("Log in"), button:has-text("Sign In")')
     ]);
 
     // Wait for the admin UI to appear

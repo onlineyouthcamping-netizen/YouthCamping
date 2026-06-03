@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:3000';
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:3001/api';
 
 test.describe('Travel CRM - E2E Tests', () => {
   test('Homepage should load successfully', async ({ page }) => {
@@ -41,7 +41,7 @@ test.describe('Travel CRM - E2E Tests', () => {
       const tripSlug = data.data[0].slug;
       
       // Navigate to trip detail
-      await page.goto(`${BASE_URL}/tours/${tripSlug}`);
+      await page.goto(`${BASE_URL}/trips/${tripSlug}`);
       
       // Check if trip details are visible
       await expect(page.locator('h1')).toBeVisible();
@@ -111,7 +111,7 @@ test.describe('Travel CRM - E2E Tests', () => {
       const trip = data.data[0];
       
       // Navigate to trip detail
-      await page.goto(`${BASE_URL}/tours/${trip.slug}`);
+      await page.goto(`${BASE_URL}/trips/${trip.slug}`);
       
       // Fill inquiry form
       const nameInput = page.locator('input[placeholder*="Name"]').first();

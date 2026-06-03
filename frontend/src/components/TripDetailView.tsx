@@ -52,7 +52,7 @@ export default function TripDetailView({ trip }: TripDetailViewProps) {
         {trip.activities && trip.activities.length > 0 && (
           <TripHighlightsList title="Activities & Experiences" items={trip.activities} />
         )}
-        {(!trip.attractions || trip.attractions.length === 0) && (!trip.activities || trip.activities.length === 0) && trip.highlights && trip.highlights.length > 0 && (
+        {trip.highlights && trip.highlights.length > 0 && (
           <TripHighlightsList title="Trip Highlights" items={trip.highlights} />
         )}
       </div>

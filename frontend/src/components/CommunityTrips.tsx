@@ -278,7 +278,7 @@ export default function CommunityTrips({
                   >
                     <div 
                       className={cn(
-                        "group relative overflow-hidden transition-all duration-300 border border-zinc-200/50",
+                        "avian-card group relative overflow-hidden transition-all duration-300 border border-zinc-200/50",
                         theme?.cardHoverAnimation === 'lift' ? "hover:-translate-y-2 shadow-2xl" : "",
                         theme?.cardHoverAnimation === 'shadow' ? "hover:shadow-2xl" : ""
                       )}

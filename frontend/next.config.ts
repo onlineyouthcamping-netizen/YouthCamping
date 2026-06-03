@@ -43,6 +43,16 @@ const nextConfig: NextConfig = {
         destination: "/about-us",
         permanent: true,
       },
+      {
+        source: "/tour-packages",
+        destination: "/trips",
+        permanent: true,
+      },
+      {
+        source: "/tours/:slug",
+        destination: "/trips/:slug",
+        permanent: true,
+      },
     ];
   },
 };

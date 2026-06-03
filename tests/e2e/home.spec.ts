@@ -22,7 +22,7 @@ test.describe('YouthCamping Frontend E2E', () => {
     await tourCard.click();
     
     // Verify we are on the trip page
-    await expect(page).toHaveURL(/\/tours\//);
+    await expect(page).toHaveURL(/\/(tours|trips)\//);
     if (tripTitle) {
       // Check if the title is present (ignoring case/extra whitespace)
       const h1Text = await page.locator('h1').textContent();

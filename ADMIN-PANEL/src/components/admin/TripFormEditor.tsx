@@ -554,68 +554,71 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
 
              {/* Duration, Min/Max participants, Display Order */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Duration */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Duration *</Label>
-                  <div className="flex gap-2 items-center">
-                    <Select defaultValue="nights-days">
-                      <SelectTrigger className="w-40 h-9 text-xs border-slate-250 focus:ring-[#FF5400] focus:border-[#FF5400] bg-white">
-                        <SelectValue placeholder="Nights/Days Format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="nights-days">Nights/Days Format</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {(() => {
-                      const match = String(form.duration || "").match(/(\d+)\s*Nights?\s*(\d+)\s*Days?/i);
-                      const nightsVal = match ? match[1] : "2";
-                      const daysVal = match ? match[2] : "3";
-                      const updateDuration = (n: string, d: string) => {
-                        setForm({ ...form, duration: `${n} Nights / ${d} Days` });
-                      };
-                      return (
-                        <>
-                          <Input 
-                            type="number" 
-                            value={nightsVal} 
-                            onChange={(e) => updateDuration(e.target.value, daysVal)} 
-                            className="h-9 w-12 text-center text-xs border-slate-250 focus-visible:ring-[#FF5400]" 
-                          />
-                          <span className="text-xs text-slate-500">Nights</span>
-                          <Input 
-                            type="number" 
-                            value={daysVal} 
-                            onChange={(e) => updateDuration(nightsVal, e.target.value)} 
-                            className="h-9 w-12 text-center text-xs border-slate-250 focus-visible:ring-[#FF5400]" 
-                          />
-                          <span className="text-xs text-slate-500">Days</span>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-
-                {/* Min/Max Participants */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Set minimum and maximum participants *</Label>
-                  <div className="flex gap-2 items-center">
-                    <span className="text-xs text-slate-400">MIN</span>
-                    <Input 
-                      type="number" 
-                      value={form.minGroupSize || 1} 
-                      onChange={(e) => setForm({ ...form, minGroupSize: Number(e.target.value) })} 
-                      className="h-9 w-16 text-center text-xs border-slate-250 focus-visible:ring-[#FF5400]" 
-                    />
-                    <span className="text-slate-400">—</span>
-                    <span className="text-xs text-slate-400">MAX</span>
-                    <Input 
-                      type="number" 
-                      value={form.maxGroupSize || 30} 
-                      onChange={(e) => setForm({ ...form, maxGroupSize: Number(e.target.value) })} 
-                      className="h-9 w-16 text-center text-xs border-slate-250 focus-visible:ring-[#FF5400]" 
-                    />
-                  </div>
-                </div>
+                 {/* Duration */}
+                 <div className="space-y-2 min-w-0">
+                   <Label className="text-xs font-semibold text-slate-800">Duration *</Label>
+                   <div className="space-y-2">
+                     <Select defaultValue="nights-days">
+                       <SelectTrigger className="w-full h-9 text-xs border-slate-250 focus:ring-[#FF5400] focus:border-[#FF5400] bg-white">
+                         <SelectValue placeholder="Nights/Days Format" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="nights-days">Nights/Days Format</SelectItem>
+                       </SelectContent>
+                     </Select>
+                     {(() => {
+                       const durationStr = String(form.duration || "");
+                       const nightsMatch = durationStr.match(/(\d+)\s*(?:Nights?|N)/i);
+                       const daysMatch = durationStr.match(/(\d+)\s*(?:Days?|D)/i);
+                       const nightsVal = nightsMatch ? nightsMatch[1] : "";
+                       const daysVal = daysMatch ? daysMatch[1] : "";
+                       const updateDuration = (n: string, d: string) => {
+                         setForm({ ...form, duration: `${n} Nights / ${d} Days` });
+                       };
+                       return (
+                         <div className="flex gap-2 items-center bg-slate-50/50 p-1.5 rounded-lg border border-slate-200 w-fit">
+                           <Input 
+                             type="number" 
+                             value={nightsVal} 
+                             onChange={(e) => updateDuration(e.target.value, daysVal)} 
+                             className="h-8 w-12 text-center text-xs border-slate-250 bg-white focus-visible:ring-[#FF5400] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                           />
+                           <span className="text-xs font-medium text-slate-600">Nights</span>
+                           <span className="text-slate-300">/</span>
+                           <Input 
+                             type="number" 
+                             value={daysVal} 
+                             onChange={(e) => updateDuration(nightsVal, e.target.value)} 
+                             className="h-8 w-12 text-center text-xs border-slate-250 bg-white focus-visible:ring-[#FF5400] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                           />
+                           <span className="text-xs font-medium text-slate-600">Days</span>
+                         </div>
+                       );
+                     })()}
+                   </div>
+                 </div>
+ 
+                 {/* Min/Max Participants */}
+                 <div className="space-y-2 min-w-0">
+                   <Label className="text-xs font-semibold text-slate-800">Set minimum and maximum participants *</Label>
+                   <div className="flex gap-2 items-center">
+                     <span className="text-xs text-slate-400">MIN</span>
+                     <Input 
+                       type="number" 
+                       value={form.minGroupSize || 1} 
+                       onChange={(e) => setForm({ ...form, minGroupSize: Number(e.target.value) })} 
+                       className="h-9 w-16 text-center text-xs border-slate-250 focus-visible:ring-[#FF5400]" 
+                     />
+                     <span className="text-slate-400">—</span>
+                     <span className="text-xs text-slate-400">MAX</span>
+                     <Input 
+                       type="number" 
+                       value={form.maxGroupSize || 30} 
+                       onChange={(e) => setForm({ ...form, maxGroupSize: Number(e.target.value) })} 
+                       className="h-9 w-16 text-center text-xs border-slate-250 focus-visible:ring-[#FF5400]" 
+                     />
+                   </div>
+                 </div>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

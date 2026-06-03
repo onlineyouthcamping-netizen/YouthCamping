@@ -231,50 +231,49 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6 bg-navy/60 backdrop-blur-md transition-all duration-500 animate-in fade-in">
            <div className="bg-white w-full max-w-2xl rounded-[32px] overflow-hidden shadow-[0_32px_80px_-20px_rgba(0,0,0,0.3)] relative animate-in zoom-in slide-in-from-bottom-8 duration-500">
               {/* Modal Header */}
-              <div className="p-8 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/30">
-                 <div className="space-y-1">
-                    <h2 className="text-2xl font-bold text-navy tracking-tight capitalize italic">{activeSection?.label}</h2>
-                    <p className="text-[10px] text-zinc-400 font-bold capitalize tracking-widest">Information & Guidelines</p>
-                 </div>
+              <div className="p-8 border-b border-zinc-100 flex items-center justify-between bg-white">
+                 <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                   {activeSection?.id === "carry" ? "Packing List" : activeSection?.label}
+                 </h2>
                  <button 
                    onClick={() => setActiveId(null)}
-                   className="w-12 h-12 flex items-center justify-center bg-white hover:bg-zinc-100 rounded-full transition-all shadow-sm border border-zinc-100 group"
+                   className="text-slate-500 hover:text-slate-900 transition-colors p-1"
                  >
-                   <X className="w-5 h-5 text-zinc-400 group-hover:text-navy transition-colors" />
+                   <X className="w-6 h-6" />
                  </button>
               </div>
               
               {/* Modal Content */}
-              <div className="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="p-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
                 {activeSection?.type === "categorical" && (
-                  <div className="space-y-12">
+                  <div className="space-y-8">
                     {activeSection.content.map((cat: any, idx: number) => {
                       if (!cat || !cat.items) return null;
                       return (
-                        <div key={idx} className="space-y-6">
-                          <h3 className="text-xs font-bold text-primary-orange capitalize tracking-[0.3em] pl-4 border-l-4 border-primary-orange">{cat.category}</h3>
-                          <div className="grid grid-cols-1 gap-4">
-                            {cat.items.map((item: any, i: number) => (
-                              <div key={i} className="flex items-center gap-4 p-4 bg-zinc-50/50 rounded-2xl border border-zinc-100 hover:bg-white hover:shadow-md transition-all group">
-                                <div className="w-2 h-2 rounded-full bg-zinc-200 group-hover:bg-primary-orange transition-colors shrink-0" />
-                                <div className="flex-1 flex items-center justify-between">
-                                  <p className="text-zinc-600 font-bold text-sm">
-                                    {item.text || item.label || item}
-                                  </p>
-                                  {item.linkText && (
-                                    <span className="text-[10px] font-bold text-navy capitalize tracking-widest ml-2 bg-white px-3 py-1 rounded-full border border-zinc-100 shadow-sm">
-                                      {item.linkText}
-                                    </span>
-                                  )}
-                                </div>
-                                {item.link && (
-                                  <a href={item.link} className="text-primary-orange hover:scale-110 transition-transform">
-                                    <ArrowRight className="w-4 h-4" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                        <div key={idx} className="space-y-3">
+                          <h3 className="text-sm font-bold text-slate-800">{cat.category}</h3>
+                          <ul className="list-disc pl-5 space-y-2 text-zinc-700 font-medium text-sm">
+                            {cat.items.map((item: any, i: number) => {
+                              const text = item.text || item.label || item;
+                              return (
+                                <li key={i} className="leading-relaxed">
+                                  <span className="inline-flex items-center gap-2">
+                                    {text}
+                                    {item.linkText && (
+                                      <span className="text-[9px] font-bold text-navy bg-slate-50 px-2 py-0.5 rounded border border-zinc-100 shadow-sm">
+                                        {item.linkText}
+                                      </span>
+                                    )}
+                                    {item.link && (
+                                      <a href={item.link} className="text-primary-orange hover:underline text-xs inline-flex items-center gap-1">
+                                        {item.linkText || "Download"} <ArrowRight className="w-3 h-3" />
+                                      </a>
+                                    )}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
                         </div>
                       );
                     })}
@@ -286,10 +285,10 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                     <div className="bg-zinc-50/50 rounded-[24px] border border-zinc-100 overflow-hidden">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-zinc-100/50">
-                            <th className="text-left px-6 py-4 text-[10px] font-bold capitalize tracking-widest text-zinc-400">Item Name</th>
-                            <th className="text-right px-6 py-4 text-[10px] font-bold capitalize tracking-widest text-zinc-400">Rent Price</th>
-                          </tr>
+                           <tr className="bg-zinc-100/50">
+                             <th className="text-left px-6 py-4 text-[10px] font-bold capitalize tracking-widest text-zinc-400">Item Name</th>
+                             <th className="text-right px-6 py-4 text-[10px] font-bold capitalize tracking-widest text-zinc-400">Rent Price</th>
+                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
                           {activeSection.content.map((row: any, i: number) => (
@@ -336,16 +335,6 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-8 bg-zinc-50 border-t border-zinc-100 flex justify-center">
-                 <button 
-                   onClick={() => setActiveId(null)}
-                   className="px-12 py-4 bg-navy text-white rounded-full font-bold capitalize text-[10px] tracking-[0.2em] hover:bg-primary-orange hover:shadow-xl hover:shadow-primary-orange/20 transition-all"
-                 >
-                   Got it, Thanks
-                 </button>
               </div>
            </div>
         </div>

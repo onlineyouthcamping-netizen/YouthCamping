@@ -47,11 +47,11 @@ export default function PhotoGalleryModal({
   const tripPhotos = [heroImage, ...images].filter(Boolean);
   
   const tabs = [
-    { id: "Trip", label: "Trip", photos: tripPhotos },
+    { id: "Trip", label: "Trip", photos: tripPhotos.map(p => p.split('|')[0]) },
     ...itinerary.map(day => ({
       id: `Day ${day.day}`,
       label: `Day ${day.day}`,
-      photos: day.photos || []
+      photos: (day.photos || []).map(p => p.split('|')[0])
     })).filter(tab => tab.photos.length > 0)
   ];
 

@@ -8,22 +8,42 @@ interface AboutTripProps {
   description: string;
 }
 
+// Helper functions to decode and clean HTML content
+function decodeHtml(html: string) {
+  if (!html) return "";
+  return html
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function stripHtml(html: string) {
+  if (!html) return "";
+  const decoded = decodeHtml(html);
+  return decoded.replace(/<[^>]*>/g, "");
+}
+
 export default function AboutTrip({ description }: AboutTripProps) {
   const [isOpen, setIsOpen] = useState(false);
   
-  // Truncate text for preview
-  const previewText = description.length > 280 
-    ? description.substring(0, 280) + "..." 
-    : description;
+  const decodedDescription = decodeHtml(description);
+  const plainText = stripHtml(description);
+  
+  // Truncate clean plain text for preview
+  const previewText = plainText.length > 280 
+    ? plainText.substring(0, 280) + "..." 
+    : plainText;
 
   return (
     <section className="mb-24 relative">
       <h2 className="text-3xl font-semibold text-navy mb-6">About this Trip</h2>
       <div className="relative">
-        <p className="text-zinc-600 font-normal leading-relaxed text-lg italic">
+        <p className="text-zinc-600 font-normal leading-relaxed text-lg">
           {previewText}
         </p>
-        {description.length > 280 && (
+        {plainText.length > 280 && (
           <button 
             onClick={() => setIsOpen(true)}
             className="text-zinc-400 font-medium hover:text-primary-orange transition-all mt-4 float-right"
@@ -45,9 +65,10 @@ export default function AboutTrip({ description }: AboutTripProps) {
             </button>
             
             <h2 className="text-3xl font-semibold text-navy mb-10 capitalize tracking-tight">The Full Story</h2>
-            <div className="prose prose-zinc lg:prose-xl max-w-none text-zinc-600 font-normal leading-relaxed italic">
-              {description}
-            </div>
+            <div 
+              className="prose prose-zinc lg:prose-xl max-w-none text-zinc-600 font-normal leading-relaxed [&>p]:mb-6 [&>p:last-child]:mb-0 [&>strong]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ul>li]:mb-2"
+              dangerouslySetInnerHTML={{ __html: decodedDescription }}
+            />
           </div>
         </div>
       )}

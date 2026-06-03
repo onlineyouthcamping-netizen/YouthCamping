@@ -8,6 +8,22 @@ import { ItineraryDay } from "@/types";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 
+// Helper function to render bold formatting for **text**
+function renderFormattedText(text: string) {
+  if (!text) return "";
+  const parts = text.split(/\*\*([^*]+)\*\*/g);
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return (
+        <strong key={index} className="font-bold text-zinc-900">
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
 interface ItineraryAccordionProps {
   itinerary: ItineraryDay[];
   startDate?: string | null;
@@ -86,7 +102,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
                         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
                       })()}
                     </span>
-                    <span className="text-[8px] md:text-[9px] font-medium text-navy/40 capitalize tracking-tighter">
+                    <span className="text-[8px] md:text-[9px] font-medium text-navy/40 capitalize tracking-tighter mt-0.5">
                       {(() => {
                         const d = new Date(startDate);
                         d.setDate(d.getDate() + day.originalDay - 1);
@@ -140,57 +156,63 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
             <div className="overflow-hidden">
               <div className="px-4 pb-6 pt-2">
                 <div className="p-6 bg-white/60 backdrop-blur-md rounded-[24px] border border-white shadow-lg">
-                  {/* Bullet Points / Description */}
-                  <div className="space-y-4 mb-8">
-                    {day.activities && day.activities.length > 0 ? (
-                      <ul className="space-y-2.5">
-                        {day.activities.map((act, i) => (
-                          <li key={i} className="flex items-start gap-3 text-sm font-medium text-zinc-600 leading-relaxed">
-                            <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2 shrink-0" />
-                            {act}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : day.description ? (
-                      <div className="space-y-3">
-                        {day.description.split('\n').filter(Boolean).map((line, i) => (
-                          <div key={i} className="flex items-start gap-3 text-sm font-medium text-zinc-600 leading-relaxed">
-                            <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2 shrink-0" />
-                            <span>{line}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-
-
-                  {/* Sightseeing Places Gallery */}
-                  {day.photos && day.photos.length > 0 && (
-                    <div className="space-y-6">
-                      <h4 className="text-sm font-bold text-navy capitalize tracking-widest flex items-center gap-2">
-                        Sightseeing Places
-                      </h4>
-                      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                        {day.photos.map((photo, i) => {
-                          const [url, caption] = photo.split('|');
-                          const displayName = caption || day.activities?.[i] || "Explore";
-                          return (
-                            <div key={i} className="w-24 md:w-32 shrink-0 group/photo">
-                              <div className="relative aspect-square rounded-[14px] md:rounded-[18px] overflow-hidden mb-2 border-2 border-white shadow-sm transition-transform group-hover/photo:scale-105">
-                                <OptimizedImage 
-                                  src={normalizeImageUrl(url) || ""} 
-                                  alt={displayName} className="object-cover" 
-                                />
-                              </div>
-                              <p className="text-[8px] md:text-[9px] font-bold text-navy capitalize tracking-widest px-1 line-clamp-1">
-                                {displayName}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  <div className="space-y-6">
+                    {/* Bullet Points / Description */}
+                    <div className="space-y-4">
+                      {day.activities && day.activities.length > 0 ? (
+                        <ul className="list-disc pl-5 space-y-2.5 text-zinc-700 font-medium text-xs md:text-sm leading-relaxed">
+                          {day.activities.map((act, i) => {
+                            const cleanLine = act.trim().replace(/^[-*•]\s*/, "");
+                            return (
+                              <li key={i} className="leading-relaxed pl-1">
+                                {renderFormattedText(cleanLine)}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : day.description ? (
+                        <ul className="list-disc pl-5 space-y-2.5 text-zinc-700 font-medium text-xs md:text-sm leading-relaxed">
+                          {day.description.split(/\r?\n/).filter(Boolean).map((line, i) => {
+                            const cleanLine = line.trim().replace(/^[-*•]\s*/, "");
+                            return (
+                              <li key={i} className="leading-relaxed pl-1">
+                                {renderFormattedText(cleanLine)}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
                     </div>
-                  )}
+
+
+                    {/* Sightseeing Places Gallery */}
+                    {day.photos && day.photos.length > 0 && (
+                      <div className="space-y-6 pt-4 border-t border-zinc-100">
+                        <h4 className="text-sm font-bold text-navy capitalize tracking-widest flex items-center gap-2">
+                          Sightseeing Places
+                        </h4>
+                        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                          {day.photos.map((photo, i) => {
+                            const [url, caption] = photo.split('|');
+                            const displayName = caption || day.activities?.[i] || "Explore";
+                            return (
+                              <div key={i} className="w-24 md:w-32 shrink-0 group/photo">
+                                <div className="relative aspect-square rounded-[14px] md:rounded-[18px] overflow-hidden mb-2 border-2 border-white shadow-sm transition-transform group-hover/photo:scale-105">
+                                  <OptimizedImage 
+                                    src={normalizeImageUrl(url) || ""} 
+                                    alt={displayName} className="object-cover" 
+                                  />
+                                </div>
+                                <p className="text-[8px] md:text-[9px] font-bold text-navy capitalize tracking-widest px-1 line-clamp-1">
+                                  {displayName}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

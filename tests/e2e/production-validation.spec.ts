@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const FRONTEND_URL = 'http://127.0.0.1:3000';
 const ADMIN_URL = 'http://127.0.0.1:8080';
-const API_URL = 'http://127.0.0.1:8888/api';
+const API_URL = 'http://127.0.0.1:3001/api';
 
 test.describe('Production Product Validation', () => {
 
@@ -39,7 +39,7 @@ test.describe('Production Product Validation', () => {
     
     // Navigate to detail
     await tourCard.click();
-    await expect(page).toHaveURL(/\/tours\//);
+    await expect(page).toHaveURL(/\/(tours|trips)\//);
     
     // Verify detailed data matches
     await expect(page.locator('h1').first()).toContainText(tripTitle?.trim() || '', { ignoreCase: true });
