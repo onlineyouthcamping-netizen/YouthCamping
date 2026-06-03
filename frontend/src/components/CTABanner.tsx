@@ -31,8 +31,8 @@ export default function CTABanner({
 
   return (
     <div className="relative bg-transparent z-10">
-      {/* Grey background section representing the upper overlap region */}
-      <div className="absolute inset-x-0 top-0 bg-[#e5e5e5] h-[200px] md:h-[250px] lg:h-[300px]" />
+      {/* Grey background section representing the lower overlap region */}
+      <div className="absolute inset-x-0 bottom-0 bg-[#e5e5e5] h-[220px] md:h-[280px] lg:h-[330px]" />
       
       <div className="max-w-[1440px] mx-auto relative z-10 px-4 sm:px-6 md:px-12 lg:px-20 -mt-[120px] md:-mt-[160px] lg:-mt-[200px] pb-12 md:pb-16 lg:pb-20">
         <div className="relative h-[400px] md:h-[500px] w-full rounded-[32px] overflow-hidden shadow-2xl group border border-zinc-50">
