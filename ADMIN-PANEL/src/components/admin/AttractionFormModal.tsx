@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "./ImageUpload";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, X } from "lucide-react";
 
@@ -91,7 +90,7 @@ export default function AttractionFormModal({ open, onOpenChange, editing, onSav
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             <div className="p-10 pt-6">
               <TabsContent value="overview" className="mt-0 space-y-8">
                 <ImageUpload 
@@ -182,7 +181,7 @@ export default function AttractionFormModal({ open, onOpenChange, editing, onSav
                  </div>
               </TabsContent>
             </div>
-          </ScrollArea>
+          </div>
         </Tabs>
 
         <div className="p-10 pt-6 flex justify-end gap-3 bg-muted/10 border-t">
