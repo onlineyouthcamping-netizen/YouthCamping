@@ -109,6 +109,7 @@ interface PopupDetailsProps {
     carry: any[];
     etiquette: { title: string; desc: string }[];
     customPolicies?: { label: string; type: string; content: any[] }[];
+    showRentedGears?: boolean;
   };
 }
 
@@ -155,7 +156,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
     });
 
     // Add Rented Gears if available
-    if (details.gears?.length > 0) {
+    if (details.gears?.length > 0 && details.showRentedGears !== false) {
       activeSections.push({
         id: "gears",
         label: "Rented Gears",

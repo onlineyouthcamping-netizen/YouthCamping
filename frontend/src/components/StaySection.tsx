@@ -47,10 +47,10 @@ export default function StaySection({ accommodations }: StaySectionProps) {
   if (!accommodations || accommodations.length === 0) return null;
 
   return (
-    <section className="mb-24">
+    <section className="relative">
       <div className="bg-white border border-zinc-100 rounded-[40px] p-10 md:p-14 shadow-sm relative">
         <div className="flex justify-between items-center mb-10">
-          <h2 className="text-2xl font-bold text-navy capitalize italic">Stay Options</h2>
+          <h2 className="text-2xl font-bold text-navy capitalize">Stay Options</h2>
         </div>
         
         <div className="flex flex-nowrap md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 overflow-x-auto pb-6 md:pb-0 scroll-mt-32 no-scrollbar">

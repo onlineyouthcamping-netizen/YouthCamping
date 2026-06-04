@@ -37,20 +37,22 @@ export default function AboutTrip({ description }: AboutTripProps) {
     : plainText;
 
   return (
-    <section className="mb-24 relative">
-      <h2 className="text-3xl font-semibold text-navy mb-6">About this Trip</h2>
-      <div className="relative">
-        <p className="text-zinc-600 font-normal leading-relaxed text-lg">
-          {previewText}
-        </p>
-        {plainText.length > 280 && (
-          <button 
-            onClick={() => setIsOpen(true)}
-            className="text-zinc-400 font-medium hover:text-primary-orange transition-all mt-4 float-right"
-          >
-            Read More
-          </button>
-        )}
+    <section className="relative">
+      <div className="bg-white border border-zinc-100 rounded-[40px] p-10 md:p-14 shadow-sm relative">
+        <h2 className="text-2xl font-bold text-navy mb-6">About this Trip</h2>
+        <div className="relative">
+          <p className="text-zinc-600 font-normal leading-relaxed text-base md:text-lg">
+            {previewText}
+          </p>
+          {plainText.length > 280 && (
+            <button 
+              onClick={() => setIsOpen(true)}
+              className="text-primary-orange font-bold hover:text-navy transition-all mt-4 float-right cursor-pointer"
+            >
+              Read More
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Modal Overlay */}

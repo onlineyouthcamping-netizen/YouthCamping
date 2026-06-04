@@ -27,7 +27,7 @@ interface ReviewsSectionProps {
 
 export default function ReviewsSection({ 
   reviews = [],
-  title = "What Our Travelers Say",
+  title = "Reviews",
   subtitle,
   titleSize,
   titleWeight,
@@ -102,15 +102,15 @@ export default function ReviewsSection({
 }
 
 function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number, onClick: () => void, reduceMotion: boolean }) {
-  const [activeImageIdx, setActiveImageIdx] = useState(0);
-  
-  // Use photos array or fallback to user image or default
-  const images = rev.photos && rev.photos.length > 0 
-    ? rev.photos 
-    : [rev.userImage || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"];
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldShowReadMore = rev.comment && rev.comment.length > 120;
+  const displayedComment = isExpanded ? rev.comment : (rev.comment || "").slice(0, 120) + (shouldShowReadMore ? " " : "");
 
-  const currentImage = images[activeImageIdx];
-  const profileImage = rev.userImage ? normalizeImageUrl(rev.userImage) : null;
+  const coverPhoto = rev.photos && rev.photos.length > 0 
+    ? rev.photos[0] 
+    : "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070";
+
+  const defaultAvatar = rev.userImage ? normalizeImageUrl(rev.userImage) : null;
   const initials = rev.userName ? rev.userName.charAt(0).toUpperCase() : "U";
 
   const getAvatarColor = (name: string) => {
@@ -121,105 +121,67 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
   const avatarBg = getAvatarColor(rev.userName);
 
   return (
-    <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
-      viewport={{ once: true }}
+    <div 
       onClick={onClick}
-      className="flex-none w-[320px] md:w-[420px] snap-start bg-white border border-zinc-50 rounded-[32px] shadow-xl hover:shadow-2xl transition-all duration-700 flex flex-col overflow-hidden group cursor-pointer"
+      className="flex-none w-[260px] md:w-[280px] min-h-[400px] snap-start bg-white border border-zinc-150 rounded-[16px] shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group cursor-pointer"
     >
-      {/* Visual Header - Gallery */}
-      <div className="relative w-full h-[280px] bg-zinc-100 overflow-hidden">
+      {/* Top Image */}
+      <div className="relative w-full h-[160px] shrink-0 bg-zinc-100 overflow-hidden">
         <OptimizedImage 
-          src={normalizeImageUrl(currentImage)} 
-          alt="Travel location" 
-          cloudinaryWidth={400}
-          width={400}
-          height={240}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          src={normalizeImageUrl(coverPhoto) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470"} 
+          alt="Review cover" 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        
-        {/* Gallery Dots */}
-        {images.length > 1 && (
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10">
-            {images.map((_, idx) => (
-              <button 
-                key={idx} 
-                onClick={() => setActiveImageIdx(idx)}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${idx === activeImageIdx ? 'bg-white w-4' : 'bg-white/40 hover:bg-white/60'}`}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Content Body */}
-      <div className="p-8 flex flex-col flex-1 space-y-6">
-        {/* Rating & Comment */}
-        <div className="space-y-4">
-          <div className="flex gap-0.5">
-            {[...Array(5)].map((_, idx) => (
-              <Star 
-                key={idx} 
-                className={`w-[14px] h-[14px] ${idx < (rev.rating || 5) ? "fill-primary text-primary" : "fill-zinc-100 text-zinc-100"}`} 
-              />
-            ))}
-          </div>
-          
-          <div className="relative">
-            <Quote className="w-8 h-8 text-primary/10 absolute -top-4 -left-2" />
-            <p className="text-navy text-sm md:text-base font-medium leading-relaxed line-clamp-4 relative z-10">
-              "{rev.comment}"
-            </p>
-          </div>
+      <div className="p-4 flex flex-col flex-1">
+        {/* Rating */}
+        <div className="flex gap-0.5 mb-2">
+          {[...Array(5)].map((_, idx) => (
+            <Star 
+              key={idx} 
+              className={`w-[14px] h-[14px] ${idx < (rev.rating || 5) ? "fill-[#fbbc05] text-[#fbbc05]" : "fill-zinc-200 text-zinc-200"}`} 
+            />
+          ))}
+        </div>
+
+        {/* Comment */}
+        <div className="mb-4 flex-1">
+          <p className="text-[#333333] text-[13px] leading-[1.5]">
+            {displayedComment}
+            {shouldShowReadMore && !isExpanded && (
+              <span className="text-[#999999] text-[13px] hover:text-[#222222] ml-1">
+                Read more...
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Profile Section */}
-        <div className="flex items-center gap-4 pt-6 border-t border-zinc-50 mt-auto">
+        <div className="flex items-center gap-2 mt-auto pt-4 border-t border-zinc-50">
           <div 
-            className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-lg shadow-inner border-2 border-white"
+            className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-medium text-[14px]"
             style={{ backgroundColor: avatarBg }}
           >
-            {profileImage ? (
+            {defaultAvatar ? (
               <OptimizedImage 
-                src={profileImage} 
+                src={defaultAvatar} 
                 alt={rev.userName} 
-                width={48}
-                height={48}
                 className="w-full h-full object-cover"
               />
             ) : (
               initials
             )}
           </div>
-          <div className="flex flex-col min-w-0">
-            <p className="text-sm md:text-base font-bold text-navy leading-tight truncate">{rev.userName}</p>
-            {rev.instagram && (
-              <a 
-                href={rev.instagram.startsWith('http') ? rev.instagram : `https://instagram.com/${rev.instagram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 group/insta mt-0.5"
-              >
-                <span className="text-[10px] text-primary font-bold capitalize tracking-widest hover:underline truncate">
-                  {rev.instagram.includes('instagram.com/') 
-                    ? `@${rev.instagram.split('instagram.com/').pop()?.split('/')[0].split('?')[0]}` 
-                    : (rev.instagram.startsWith('@') ? rev.instagram : `@${rev.instagram}`)
-                  }
-                </span>
-                <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] flex items-center justify-center text-white shadow-sm hover:scale-110 transition-transform">
-                  <Camera className="w-3 h-3" />
-                </div>
-              </a>
-            )}
-            <span className="text-[10px] text-zinc-400 font-medium capitalize tracking-widest mt-1 truncate">
-              {rev.tripName && rev.city ? `${rev.tripName} • ${rev.city}` : (rev.tripName || rev.city || "Adventure Trip")}
+          <div className="flex flex-col justify-center min-w-0">
+            <h4 className="text-[13px] font-bold text-[#222222] leading-tight truncate">{rev.userName}</h4>
+            <span className="text-[11px] text-[#888888] mt-0.5 truncate">
+              {rev.tripName || rev.tripType || "Adventure Trip"}
             </span>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

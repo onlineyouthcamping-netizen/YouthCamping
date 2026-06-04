@@ -129,6 +129,7 @@ export interface Trip {
     terms: string[];
     carry: { label: string; val: string }[];
     etiquette: { title: string; desc: string }[];
+    showRentedGears?: boolean;
   };
   status: "draft" | "published";
   maxGroupSize?: number;

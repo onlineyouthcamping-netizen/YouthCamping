@@ -70,7 +70,34 @@ exports.getTrip = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Trip not found' });
     }
 
-    res.json({ success: true, data: trip });
+    // Build conditional query to fetch reviews dynamically linked to this trip
+    const reviewWhereOr = [
+      { tripId: trip.id }
+    ];
+    if (trip.title) {
+      reviewWhereOr.push({ tripName: trip.title });
+    }
+    if (trip.shortName) {
+      reviewWhereOr.push({ tripName: trip.shortName });
+    }
+
+    const reviews = await prisma.review.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+        OR: reviewWhereOr
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    const tripWithReviews = {
+      ...trip,
+      reviews: reviews || []
+    };
+
+    res.json({ success: true, data: tripWithReviews });
   } catch (error) {
     next(error);
   }

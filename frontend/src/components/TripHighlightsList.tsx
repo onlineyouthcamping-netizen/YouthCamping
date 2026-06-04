@@ -1,8 +1,10 @@
 "use client";
 
+import React, { useRef } from "react";
 import Link from "next/link";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface HighlightItem {
   name: string;
@@ -19,18 +21,53 @@ interface TripHighlightsListProps {
 }
 
 export default function TripHighlightsList({ title, items, defaultItems = [] }: TripHighlightsListProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const activeList = (items && items.length > 0) ? items : defaultItems;
 
   if (activeList.length === 0) return null;
 
+  const scroll = (direction: "left" | "right") => {
+    if (containerRef.current) {
+      const container = containerRef.current;
+      // Scroll by roughly one card width plus gap (e.g. 300px)
+      const scrollAmount = 320;
+      if (direction === "left") {
+        container.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+      } else {
+        container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      }
+    }
+  };
+
   return (
-    <section className="mb-24">
+    <section className="relative">
       <div className="bg-white border border-zinc-100 rounded-[40px] p-10 md:p-14 shadow-sm relative overflow-hidden">
         <div className="flex justify-between items-center mb-10">
           <h2 className="text-2xl font-bold text-navy">{title}</h2>
+          
+          {/* Slide Navigation Buttons */}
+          <div className="flex gap-2 shrink-0">
+            <button 
+              onClick={() => scroll("left")}
+              className="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:bg-zinc-50 hover:text-navy hover:border-zinc-400 transition-all cursor-pointer focus:outline-none"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => scroll("right")}
+              className="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:bg-zinc-50 hover:text-navy hover:border-zinc-400 transition-all cursor-pointer focus:outline-none"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         
-        <div className="flex flex-nowrap overflow-x-auto pb-4 gap-6 md:gap-8 no-scrollbar scroll-smooth">
+        <div 
+          ref={containerRef}
+          className="flex flex-nowrap overflow-x-auto pb-4 gap-6 md:gap-8 no-scrollbar scroll-smooth"
+        >
           {activeList.map((item, i) => {
             const isString = typeof item === "string";
             const name = isString ? item : ((item as any).name || (item as any).title || "Highlight");

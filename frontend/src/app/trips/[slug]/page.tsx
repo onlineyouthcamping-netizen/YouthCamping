@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 export const revalidate = 30;
 
 import {
-  Calendar, Map as MapIcon, TrendingUp, Users, ChevronLeft
+  Clock3, Mountain, Backpack, MountainSnow, ChevronLeft
 } from "lucide-react";
 import TravelTimeline from "@/components/TravelTimeline";
 import TripGallerySection from "@/components/TripGallerySection";
@@ -36,7 +36,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-32 pb-24">
         <div className="mb-4 md:mb-12">
           <Link href="/trips" className="inline-flex items-center gap-2 text-zinc-400 hover:text-primary-orange mb-3 md:mb-6 font-bold text-xs capitalize tracking-widest transition-colors">
-            <ChevronLeft className="w-4 h-4" /> Back to Expeditions
+            <ChevronLeft className="w-4 h-4" /> Back to Trips
           </Link>
           <h1 className="text-2xl md:text-7xl font-bold text-navy mb-2 md:mb-4 tracking-tighter leading-[0.9] italic">
             <span className="text-primary-orange not-italic font-semibold">{trip.title || "Our Expedition"}</span>
@@ -50,10 +50,10 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
         {/* Quick Info Bar - Open Grid Style */}
         <div className="flex flex-row overflow-x-auto no-scrollbar gap-x-12 md:gap-x-16 gap-y-8 mb-20 py-8 border-y border-zinc-100 w-full">
           {[
-            { label: "Duration", val: trip.duration || "9 Days", icon: Calendar },
-            { label: "Difficulty", val: trip.difficulty || "Moderate", icon: MapIcon },
-            { label: "Age Group", val: trip.ageLimit || "15-35 years", icon: Users },
-            { label: "Max Altitude", val: trip.maxAltitude || "15,000 ft", icon: TrendingUp },
+            { label: "Duration", val: trip.duration || "9 Days", icon: Clock3 },
+            { label: "Difficulty", val: trip.difficulty || "Moderate", icon: Mountain },
+            { label: "Age Group", val: trip.ageLimit || "15-35 years", icon: Backpack },
+            { label: "Max Altitude", val: trip.maxAltitude || "15,000 ft", icon: MountainSnow },
           ].map((info, i) => (
             <div key={i} className="flex items-center gap-4 shrink-0">
               <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-primary-orange">

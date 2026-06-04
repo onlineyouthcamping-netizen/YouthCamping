@@ -26,7 +26,7 @@ export default function TripBookingSection({ trip, onPriceChange, onDateSelect }
     : 0;
 
   return (
-    <div className="space-y-8 md:space-y-24">
+    <div className="space-y-12 md:space-y-16">
       <BookingOptions 
         trip={trip} 
         onDateSelect={handleDateSelect} 
@@ -34,7 +34,7 @@ export default function TripBookingSection({ trip, onPriceChange, onDateSelect }
         onPriceChange={onPriceChange}
       />
       
-      <section id="itinerary" className="mb-24 scroll-mt-32">
+      <section id="itinerary" className="scroll-mt-32">
         <ItineraryAccordion 
           itinerary={trip.itinerary} 
           startDate={selectedDate}

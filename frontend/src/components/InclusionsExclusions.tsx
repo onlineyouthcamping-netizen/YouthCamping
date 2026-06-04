@@ -9,7 +9,7 @@ interface InclusionsExclusionsProps {
 
 export default function InclusionsExclusions({ inclusions, exclusions }: InclusionsExclusionsProps) {
   return (
-    <div className="space-y-8 mb-24">
+    <div className="space-y-8">
       {/* Inclusions */}
       <div className="bg-white border border-zinc-100 rounded-[40px] p-10 md:p-14 shadow-sm">
         <h2 className="text-2xl font-bold text-navy mb-10">Inclusions</h2>

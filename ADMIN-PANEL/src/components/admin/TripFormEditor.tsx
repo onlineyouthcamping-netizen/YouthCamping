@@ -2009,7 +2009,22 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
               {/* Gears (Categorical) */}
               <div className="space-y-4 pt-4 border-t">
                  <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Rented Gears (Categorical)</Label>
+                    <div className="flex items-center gap-4">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Rented Gears (Categorical)</Label>
+                       <div className="flex items-center gap-2">
+                          <Switch 
+                             checked={form.popupDetails?.showRentedGears !== false}
+                             onCheckedChange={(checked) => setForm({
+                               ...form,
+                               popupDetails: {
+                                 ...(form.popupDetails || {}),
+                                 showRentedGears: checked
+                               }
+                             })}
+                          />
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Visible on Trip Details</span>
+                       </div>
+                    </div>
                     <Button variant="outline" size="sm" onClick={() => setForm({ ...form, popupDetails: { ...form.popupDetails, gears: [...(form.popupDetails?.gears || []), { category: "", items: [] }] } })} className="h-7 text-[9px] font-black uppercase">Add Gear Category</Button>
                  </div>
                  <div className="space-y-6">

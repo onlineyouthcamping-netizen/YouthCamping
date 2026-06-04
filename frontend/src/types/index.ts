@@ -128,6 +128,7 @@ export interface Trip {
     terms: string[];
     carry: { label: string; val: string }[];
     etiquette: { title: string; desc: string }[];
+    showRentedGears?: boolean;
   };
   videos?: { id: string; title: string }[];
   reels?: { url: string; thumbnail: string; caption: string }[];

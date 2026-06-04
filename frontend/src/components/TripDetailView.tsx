@@ -25,7 +25,7 @@ export default function TripDetailView({ trip }: TripDetailViewProps) {
   }, [trip.id]);
 
   return (
-    <div className="lg:col-span-8 space-y-24">
+    <div className="lg:col-span-8 space-y-12 md:space-y-16">
       <div id="about">
         <AboutTrip description={trip.description || ""} />
       </div>
