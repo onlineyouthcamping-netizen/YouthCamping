@@ -98,11 +98,7 @@ export default function TripHighlightsList({ title, items, defaultItems = [] }: 
               return (
                 <Link 
                   key={i} 
-                  href={
-                    title.toLowerCase().includes('attractions') 
-                    ? `/attractions/${slug}` 
-                    : `/blogs/${slug}`
-                  } 
+                  href={`/attractions/${slug}`} 
                   className={cardClass}
                 >
                   {cardContent}
