@@ -125,35 +125,35 @@ const TRIPS_TO_SEED = [
       {
         day: 1,
         title: "Scenic Drive to Munnar",
-        description: "Your unforgettable Kerala journey begins with a warm pick-up from Ernakulam Railway Station (9:00 AM) or Cochin Airport (10:00 AM). Enjoy a breathtaking drive to Munnar through lush green hills and misty landscapes. On the way, witness the beauty of the stunning Valara & Cheeyappara Waterfalls and explore aromatic Spice Plantations, where Kerala’s famous spices are grown. Arrive in Munnar and check in to your comfortable hotel. Relax, enjoy a delicious dinner, and unwind in the peaceful mountain atmosphere.",
+        description: "• Warm pick-up from Ernakulam Railway Station (9:00 AM) or Cochin Airport (10:00 AM)\n• Scenic mountain drive to Munnar through lush green hills and misty valleys\n• Enroute sightseeing of the beautiful Valara & Cheeyappara Waterfalls\n• Explore aromatic spice plantations in Munnar\n• Check in to Munnar hotel, relax, and enjoy dinner",
         stay: "Hotel in Munnar",
         meals: "Dinner Included"
       },
       {
         day: 2,
         title: "Explore the Beauty of Munnar",
-        description: "Wake up to a refreshing morning and enjoy a delicious breakfast at the hotel. Today, explore the scenic highlights of Munnar, including the peaceful Mattupetty Dam, the magical Echo Point, and the picturesque Kundala Dam surrounded by lush mountains. Visit the famous Eravikulam National Park (subject to government guidelines), home to breathtaking views and rare wildlife. Also explore the vibrant Rose Garden and enjoy some free time for local shopping and café hopping. Return to the hotel, relax, and soak in the serene mountain vibes.",
+        description: "• Enjoy a healthy morning breakfast at the hotel\n• Sightseeing of Mattupetty Dam, Echo Point, and Kundala Dam\n• Visit Eravikulam National Park to witness rare wildlife (subject to guidelines)\n• Visit Munnar Rose Garden and enjoy local market shopping & café hopping\n• Return to the hotel for a cozy dinner and overnight stay",
         stay: "Hotel in Munnar",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 3,
         title: "Thekkady – Wildlife & Cultural Experience",
-        description: "Start your day with breakfast and check out by 8:00 AM, then enjoy a scenic drive to Thekkady, home to Kerala’s famous wildlife sanctuary. In the afternoon, you can experience the peaceful Periyar Lake cruise (optional, direct payment), where you may spot elephants, deer, wild boar, and other wildlife in their natural habitat. You can also enjoy an elephant interaction experience at Periyar. In the evening, witness Kerala’s rich traditions with the mesmerizing Kalaripayattu martial arts and Kathakali cultural show. Check in to your hotel, enjoy dinner, and relax.",
+        description: "• Breakfast at hotel and check-out by 8:00 AM\n• Scenic drive from Munnar to Thekkady\n• Periyar Lake cruise to spot wild elephants, deer, and boar (optional/self-paid)\n• Elephant interaction experience in Periyar (optional/self-paid)\n• Experience traditional Kalaripayattu martial arts and Kathakali cultural show\n• Check in to hotel, enjoy dinner, and rest",
         stay: "Hotel stay in Thekkady",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 4,
         title: "Thekkady to Alleppey – Backwater Paradise",
-        description: "After breakfast, check out and proceed to Alleppey, known as the 'Venice of the East.' Experience the beauty of Kerala’s famous backwaters with an optional Shikara or Houseboat ride (direct payment). Cruise through peaceful canals surrounded by coconut trees, villages, and scenic landscapes — truly a once-in-a-lifetime experience. Check in and relax for the evening. Enjoy a delicious dinner and unwind.",
+        description: "• Breakfast at hotel, check out, and head to Alleppey\n• Journey to the backwater paradise, the 'Venice of the East'\n• Optional Shikara or Houseboat cruise through tranquil canals (direct payment)\n• Admire beautiful backwater villages, paddy fields, and coconut groves\n• Check in to hotel/houseboat, enjoy dinner, and relax",
         stay: "Hotel/Houseboat Alleppey",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 5,
         title: "Alleppey to Cochin",
-        description: "Wake up and enjoy breakfast at the houseboat/hotel. Check-out from hotel/houseboat and drive back to Cochin. Drop off at Ernakulam Railway Station or Cochin Airport. Your Kerala trip concludes here with sweet memories.",
+        description: "• Enjoy breakfast by the backwaters and check out\n• Drive back to Cochin/Kochi\n• Drop off at Ernakulam Railway Station or Cochin Airport\n• Journey concludes with unforgettable memories",
         stay: "",
         meals: "Breakfast Included"
       }
@@ -284,63 +284,63 @@ const TRIPS_TO_SEED = [
       {
         day: 1,
         title: "Train Journey to Jalandhar",
-        description: "Meet the YC representative at the railway station in the morning. His/Her contact details will be shared on WhatsApp one day before departure. Board the train and start your journey with group introductions and ice-breaking games.",
+        description: "• Meet the YouthCamping representative at the railway station in the morning\n• Receive trip captain contact details on WhatsApp before departure\n• Board the train to Jalandhar/Amritsar\n• Participate in group games, ice-breaking sessions, and travel activities",
         stay: "Overnight in Train",
         meals: ""
       },
       {
         day: 2,
         title: "Visit Wagha Border & Golden Temple",
-        description: "Arrive at Jalandhar/Amritsar. Drive to Wagah Border to witness the Indo-Pak historic Ceremonial Parade (If it's closed, we'll visit Jallianwala Bagh). In the evening, explore the divine Golden Temple and shop at the local Amritsar market. Board the vehicle for an overnight drive to Kasol.",
+        description: "• Arrive at Jalandhar/Amritsar\n• Drive to Wagah Border for the historic Indo-Pak Ceremonial Parade (if closed, visit Jallianwala Bagh)\n• Explore the spiritual Golden Temple and shop for souvenirs at Amritsar market\n• Board the vehicle for a night drive to Kasol",
         stay: "Overnight travel",
         meals: ""
       },
       {
         day: 3,
         title: "Kasol & Parvati valley Exploration",
-        description: "Reach the Kasol Campsite by 11:00 AM, check in, have breakfast, and relax. In the afternoon, start a scenic 2-hour hike to Chalal Village along the Parvati River. In the evening, visit Manikaran Gurudwara and the local Kasol market. Unwind at the campsite with a bonfire, music, and group games.",
+        description: "• Reach the Kasol Campsite by 11:00 AM and check in\n• Relish a hot breakfast and enjoy free time to rest\n• Guided 2-hour hike to Chalal Village along the gushing Parvati River\n• Visit Manikaran Gurudwara and the local Kasol market in the evening\n• Return to camp for a cozy bonfire, music, and group games",
         stay: "Camping/cottage in Kasol",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 4,
         title: "Bijli Mahadev Trek",
-        description: "After an early breakfast, check out and drive to the starting point of the Bijli Mahadev Trek. Trek up with a daypack to witness a stunning 360-degree view of the snow-clad Himalayas. After the trek, drive to Kullu. Check in at the Swiss camps, enjoy dinner and a bonfire.",
+        description: "• Early morning breakfast and check-out\n• Drive to the starting point of the Bijli Mahadev Trek\n• Trek with a daypack to witness a 360° view of the snow-clad Himalayas\n• Complete the trek and drive to Kullu\n• Check in at Swiss camps, enjoy dinner, and relax",
         stay: "Swiss Camp in Kullu",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 5,
         title: "Kullu Adventure Activities & Transfer to Manali",
-        description: "Fuel up with breakfast. Engage in camp adventure activities like Burma Bridge and Rock Climbing. Visit the paragliding point (optional, self-paid) and enjoy a thrilling 8KM white water rafting session (included). Visit the Kullu Shawl Factory, then drive to Manali. Check in to the hotel/cottage.",
+        description: "• Breakfast at camps followed by outdoor adventure rope activities\n• Try camp activities: Burma Bridge, Balanced Bridge, Rock Climbing\n• Transfer to the highest paragliding spot in Manali (optional/self-paid)\n• Enjoy a complimentary 8KM white water river rafting session in Beas River\n• Visit the Kullu Shawl Factory, drive to Manali, and check in",
         stay: "Hotel or Cottages in Manali",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 6,
         title: "Solang Valley - Atal Tunnel - Sissu",
-        description: "Depart early for Solang Valley. Enjoy snow activities and explore Solang. Cross the legendary Atal Tunnel to reach Sissu Lake in Lahaul Valley. Option to rent a bike for a scenic ride. Drive back to Manali for dinner and a warm cottage stay. Note: Sissu/Atal tunnel routes can be closed in heavy snow.",
+        description: "• Depart early morning to the scenic Solang Valley for snow activities\n• Cross the Atal Tunnel, Asia's longest highway tunnel\n• Explore Sissu Village and the beautiful Sissu Lake in Lahaul Valley\n• Option to rent a bike for a ride through the tunnel & Sissu\n• Drive back to Manali for dinner and a cottage stay",
         stay: "Hotel or Cottages in Manali",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 7,
         title: "Manali Sightseeing & Jogini Waterfall Trek",
-        description: "Have breakfast, check out, and head to Vashisht village. Begin the trek to the gorgeous 160-foot Jogini Waterfall. Later, explore Mall Road, Hadimba Temple, and Old Manali. Enjoy dinner, then board the vehicle for a night drive back to Una/Jalandhar.",
+        description: "• Have breakfast, check out, and head to Vashisht village\n• Trek to the stunning 160-foot Jogini Waterfall\n• Explore Hadimba Devi Temple, Old Manali cafés, and Mall Road shopping\n• Enjoy dinner, then board the vehicle for a night drive back to Jalandhar/Una",
         stay: "Overnight travel",
         meals: "Breakfast & Lunch Included"
       },
       {
         day: 8,
         title: "Return Train Journey to Your City",
-        description: "Reach Jalandhar/Una. Board the return train back to Ahmedabad/your city. Relax, play group games, and share photos with new friends during the journey.",
+        description: "• Reach Jalandhar/Una railway station\n• Board the return train back to Ahmedabad/your city\n• Enjoy the journey with group activities, cards, and sharing memories",
         stay: "Overnight in Train",
         meals: ""
       },
       {
         day: 9,
         title: "Arrive at Your City",
-        description: "Arrive back in your home city. The memorable and adventurous trip concludes here with a bag full of stories and lifelong friendships.",
+        description: "• Reach your home city safely in the morning\n• Trip concludes with new friends and a bag full of memories",
         stay: "",
         meals: ""
       }
@@ -471,49 +471,49 @@ const TRIPS_TO_SEED = [
       {
         day: 1,
         title: "Leh Arrival - Acclimatization Day",
-        description: "Welcome to The Land Of High Passes! The group will assemble at the Leh Airport. From here, a designated vehicle will drop you at your hotel. Check in and relax to adapt to the high altitude. Rest and stay hydrated, avoiding heavy physical activity. In the evening, attend a trip briefing by the trip captain. Note: The pickup timings are 9:00 AM to 12:00 PM.",
+        description: "• Welcome to the land of high passes! Meet the group at Leh Airport\n• Transfer to hotel via private vehicle (pickup from 9 AM to 12 PM)\n• Complete rest and acclimatization to high altitude\n• Stay hydrated and avoid physical exertion\n• Evening briefing about biking rules by the trip captain",
         stay: "Hotel stay in Leh",
         meals: "Dinner Included"
       },
       {
         day: 2,
         title: "Leh Local Sightseeing (50-60 KMS)",
-        description: "Post breakfast, participate in the bike briefing and trial session. Ride towards Sangam, the scenic confluence of the Indus and Zanskar rivers. Visit Gurudwara Pathar Sahib, explore the optical illusion at Magnetic Hill, visit the historic Hall of Fame, and catch the sunset at Shanti Stupa. Spend the evening shopping or cafe hopping at Leh Market.",
+        description: "• Post breakfast, bike allocation and briefing session\n• Ride to Sangam, the confluence of Indus and Zanskar rivers\n• Visit the holy Gurudwara Pathar Sahib\n• Explore the gravity-defying Magnetic Hill\n• Visit the historic Hall of Fame and the peaceful Shanti Stupa\n• Spend the evening shopping or café hopping at Leh Market",
         stay: "Hotel stay in Leh",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 3,
         title: "Leh to Nubra Valley (130 KMS)",
-        description: "Start early and ride via the legendary Khardung La Pass (18,380 ft) — one of the highest motorable passes in the world. Reach Diskit Monastery and see the giant 106-foot Maitreya Buddha statue. Ride down to Hunder Sand Dunes, famous for its cold desert and double-humped Bactrian camels (optional ride). Check in to Nubra Valley camps.",
+        description: "• Ride via the world-famous Khardung La Pass (18,380 ft)\n• Visit Diskit Monastery and see the giant 106-foot Maitreya Buddha\n• Explore Hunder Sand Dunes and enjoy a double-humped camel ride (optional)\n• Check in to Nubra Valley camps\n• Hot bucket of water provided for freshening up in morning",
         stay: "Camp stay in Nubra valley",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 4,
         title: "Nubra to Turtuk (170 KMS)",
-        description: "Embark on an epic ride to Turtuk, the last village on the Indo-Pak border in the Baltistan region. Ride along the Shyok River and walk through the scenic apricot orchards of this Balti village. Visit the Balti Museum and learn about its history. Ride back to Nubra Valley by evening.",
+        description: "• Epic ride to Turtuk, the last village on the Indo-Pak border\n• Walk through the beautiful Balti village and apricot orchards\n• Visit the Shyok River and Balti Museum\n• Return to Nubra Valley camps by evening",
         stay: "Camp stay in Nubra valley",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 5,
         title: "Nubra Valley to Pangong (180 KMS)",
-        description: "Check out and ride towards Pangong Tso via the Shyok route, enjoying scenic mountain streams and raw landscapes. Reach Pangong Lake and marvel at the changing colors of the high-altitude lake. Capture the sunset and enjoy a quiet stargazing night. Note: Camps do not have electricity at night.",
+        description: "• Ride to Pangong Lake via the Shyok route, enjoying scenic river vistas\n• Arrive at Pangong Lake (14,270 ft) and explore the lakeside\n• Witness the beautiful sunset and changing colors of the lake\n• Cozy camping stay near Pangong Lake under a clear starry night",
         stay: "Camp stay near Pangong",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 6,
         title: "Pangong to Leh (150 KMS)",
-        description: "Wake up to a freezing morning by the lake. Check out and ride back to Leh via the Chang La Pass (17,800 ft). On the way back, visit Shey Palace and the majestic Thiksey Monastery (subject to time). Arrive in Leh and enjoy a final group dinner.",
+        description: "• Capture the freezing early morning views of Pangong Lake\n• Ride back to Leh via the challenging Chang La Pass (17,800 ft)\n• Visit Shey Palace and the grand Thiksey Monastery enroute (subject to time)\n• Reach Leh, check in, and enjoy a farewell dinner",
         stay: "Hotel stay in Leh",
         meals: "Breakfast & Dinner Included"
       },
       {
         day: 7,
         title: "Departure to Leh Airport | Tour Ends",
-        description: "Have a final breakfast with the group. Check out and get dropped at Leh Airport (fixed drop off at 9:00 AM). Bid goodbye to the Himalayas and return to your home cities with unforgettable stories.",
+        description: "• Final breakfast with the group and checkout\n• Drop off at Leh Airport (fixed drop at 9:00 AM)\n• Tour concludes with high-altitude memories and new friendships",
         stay: "",
         meals: "Breakfast Included"
       }
@@ -644,77 +644,77 @@ const TRIPS_TO_SEED = [
       {
         day: 1,
         title: "Train Journey Ahmedabad to Chandigarh/Jalandhar",
-        description: "Kickstart your adventure with an overnight train journey from Ahmedabad to Chandigarh/Jalandhar, passing through Gujarat, Rajasthan, and Haryana. Enjoy scenic views, bond with fellow travelers through fun activities, and soak in the local flavors. Please note that if you have a connecting train from any station in Ahmedabad or Gandhinagar to Surat, Baroda, Mumbai, or Pune, inter-station transfers are not included.",
+        description: "• Board the train from Ahmedabad/your city\n• Enjoy an overnight train ride passing through Gujarat, Rajasthan, and Haryana\n• Bond with fellow travelers over games and local train snacks\n• Contact details of the trip representative shared on WhatsApp beforehand",
         stay: "Overnight in Train",
         meals: ""
       },
       {
         day: 2,
         title: "Drive to Shimla/Narkanda",
-        description: "Arrive at Chandigarh railway station at 8:00 AM or Jalandhar. Board the traveler/taxi and drive towards Shimla. If time permits, stroll through Shimla's famous Mall Road and check in at the hotel for dinner and rest.",
+        description: "• Arrive at Chandigarh (8:00 AM) or Jalandhar railway station\n• Depart for Shimla by Tempo Traveller or Taxi\n• Enjoy a scenic drive into the lower Himalayas\n• Stroll through Shimla Mall Road for shopping if time permits\n• Check in at the hotel for dinner and rest",
         stay: "Hotel in Shimla",
         meals: "Dinner Included"
       },
       {
         day: 3,
         title: "Shimla to Chitkul - The Ultimate Road Trip",
-        description: "Depart early from Shimla and drive through the stunning Kinnaur Valley. Journey along the Sutlej River and reach Chitkul, the last inhabited village on the old Indo-Tibetan trade route. Check in to the wooden huts/cottages.",
+        description: "• Adventure begins with a mountain drive from Shimla\n• Travel through the breathtaking Kinnaur Valley along the Sutlej River\n• Reach Chitkul, the last inhabited village on the old Hindustan-Tibet trade route\n• Check in at wooden cottages/hotel and enjoy dinner",
         stay: "Cottage in Chitkul/Sangla",
         meals: "Breakfast, Dinner Included"
       },
       {
         day: 4,
         title: "Chitkul to Tabo via Nako Lake",
-        description: "Depart Chitkul and drive along the India-Tibet border. Witness Khab, the scenic confluence of the Spiti & Sutlej rivers. Stop by the high-altitude Nako Lake, then proceed to Tabo village. Check in at a local homestay.",
+        description: "• Depart Chitkul and explore serene Indo-Tibetan border villages\n• Witness Khab, the confluence of Spiti and Sutlej rivers\n• Take a peaceful walk around the high-altitude Nako Lake\n• Drive to Tabo, check in at a traditional homestay, and enjoy dinner",
         stay: "Homestay in Tabo",
         meals: "Breakfast, Dinner Included"
       },
       {
         day: 5,
         title: "Explore Tabo and Dhankar Village",
-        description: "Visit the legendary 1000-year-old Tabo Monastery, famous for its clay statues and ancient wall murals. Catch a panoramic 360-degree sky view of the desert mountains. Drive to Dhankar Village and see the cliffside Dhankar Gompa. Reach Kaza by evening and check in to the homestay.",
+        description: "• Visit the 1000-year-old Tabo Monastery, famous for ancient mud statues & paintings\n• Enjoy a panoramic 360-degree sky view of the rugged Spiti Valley\n• Explore Dhankar cliffside village and the ancient Dhankar Gompa\n• Drive to Kaza, check in to your homestay, and explore Kaza Market",
         stay: "Homestay in Kaza",
         meals: "Breakfast, Dinner Included"
       },
       {
         day: 6,
         title: "Key, Komic, Langza, and Hikkim in a day",
-        description: "Explore Key Monastery, the largest spiritual center in Spiti Valley. Drive to Komic, the highest motorable village in the world (15,050 ft), and visit Komic Gompa. See the giant Buddha statue overlooking the valley at Langza (14,300 ft) and search for marine fossils. Send a postcard to your family from the highest post office in the world at Hikkim (14,400 ft).",
+        description: "• Visit Key Monastery, the largest spiritual center in Spiti Valley\n• Drive to Komic (15,050 ft), the highest motorable village in the world\n• See the majestic Buddha Statue overlooking snow peaks at Langza (14,300 ft)\n• Search for ancient marine fossils in Langza village\n• Post a card to your family from the world's highest post office at Hikkim (14,400 ft)",
         stay: "Homestay in Kaza",
         meals: "Breakfast, Dinner Included"
       },
       {
         day: 7,
         title: "Visit Kibber, Chicham Bridge & drive to Chandra Taal",
-        description: "Check out and drive to Kibber village. Cross the spectacular Chicham Bridge, the highest bridge in Asia, suspended over a deep gorge. Drive to Chandra Taal, the mesmerizing crescent-shaped Moon Lake. Check in to the campsite and enjoy the chilly night under the stars.",
+        description: "• Visit Kibber village, a high-altitude home of the snow leopard\n• Cross the spectacular Chicham Bridge, the highest bridge in Asia\n• Drive to Chandra Taal, the crescent-shaped Moon Lake (14,100 ft)\n• Enjoy dinner and overnight camping under a starry Spiti night\n• Note: If Chandratal is closed, stay in Kaza and explore Kalpa",
         stay: "Chandrataal Camps",
         meals: "Breakfast, Dinner Included"
       },
       {
         day: 8,
         title: "Chandra Taal to Manali via Atal Tunnel",
-        description: "Wake up early and walk to the breathtaking Chandra Taal Lake. Drive towards Manali via the rough and adventurous gravel road through Chhatru. Cross the famous engineering marvel, the Atal Tunnel, and reach Manali. Check in to your cottage.",
+        description: "• Wake up to a cold morning and visit the beautiful Chandra Taal Lake\n• Embark on a thrilling off-road drive to Manali via Chhatru\n• Cross the legendary Atal Tunnel, the world's longest highway tunnel above 10,000 ft\n• Arrive in Manali, check in to cottages, and relax",
         stay: "Cottages in Manali",
         meals: "Breakfast, Dinner Included"
       },
       {
         day: 9,
         title: "Explore Manali & Adventure Activities",
-        description: "Enjoy a day of thrill with paragliding or river rafting (optional, self-paid) in Manali. Explore Hadimba Devi Temple, walk along Mall Road, and experience the cafes in Old Manali. Board the evening vehicle for an overnight drive to Jalandhar/Chandigarh.",
+        description: "• Kickstart the day with paragliding or river rafting (optional/self-paid)\n• Visit Hadimba Devi Temple, Old Manali, and Mall Road\n• Enjoy dinner, then board the vehicle for an overnight drive to Jalandhar/Chandigarh",
         stay: "Overnight travel",
         meals: "Breakfast Included"
       },
       {
         day: 10,
         title: "Board the Return Train",
-        description: "Arrive at Jalandhar/Chandigarh and board the return train to Ahmedabad. Relive the trip memories with your group through games and stories.",
+        description: "• Arrive at Jalandhar/Chandigarh railway station\n• Board the return train back to Ahmedabad\n• Relax, play games, and share photos with new friends during the journey",
         stay: "Overnight in Train",
         meals: ""
       },
       {
         day: 11,
         title: "Arrival in Ahmedabad",
-        description: "Arrive back in Ahmedabad. The epic 11-day Spiti Valley full circuit concludes with unforgettable memories and close bonds.",
+        description: "• Train passes through Rajasthan in the morning; relish local Rabdi & Chaat\n• Arrive in Ahmedabad safely; the epic circuit concludes with lifelong bonds",
         stay: "",
         meals: ""
       }
@@ -839,63 +839,63 @@ const TRIPS_TO_SEED = [
       {
         day: 1,
         title: "Train Journey to Jalandhar",
-        description: "Meet the YC representative at the railway station. Board the train and start your journey towards Jalandhar. Make new friends, play games, and prepare for the Himalayan trek. Note: Inter-station transfers in cities like Vadodara/Mumbai are not included.",
+        description: "• Meet the YC representative at the railway station in the morning\n• Board the train to Jalandhar/Amritsar\n• Participate in group games and ice-breaking activities\n• Inter-station transfers in cities like Vadodara/Mumbai are not included",
         stay: "Overnight in Train",
         meals: ""
       },
       {
         day: 2,
         title: "Visit Wagha Border & Golden Temple",
-        description: "Arrive at Jalandhar/Amritsar. Drive to Wagah Border for the historic Indo-Pak parade ceremony. Later, visit the divine Golden Temple and explore the local markets of Amritsar. Enjoy dinner, then board the vehicle for an overnight drive to Kasol.",
+        description: "• Arrive at Jalandhar/Amritsar\n• Drive to Wagah Border for the historic Indo-Pak Ceremonial Parade\n• Visit the Golden Temple and explore the local Amritsar markets\n• Enjoy dinner and start the overnight drive to Kasol",
         stay: "Overnight travel",
         meals: ""
       },
       {
         day: 3,
         title: "Kasol & Parvati Valley Exploration",
-        description: "Reach the Kasol Campsite around 11:00 AM. Check in, have breakfast, and freshen up. Hike to Chalal Village (2-hour hike) along the beautiful Parvati River. In the evening, visit Manikaran Gurudwara and the local Kasol market. Return to the camp for a bonfire, group games, and dinner.",
+        description: "• Reach the Kasol Campsite by 11:00 AM, check in, and have breakfast\n• Relish a scenic 2-hour hike to Chalal Village along the Parvati River\n• Visit Manikaran Gurudwara and the local Kasol market in the evening\n• Unwind with a bonfire, music party, and group games",
         stay: "Cottage/Tent in Kasol",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 4,
-        title: "Start Bhrigu Lake Trek",
-        description: "After breakfast, check out and drive to the trek start point near Manali. Leave your heavy bags in Manali and start the trek to Bhrigu Base Camp (10,000 ft) carrying only a light daypack. Enjoy the vast expanse of meadows stretch far and wide. Check in to the tents, have dinner, and sleep.",
+        title: "Start Bhrigu Lake Trek from Base Camp",
+        description: "• Have breakfast and check out from Kasol\n• Leave main luggage in Manali; carry a light daypack for the trek\n• Drive to the trek start point and begin trekking to Bhrigu Base Camp (10,000 ft)\n• Hike through endless green alpine meadows\n• Check in to tents and enjoy dinner",
         stay: "Tent stay in Bhrigu Campsite",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 5,
         title: "Bhrigu Lake Trek Summit Day",
-        description: "Wake up early for the summit push. Hike up to the first ridge. In early season (April-June), the trail is covered in snow. Summit Bhrigu Lake at 14,300 ft and marvel at the frozen alpine lake and high peaks. Celebrate with a summit party back at the base camp.",
+        description: "• Begin the early morning summit push to the first ridge\n• Trek through snow trails (in April, May, and June)\n• Reach the mystical Bhrigu Lake at 14,300 ft for splendid Himalayan views\n• Descent to base camp and celebrate with a summit party",
         stay: "Tent stay in Bhrigu Campsite",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 6,
         title: "Trek Down & Manali Local Sightseeing",
-        description: "Trek down to the base village. Drive to Solang Valley and cross the Atal Tunnel. Visit Hadimba Devi Temple and walk through Mall Road in Manali. Enjoy dinner and a comfortable hotel/cottage stay.",
+        description: "• Trek down from the base camp to the village\n• Witness Solang Valley views and cross the Atal Tunnel\n• Visit Hadimba Devi Temple and walk along Mall Road in Manali\n• Check in to the hotel/cottage for dinner and rest",
         stay: "Manali (Hotel/cottage)",
         meals: "Breakfast, Lunch, Dinner Included"
       },
       {
         day: 7,
         title: "Adventure Activities & Drive to Jalandhar",
-        description: "Enjoy early breakfast and proceed to Kullu for camp rope activities. Take a complimentary 8KM white water rafting session (included) and paragliding (optional, self-paid). In the evening, board the vehicle for a night drive to Jalandhar.",
+        description: "• Enjoy breakfast and participate in outdoor rope camp activities\n• Experience white water river rafting (included) & paragliding (optional/self-paid)\n• Drive back to Jalandhar in the evening",
         stay: "Overnight travel",
         meals: "Breakfast & Lunch Included"
       },
       {
         day: 8,
         title: "Return Train Journey to Your City",
-        description: "Board the return train back to Ahmedabad/your city. Chat, play cards, and share photos with new friends during the journey.",
+        description: "• Board the return train back to Ahmedabad/your city\n• Enjoy the journey with group activities, sharing stories and pictures",
         stay: "Overnight in Train",
         meals: ""
       },
       {
         day: 9,
-        title: "Arrive at Your City",
-        description: "Arrive in your home city. The adventure concludes with a bag full of memories and long-lasting friendships.",
+        title: "Arrive in Your City",
+        description: "• Arrive in your home city safely\n• Trip concludes with new friends and beautiful memories",
         stay: "",
         meals: ""
       }
@@ -907,16 +907,15 @@ const TRIPS_TO_SEED = [
 
 async function seed() {
   try {
-    console.log("🌱 Starting to seed extracted trips into database...");
+    console.log("🌱 Deleting all existing trips to clear database...");
+    await prisma.trip.deleteMany({});
+    console.log("🧹 Previous trips deleted.");
+
+    console.log("🌱 Seeding bulleted itinerary trips into database...");
     for (const trip of TRIPS_TO_SEED) {
-      console.log(`Upserting: ${trip.title} (slug: ${trip.slug})`);
-      await prisma.trip.upsert({
-        where: { slug: trip.slug },
-        update: {
-          ...trip,
-          tenantId: "default"
-        },
-        create: {
+      console.log(`Creating: ${trip.title} (slug: ${trip.slug})`);
+      await prisma.trip.create({
+        data: {
           ...trip,
           tenantId: "default"
         }
