@@ -103,44 +103,49 @@ export default function BookingOptions({
         {/* Starting Location Section - Horizontal Slide */}
         <div>
           <div className="flex flex-row overflow-x-auto no-scrollbar gap-4 pb-4 -mx-1 px-1 snap-x">
-            {variants.map((v, i) => (
-              <div 
-                key={i}
-                onClick={() => {
-                  setSelectedVariant(i);
-                  onVariantSelect?.(i);
-                }}
-                className={cn(
-                  "min-w-[200px] md:min-w-[240px] bg-white rounded-[20px] overflow-hidden border-2 transition-all p-3 cursor-pointer snap-start shadow-sm",
-                  selectedVariant === i ? "border-primary-orange" : "border-zinc-100 hover:border-zinc-200"
-                )}
-              >
-                <div className="relative aspect-square rounded-[14px] overflow-hidden mb-3">
-                  <OptimizedImage 
-                    src={normalizeImageUrl(v.image) || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6"} 
-                    alt={v.location} className="absolute inset-0 w-full h-full object-cover" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-base md:text-lg font-semibold text-navy">{v.location}</h3>
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="flex flex-col">
-                       <span className="text-[10px] text-zinc-400 line-through">₹{v.originalPrice?.toLocaleString()}</span>
-                       <span className="text-sm font-semibold tracking-wide text-navy leading-none">₹{v.discountedPrice?.toLocaleString()}/-</span>
-                    </div>
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-zinc-50 rounded-full border border-zinc-100">
-                      <svg viewBox="0 0 24 24" className="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                        <line x1="16" y1="2" x2="16" y2="6" />
-                        <line x1="8" y1="2" x2="8" y2="6" />
-                        <line x1="3" y1="10" x2="21" y2="10" />
-                      </svg>
-                      <span className="text-[10px] font-semibold text-zinc-500 whitespace-nowrap">{v.duration}</span>
+            {variants.map((v, i) => {
+              const displayDuration = v.duration || trip.duration;
+              return (
+                <div 
+                  key={i}
+                  onClick={() => {
+                    setSelectedVariant(i);
+                    onVariantSelect?.(i);
+                  }}
+                  className={cn(
+                    "min-w-[200px] md:min-w-[240px] bg-white rounded-[20px] overflow-hidden border-2 transition-all p-3 cursor-pointer snap-start shadow-sm",
+                    selectedVariant === i ? "border-primary-orange" : "border-zinc-100 hover:border-zinc-200"
+                  )}
+                >
+                  <div className="relative aspect-square rounded-[14px] overflow-hidden mb-3">
+                    <OptimizedImage 
+                      src={normalizeImageUrl(v.image) || "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6"} 
+                      alt={v.location} className="absolute inset-0 w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-base md:text-lg font-semibold text-navy">{v.location}</h3>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex flex-col">
+                         <span className="text-[10px] text-zinc-400 line-through">₹{v.originalPrice?.toLocaleString()}</span>
+                         <span className="text-sm font-semibold tracking-wide text-navy leading-none">₹{v.discountedPrice?.toLocaleString()}/-</span>
+                      </div>
+                      {displayDuration && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-zinc-50 rounded-full border border-zinc-100">
+                          <svg viewBox="0 0 24 24" className="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                          <span className="text-[10px] font-semibold text-zinc-500 whitespace-nowrap">{displayDuration}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
