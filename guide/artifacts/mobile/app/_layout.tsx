@@ -3,8 +3,8 @@ import {
   Montserrat_500Medium,
   Montserrat_600SemiBold,
   Montserrat_700Bold,
-  useFonts,
 } from "@expo-google-fonts/montserrat";
+import { useFonts } from "expo-font";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/context/queryClient";
 import { Stack } from "expo-router";

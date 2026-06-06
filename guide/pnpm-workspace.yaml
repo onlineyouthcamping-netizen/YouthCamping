@@ -75,6 +75,10 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Force single React version across the entire monorepo to prevent
+  # duplicate React instances that cause "Invalid hook call" crashes
+  react: "catalog:"
+  react-dom: "catalog:"
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"
