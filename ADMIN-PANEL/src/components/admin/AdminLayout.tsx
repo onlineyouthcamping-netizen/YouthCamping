@@ -79,6 +79,16 @@ const navGroups = [
     ]
   },
   {
+    label: "Guide Operations",
+    items: [
+      { title: "Guides Dashboard", url: "/admin/guides-dashboard", icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
+      { title: "Guides List", url: "/admin/guides", icon: Users, roles: ['admin', 'superadmin'] },
+      { title: "Attendance Logs", url: "/admin/attendance-logs", icon: CalendarCheck, roles: ['admin', 'superadmin'] },
+      { title: "Assignments", url: "/admin/assignments", icon: Map, roles: ['admin', 'superadmin'] },
+      { title: "Payroll & Payouts", url: "/admin/payroll", icon: Banknote, roles: ['admin', 'superadmin'] },
+    ]
+  },
+  {
     label: "Website Content",
     items: [
       { title: "Page Builder", url: "/admin/page-builder", icon: FilePlus, roles: ['admin'] },
