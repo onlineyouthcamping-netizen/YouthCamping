@@ -10,7 +10,8 @@ import {
   AlertTriangle, 
   FileText,
   UserPlus,
-  Plus
+  Plus,
+  Loader2
 } from "lucide-react";
 
 export default function GuidesDashboardPage() {

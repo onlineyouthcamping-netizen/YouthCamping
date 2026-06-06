@@ -13,7 +13,8 @@ import {
   Trash2,
   Loader2,
   Calendar,
-  Compass
+  Compass,
+  AlertTriangle
 } from "lucide-react";
 
 export default function AssignmentsPage() {
