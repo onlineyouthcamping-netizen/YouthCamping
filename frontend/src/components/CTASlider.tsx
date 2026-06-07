@@ -75,7 +75,7 @@ export default function CTASlider({
         <div 
           ref={containerRef}
           className={cn(
-            "relative w-full max-w-[1200px] aspect-[21/9] max-md:max-h-[220px] max-md:min-h-[160px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.12)] bg-zinc-900 border border-zinc-200/20 mx-auto",
+            "relative w-full max-w-[1200px] aspect-[21/9] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.12)] bg-zinc-900 border border-zinc-200/20 mx-auto",
             radiusClass
           )}
         >
