@@ -35,6 +35,9 @@ import GuidesListPage from "./pages/admin/GuidesListPage.tsx";
 import AttendanceLogsPage from "./pages/admin/AttendanceLogsPage.tsx";
 import AssignmentsPage from "./pages/admin/AssignmentsPage.tsx";
 import PayrollPage from "./pages/admin/PayrollPage.tsx";
+import ExpensesApprovalPage from "./pages/admin/ExpensesApprovalPage.tsx";
+import GuideDashboardPage from "./pages/admin/GuideDashboardPage.tsx";
+import GuideTripDetailPage from "./pages/admin/GuideTripDetailPage.tsx";
 import { 
   CollectionsPage, PromotionsPage, DistributionPage, 
   ReportsPage, BillingPage 
@@ -98,6 +101,9 @@ const App = () => (
               <Route path="/admin/attendance-logs" element={<AdminRoute><AttendanceLogsPage /></AdminRoute>} />
               <Route path="/admin/assignments" element={<AdminRoute><AssignmentsPage /></AdminRoute>} />
               <Route path="/admin/payroll" element={<AdminRoute><PayrollPage /></AdminRoute>} />
+              <Route path="/admin/expenses" element={<AdminRoute><ExpensesApprovalPage /></AdminRoute>} />
+              <Route path="/admin/guide-portal" element={<AdminRoute><GuideDashboardPage /></AdminRoute>} />
+              <Route path="/admin/guide-portal/trip/:assignmentId" element={<AdminRoute><GuideTripDetailPage /></AdminRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

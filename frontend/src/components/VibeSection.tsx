@@ -34,7 +34,7 @@ export default function VibeSection({
     <section className="section-wrapper bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <h2 
-          className="section-heading text-center text-navy mb-16"
+          className="section-heading text-center text-navy mb-6 md:mb-10"
           style={{ 
             fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
             fontWeight: titleWeight ? titleWeight : undefined
@@ -43,7 +43,7 @@ export default function VibeSection({
           {title}
         </h2>
 
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-8 snap-x">
+        <div className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-8 snap-x">
           {reels.map((reel, i) => (
             <motion.div
               key={i}

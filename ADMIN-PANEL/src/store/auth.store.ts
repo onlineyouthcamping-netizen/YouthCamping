@@ -8,6 +8,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginAsGuide: (phone: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -47,6 +48,30 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  loginAsGuide: async (phone) => {
+    set({ isLoading: true });
+    console.log("🚀 Attempting guide login for:", phone);
+    try {
+      const guideAuth = await guideService.login(phone, "guide");
+      console.log("🔑 Guide login success, user ID received:", guideAuth.id);
+      localStorage.setItem("guide_token", guideAuth.id.toString());
+      set({ 
+        admin: {
+          id: guideAuth.id,
+          name: guideAuth.name,
+          email: guideAuth.email || null,
+          role: "guide"
+        },
+        isAuthenticated: true,
+        isLoading: false 
+      });
+    } catch (err) {
+      console.error("🔥 Guide login error:", err);
+      set({ isLoading: false });
+      throw err;
+    }
+  },
+
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("guide_token");
@@ -56,20 +81,45 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkAuth: async () => {
     set({ isLoading: true });
     const token = localStorage.getItem("token");
-    console.log("🔍 Checking auth, token exists:", !!token);
+    const guideToken = localStorage.getItem("guide_token");
+    console.log("🔍 Checking auth, token exists:", !!token, "guideToken exists:", !!guideToken);
     
-    if (!token) {
-      console.log("🔄 No token found, redirecting to login...");
+    if (!token && !guideToken) {
+      console.log("🔄 No tokens found, redirecting to login...");
       set({ admin: null, isAuthenticated: false, isLoading: false });
       return;
     }
 
+    // Case 1: Guide login session
+    if (guideToken && !token) {
+      try {
+        console.log("🤖 Fetching guide profile...");
+        const guideProfile = await guideService.getProfile();
+        console.log("✅ Guide auth check success:", guideProfile.name);
+        set({
+          admin: {
+            id: guideProfile.id,
+            name: guideProfile.name,
+            email: guideProfile.email || null,
+            role: "guide"
+          },
+          isAuthenticated: true,
+          isLoading: false
+        });
+      } catch (err) {
+        console.error("❌ Guide auth check failed:", err);
+        localStorage.removeItem("guide_token");
+        set({ admin: null, isAuthenticated: false, isLoading: false });
+      }
+      return;
+    }
+
+    // Case 2: Admin/manager login session
     try {
       const admin = await authService.getMe();
       console.log("✅ Auth check success:", admin?.email || admin?.name || "Admin");
 
-      // Auto-login to Guide API backend if the token is present but guide_token is missing
-      const guideToken = localStorage.getItem("guide_token");
+      // Auto-login to Guide API backend if token is present but guide_token is missing
       if (!guideToken) {
         try {
           console.log("🤖 Guide token missing but authenticated, auto-logging into Guide API...");

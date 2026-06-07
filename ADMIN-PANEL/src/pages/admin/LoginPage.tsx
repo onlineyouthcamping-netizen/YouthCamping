@@ -8,14 +8,16 @@ import { Loader2, Plane, Eye, EyeOff, Star, ArrowRight, ChevronLeft } from "luci
 import { toast } from "sonner";
 
 export default function LoginPage() {
+  const [loginType, setLoginType] = useState<"admin" | "guide">("admin");
   const [email, setEmail] = useState("admin@youthcamping.online");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<"login" | "forgot">("login");
   const [notification, setNotification] = useState<string | null>(null);
 
-  const { login } = useAuthStore();
+  const { login, loginAsGuide } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,16 +25,29 @@ export default function LoginPage() {
     setLoading(true);
     setNotification(null);
     try {
-      await login(email, password);
-      toast.success("Welcome back!");
-      navigate("/admin");
+      if (loginType === "admin") {
+        await login(email, password);
+        toast.success("Welcome back!");
+        navigate("/admin");
+      } else {
+        if (!phone) {
+          toast.error("Phone number is required");
+          setLoading(false);
+          return;
+        }
+        await loginAsGuide(phone);
+        toast.success("Welcome back, Guide!");
+        navigate("/admin/guide-portal");
+      }
     } catch (error: any) {
       console.error("Login attempt failed:", error);
       let message = "Something went wrong";
       if (!error.response) {
         message = "Cannot connect to server. Is the backend running?";
       } else if (error.response.status === 401) {
-        message = "Invalid email or password";
+        message = loginType === "admin" ? "Invalid email or password" : "Unauthorized role mismatch";
+      } else if (error.response.status === 404) {
+        message = "User not found. Verify phone number registration.";
       } else {
         message = error.response.data?.message || message;
       }
@@ -51,7 +66,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-xs text-slate-600 font-sans">
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-xs text-slate-650 font-sans">
       
       {/* ─── Main Content Split Panes ─── */}
       <div className="grid grid-cols-1 md:grid-cols-2 flex-1">
@@ -64,7 +79,7 @@ export default function LoginPage() {
             <span className="font-bold text-slate-800 text-base tracking-tight select-none">
               Youth<span className="text-[#FF5400]">Camping</span>
             </span>
-            <span className="text-[8px] bg-slate-100 text-slate-400 font-mono px-1 rounded">ADMIN</span>
+            <span className="text-[8px] bg-slate-100 text-slate-400 font-mono px-1 rounded">PORTAL</span>
           </div>
 
           {/* Form Content Area */}
@@ -78,68 +93,107 @@ export default function LoginPage() {
                   <p className="text-slate-400 text-[11px] font-medium">All-in-one tour operator management platform</p>
                 </div>
 
+                {/* Login Type Tab Swapping */}
+                <div className="flex bg-slate-100 rounded-lg p-0.5 w-full">
+                  <button
+                    type="button"
+                    onClick={() => { setLoginType("admin"); setNotification(null); }}
+                    className={`flex-1 text-center py-1.5 text-xs font-semibold rounded transition-all ${loginType === "admin" ? "bg-white shadow-sm text-slate-850" : "text-slate-450"}`}
+                  >
+                    Admin Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setLoginType("guide"); setNotification(null); }}
+                    className={`flex-1 text-center py-1.5 text-xs font-semibold rounded transition-all ${loginType === "guide" ? "bg-white shadow-sm text-slate-850" : "text-slate-450"}`}
+                  >
+                    Guide Portal Login
+                  </button>
+                </div>
+
                 {/* Notifications Banner */}
-                {notification ? (
-                  <div className="bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-[10.5px] font-medium animate-fade-in flex items-center justify-between">
+                {notification && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-[10.5px] font-medium flex items-center justify-between">
                     <span>{notification}</span>
                     <button onClick={() => setNotification(null)} className="text-red-400 hover:text-red-700 font-bold">&times;</button>
-                  </div>
-                ) : (
-                  <div className="bg-[#fffbea] border border-[#fce588] text-[#c08d1a] rounded px-3 py-2 text-[10.5px] font-medium flex items-center justify-between">
-                    <span>Enter your credentials to manage youth expeditions.</span>
                   </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Email */}
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-bold uppercase text-slate-400">Email</Label>
-                    <Input 
-                      type="email" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      placeholder="you@company.com"
-                      className="h-9 text-xs rounded border-slate-200 focus-visible:ring-primary focus-visible:border-primary bg-white"
-                      required 
-                    />
-                  </div>
+                  {loginType === "admin" ? (
+                    <>
+                      {/* Email */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase text-slate-400">Email</Label>
+                        <Input 
+                          type="email" 
+                          value={email} 
+                          onChange={(e) => setEmail(e.target.value)} 
+                          placeholder="you@company.com"
+                          className="h-9.5 text-xs rounded border-slate-200 focus-visible:ring-primary focus-visible:border-primary bg-white"
+                          required 
+                        />
+                      </div>
 
-                  {/* Password with visibility toggle */}
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-bold uppercase text-slate-400">Password</Label>
-                    <div className="relative">
-                      <Input 
-                        type={showPassword ? "text" : "password"} 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                        placeholder="Enter your password"
-                        className="h-9 text-xs rounded border-slate-200 focus-visible:ring-primary focus-visible:border-primary pr-9 bg-white"
-                        required 
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                      {/* Password */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase text-slate-400">Password</Label>
+                        <div className="relative">
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
+                            placeholder="Enter your password"
+                            className="h-9.5 text-xs rounded border-slate-200 focus-visible:ring-primary focus-visible:border-primary pr-9 bg-white"
+                            required 
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* Guide Login - phone number based */
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold uppercase text-slate-450">Registered Phone Number</Label>
+                      <div className="flex h-9.5 rounded border border-slate-200 overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+                        <div className="w-12 h-full bg-slate-50 border-r border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">
+                          +91
+                        </div>
+                        <Input 
+                          type="text" 
+                          value={phone} 
+                          onChange={(e) => setPhone(e.target.value)} 
+                          placeholder="10-digit number"
+                          className="h-full border-none rounded-none flex-1 focus-visible:ring-0 shadow-none pl-3 bg-white"
+                          required 
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 italic mt-1.5 ml-1">Use the phone number registered in the guide directory.</p>
                     </div>
-                  </div>
+                  )}
 
                   {/* Helpers row */}
-                  <div className="flex items-center justify-between text-[11px] pt-1">
-                    <label className="flex items-center gap-1.5 font-medium cursor-pointer text-slate-500 hover:text-slate-800">
-                      <input type="checkbox" className="rounded border-slate-300 text-primary focus:ring-primary w-3.5 h-3.5" defaultChecked />
-                      <span>Remember me</span>
-                    </label>
-                    <button 
-                      type="button"
-                      onClick={() => { setView("forgot"); setNotification(null); }}
-                      className="text-blue-600 font-semibold hover:underline"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
+                  {loginType === "admin" && (
+                    <div className="flex items-center justify-between text-[11px] pt-1">
+                      <label className="flex items-center gap-1.5 font-medium cursor-pointer text-slate-500 hover:text-slate-800">
+                        <input type="checkbox" className="rounded border-slate-300 text-primary focus:ring-primary w-3.5 h-3.5" defaultChecked />
+                        <span>Remember me</span>
+                      </label>
+                      <button 
+                        type="button"
+                        onClick={() => { setView("forgot"); setNotification(null); }}
+                        className="text-blue-600 font-semibold hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
 
                   {/* Login Button */}
                   <Button type="submit" className="w-full h-9.5 rounded bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-sm transition-all" disabled={loading}>
@@ -151,13 +205,14 @@ export default function LoginPage() {
                   </Button>
                 </form>
 
-                {/* Account creation footer */}
-                <div className="text-center pt-2">
-                  <span className="text-slate-450">Don't have an account? </span>
-                  <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Contact system administrator to request an admin profile."); }} className="text-blue-600 font-semibold hover:underline">
-                    Start your free 14 day trial &rarr;
-                  </a>
-                </div>
+                {loginType === "admin" && (
+                  <div className="text-center pt-2">
+                    <span className="text-slate-450">Don't have an account? </span>
+                    <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Contact system administrator to request an admin profile."); }} className="text-blue-600 font-semibold hover:underline">
+                      Contact Administrator &rarr;
+                    </a>
+                  </div>
+                )}
               </div>
             ) : (
               /* ─── FORGOT PASSWORD PANEL VIEW ─── */
@@ -184,7 +239,7 @@ export default function LoginPage() {
                   </form>
                   
                   <div className="text-center text-[10.5px] border-t border-slate-100 pt-3">
-                    <span className="text-slate-400">Already registered? </span>
+                    <span className="text-slate-450">Already registered? </span>
                     <button 
                       type="button" 
                       onClick={() => setView("login")} 
@@ -210,7 +265,7 @@ export default function LoginPage() {
 
           {/* Developer notes / credentials footer */}
           <div className="text-center text-[10px] text-slate-400 select-none">
-            🔒 Official credentials verified via system `.env` databases.
+            🔒 Official credentials verified via system database configurations.
           </div>
         </div>
 
@@ -225,34 +280,32 @@ export default function LoginPage() {
           {/* "What's New" Glass container */}
           <div className="relative z-10 bg-slate-950/70 backdrop-blur-md rounded-xl p-8 max-w-sm text-white border border-white/10 shadow-2xl space-y-3.5 transform hover:scale-[1.01] transition-transform duration-300">
             <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block">
-              What's new?
+              Guides Operations
             </span>
             <h3 className="text-base font-bold tracking-tight text-white leading-tight">
-              Add an "Upcoming Departures" section to your website
+              Real-time synchronization and live status tracking
             </h3>
             <p className="text-[10.5px] text-white/70 leading-relaxed font-medium">
-              Show your next available tour dates anywhere on your site. You can now add an Upcoming Departures section to your website and display your next available tour dates in a clean, structured layout &mdash; anywhere you like. This section pulls data from your date-based collections and automatically shows upcoming slots.
+              Guides can now log in directly from this portal to see assigned assignments, sync booking travelers, record milestone updates, and log trip expenses. Admins receive all logs instantly on their dashboard.
             </p>
-            <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Learn more is deactivated in preview mode."); }} className="text-[10.5px] font-bold text-blue-400 hover:underline flex items-center gap-1 pt-1">
-              Read more &rarr;
+            <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Guide management portal active."); }} className="text-[10.5px] font-bold text-blue-400 hover:underline flex items-center gap-1 pt-1">
+              Read guide manual &rarr;
             </a>
           </div>
         </div>
 
       </div>
 
-      {/* ─── Bottom trust badging strip ─── */}
-      <footer className="bg-white border-t border-slate-200 py-3 text-center text-[10px] text-slate-400 select-none flex items-center justify-center gap-1.5 flex-wrap px-4">
+      {/* ─── Bottom strip ─── */}
+      <footer className="bg-white border-t border-slate-200 py-3 text-center text-[10px] text-slate-450 select-none flex items-center justify-center gap-1.5 flex-wrap px-4">
         <div className="flex gap-0.5 text-amber-400 mr-1">
           {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-current" />)}
         </div>
-        <span className="font-bold text-slate-700">4.7/5 on Capterra</span>
+        <span className="font-bold text-slate-700">Guide Operations Dashboard</span>
         <span>•</span>
-        <span>Trusted by tour operators worldwide since 2012</span>
+        <span>Trusted by guides and coordinators across the Himalayas</span>
         <span>•</span>
         <span>Made with ❤️ in Goa</span>
-        <span>•</span>
-        <a href="#" className="text-blue-500 font-semibold hover:underline">Learn more</a>
       </footer>
 
     </div>

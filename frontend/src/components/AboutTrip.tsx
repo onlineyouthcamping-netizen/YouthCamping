@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,26 +27,72 @@ function stripHtml(html: string) {
 
 export default function AboutTrip({ description }: AboutTripProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpandedInline, setIsExpandedInline] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   
   const decodedDescription = decodeHtml(description);
   const plainText = stripHtml(description);
   
+  // Check if content is long enough (approx > 250 chars)
+  const isLong = plainText.length > 250;
+
   // Truncate clean plain text for preview
   const previewText = plainText.length > 280 
     ? plainText.substring(0, 280) + "..." 
     : plainText;
 
+  const handleToggle = () => {
+    if (isMobile) {
+      setIsExpandedInline(!isExpandedInline);
+    } else {
+      setIsOpen(true);
+    }
+  };
+
   return (
     <section className="relative">
-      <div className="bg-white border border-zinc-100 rounded-[40px] p-10 md:p-14 shadow-sm relative">
-        <h2 className="text-2xl font-bold text-navy mb-6">About this Trip</h2>
-        <div className="relative">
+      <div className="bg-white border border-zinc-100 rounded-[24px] md:rounded-[40px] p-6 md:p-14 shadow-sm relative">
+        <h2 className="text-lg md:text-2xl font-bold text-navy mb-3 md:mb-6">About this Trip</h2>
+        
+        {/* Mobile View */}
+        <div className="md:hidden relative">
+          {isExpandedInline ? (
+            <div 
+              className="prose prose-zinc max-w-none text-zinc-600 font-normal leading-normal text-sm [&>p]:mb-4 [&>p:last-child]:mb-0 [&>strong]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ul>li]:mb-1"
+              dangerouslySetInnerHTML={{ __html: decodedDescription }}
+            />
+          ) : (
+            <p className="text-zinc-600 font-normal leading-normal text-sm line-clamp-5">
+              {plainText}
+            </p>
+          )}
+          {isLong && (
+            <button 
+              onClick={handleToggle}
+              className="text-primary-orange font-bold hover:text-navy transition-all mt-3 cursor-pointer text-sm"
+            >
+              {isExpandedInline ? "Show Less" : "Read More"}
+            </button>
+          )}
+        </div>
+
+        {/* Desktop View */}
+        <div className="hidden md:block relative">
           <p className="text-zinc-600 font-normal leading-relaxed text-base md:text-lg">
             {previewText}
           </p>
           {plainText.length > 280 && (
             <button 
-              onClick={() => setIsOpen(true)}
+              onClick={handleToggle}
               className="text-primary-orange font-bold hover:text-navy transition-all mt-4 float-right cursor-pointer"
             >
               Read More

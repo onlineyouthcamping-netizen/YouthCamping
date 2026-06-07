@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { guideService, PayrollItem } from "@/services/guide.service";
 import { Button } from "@/components/ui/button";
 import { KPICard } from "@/components/admin/KPICard";
@@ -125,10 +125,9 @@ export default function PayrollPage() {
                 {payroll.map((item) => {
                   const isExpanded = expandedGuideId === item.guideId;
                   return (
-                    <>
+                    <Fragment key={item.guideId}>
                       {/* Parent Row */}
                       <tr 
-                        key={item.guideId} 
                         className="hover:bg-slate-50/80 transition-colors group align-middle cursor-pointer"
                         onClick={() => toggleExpand(item.guideId)}
                       >
@@ -194,7 +193,7 @@ export default function PayrollPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
                 {payroll.length === 0 && (

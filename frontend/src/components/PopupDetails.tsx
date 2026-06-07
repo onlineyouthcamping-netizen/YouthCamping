@@ -229,10 +229,16 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
       </div>
 
       {activeId && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6 bg-navy/60 backdrop-blur-md transition-all duration-500 animate-in fade-in">
-           <div className="bg-white w-full max-w-2xl rounded-[32px] overflow-hidden shadow-[0_32px_80px_-20px_rgba(0,0,0,0.3)] relative animate-in zoom-in slide-in-from-bottom-8 duration-500">
+        <div 
+          onClick={() => setActiveId(null)}
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6 bg-navy/60 backdrop-blur-md transition-all duration-500 animate-in fade-in"
+        >
+           <div 
+             onClick={(e) => e.stopPropagation()}
+             className="bg-white w-full max-w-2xl rounded-[24px] md:rounded-[32px] overflow-hidden shadow-[0_32px_80px_-20px_rgba(0,0,0,0.3)] relative animate-in zoom-in slide-in-from-bottom-8 duration-500 flex flex-col max-h-[90vh] md:max-h-[85vh]"
+           >
               {/* Modal Header */}
-              <div className="p-8 border-b border-zinc-100 flex items-center justify-between bg-white">
+              <div className="p-5 md:p-8 border-b border-zinc-100 flex items-center justify-between bg-white shrink-0">
                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                    {activeSection?.id === "carry" ? "Packing List" : activeSection?.label}
                  </h2>
@@ -245,7 +251,7 @@ export default function PopupDetails({ details, startDate }: PopupDetailsProps) 
               </div>
               
               {/* Modal Content */}
-              <div className="p-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <div className="p-5 md:p-10 overflow-y-auto flex-1 custom-scrollbar">
                 {activeSection?.type === "categorical" && (
                   <div className="space-y-8">
                     {activeSection.content.map((cat: any, idx: number) => {

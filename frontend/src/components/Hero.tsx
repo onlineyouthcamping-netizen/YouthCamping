@@ -48,6 +48,29 @@ function Typewriter({ phrases, typingSpeed = 100, deletingSpeed = 50, pauseDelay
   );
 }
 
+const SLIDES = [
+  {
+    url: "https://images.unsplash.com/photo-1581793745862-99f579601e1b?q=80&w=2070",
+    alt: "Scenic winding roads in Ladakh mountains"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?q=80&w=2070",
+    alt: "Adventure campsite under high mountain pass in Spiti Valley"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=2070",
+    alt: "Travellers kayaking on pristine mountain lake in Kashmir"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=2070",
+    alt: "Beautiful palm-lined backwaters of Kerala"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=2070",
+    alt: "Stargazing and camping under the night sky"
+  }
+];
+
 interface HeroProps {
   headline?: string;
   subheadline?: string;
@@ -75,26 +98,18 @@ export default function Hero({
   const prefersReducedMotion = useReducedMotion();
   const isMobile = useIsMobile();
 
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  
-  const [playClicked, setPlayClicked] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 5500);
+    return () => clearInterval(timer);
   }, []);
 
   const normalizedBg = normalizeImageUrl(backgroundImage);
-  
-  const selfHostedEnabled = !!((settings?.heroVideoEnabled && settings?.heroVideoUrl) || (videoEnabled && videoUrl && !videoUrl.includes('youtube') && !videoUrl.includes('youtu.be')));
-  
-  const resolvedVideoUrl = (settings?.heroVideoEnabled && settings?.heroVideoUrl) 
-    ? settings.heroVideoUrl 
-    : (videoEnabled && videoUrl && !videoUrl.includes('youtube') && !videoUrl.includes('youtu.be') ? videoUrl : "");
-    
-  const resolvedPosterUrl = (settings?.heroVideoEnabled && settings?.heroVideoPosterUrl) 
-    ? settings.heroVideoPosterUrl 
-    : (videoPosterUrl || normalizedBg);
   
   // Theme-driven animated texts with hardcoded fallback
   const defaultPhrases = [
@@ -133,17 +148,11 @@ export default function Hero({
   const heroAlign = theme?.heroAlign || "center";
   const alignClass = heroAlign === "left" ? "items-start text-left" : heroAlign === "right" ? "items-end text-right" : "items-center text-center";
 
-  const mobileVideoHeight = theme?.mobileHeroVideoHeight || 'aspect-video';
-  const isCustomVideoSize = selfHostedEnabled && mobileVideoHeight !== 'aspect-video';
   const reduceMotion = prefersReducedMotion || isMobile;
 
   return (
     <div 
-      className={`hero-container relative w-full overflow-hidden bg-navy ${
-        selfHostedEnabled ? 'hero-has-video' : ''
-      } ${
-        isCustomVideoSize ? 'video-custom-size' : 'max-md:aspect-video'
-      }`}
+      className="hero-container relative w-full overflow-hidden bg-navy max-md:aspect-video"
       style={{ 
         transform: 'scale(1.001)',
         willChange: 'transform',
@@ -154,35 +163,7 @@ export default function Hero({
     >
       {/* Background Media */}
       <div className="absolute inset-0 z-0" style={{ transform: 'scale(1.01)', backfaceVisibility: 'hidden' }}>
-        {selfHostedEnabled && resolvedVideoUrl ? (
-          <div className="absolute inset-0 w-full h-full overflow-hidden">
-            {/* Poster image always underneath and visible until video is ready */}
-            {resolvedPosterUrl && !videoLoaded && (
-              <OptimizedImage
-                src={resolvedPosterUrl}
-                priority={true}
-                cloudinaryWidth={1920}
-                className="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-500"
-                alt="Hero Background Poster"
-                style={{ objectFit: 'cover', objectPosition: 'center' }}
-              />
-            )}
-            
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              onCanPlay={() => setVideoLoaded(true)}
-              className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-500 ${
-                videoLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              <source src={resolvedVideoUrl} type="video/mp4" />
-            </video>
-          </div>
-        ) : normalizedBg ? (
+        {normalizedBg ? (
           <OptimizedImage 
             src={normalizedBg} 
             priority={true}
@@ -192,16 +173,48 @@ export default function Hero({
             style={{ objectFit: 'cover', objectPosition: 'center' }}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-navy via-charcoal to-navy" />
+          <div className="absolute inset-0 w-full h-full overflow-hidden bg-navy">
+            {SLIDES.map((slide, index) => {
+              const isActive = index === currentSlide;
+              return (
+                <motion.div
+                  key={slide.url}
+                  initial={{ opacity: index === 0 ? 1 : 0 }}
+                  animate={{ opacity: isActive ? 1 : 0 }}
+                  transition={{ duration: 1.2, ease: "easeInOut" }}
+                  className="absolute inset-0 w-full h-full"
+                  style={{
+                    zIndex: isActive ? 10 : 1,
+                    pointerEvents: "none",
+                  }}
+                >
+                  <motion.div
+                    animate={isActive && !reduceMotion ? { scale: 1.08 } : { scale: 1.02 }}
+                    transition={isActive && !reduceMotion ? { duration: 5.5, ease: "linear" } : { duration: 0 }}
+                    className="w-full h-full"
+                  >
+                    <OptimizedImage
+                      src={slide.url}
+                      priority={index === 0}
+                      cloudinaryWidth={1920}
+                      className="w-full h-full object-cover"
+                      alt={slide.alt}
+                      style={{ objectFit: 'cover', objectPosition: 'center' }}
+                    />
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </div>
         )}
         
-        {/* Subtle Premium Dark Overlay (Capped at 15-25% to showcase vibrant natural colors) */}
+        {/* Subtle Premium Dark Overlay (Capped at 15-30% to showcase vibrant natural colors) */}
         <div 
           className="absolute inset-0 bg-black transition-opacity duration-700" 
           style={{ 
             opacity: overlayOpacity != null 
-              ? Math.min(overlayOpacity, 0.25) 
-              : 0.20 
+              ? Math.min(overlayOpacity, 0.30) 
+              : 0.25 
           }} 
         />
       </div>
@@ -232,14 +245,13 @@ export default function Hero({
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={reduceMotion ? { duration: 0 } : { delay: 0.5, duration: 1 }}
-                className="flex items-center justify-center font-medium hero-subheadline"
+                className="flex items-center justify-center font-extrabold hero-subheadline whitespace-nowrap"
                 style={{ 
                   marginTop: '6px', // Reduced gap between title and subtitle
                   ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
                 }}
               >
-                <Typewriter phrases={typingPhrases} />
-                <span className="font-light opacity-80 animate-pulse ml-2 text-primary-orange">|</span>
+                <Typewriter phrases={typingPhrases} /><span className="inline-block w-[2px] h-[1em] bg-primary-orange animate-pulse ml-[2px] align-middle" style={{ verticalAlign: 'middle' }} />
               </motion.div>
             )}
           </div>

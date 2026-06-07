@@ -30,6 +30,9 @@ export default defineConfig({
     "payouts",
     "assignments",
     "guide_work_days",
-    "guide_day_reports"
+    "guide_day_reports",
+    "guide_expenses",
+    "traveler_attendance",
+    "trip_status_updates"
   ]
 });

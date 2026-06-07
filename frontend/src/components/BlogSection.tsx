@@ -61,7 +61,7 @@ export default function BlogSection({
     <section className="section-wrapper bg-transparent overflow-hidden relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto relative">
-        <div className="flex flex-col mb-12">
+        <div className="flex flex-col mb-6 md:mb-10">
           {topLabel && (
             <span className="section-label">
               {topLabel}
@@ -85,7 +85,7 @@ export default function BlogSection({
         <div className="relative group">
           <div 
             id="blog-slider-container"
-            className="flex gap-6 overflow-x-auto no-scrollbar pb-8 snap-x scroll-smooth"
+            className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-8 snap-x scroll-smooth"
           >
             {displayBlogs.map((art, i) => (
               <BlogCard key={art.slug || i} art={art} i={i} reduceMotion={reduceMotion} />

@@ -392,7 +392,7 @@
   /* ─── Premium Luxury Hero Heading ─── */
   .hero-title {
     font-family: 'Montserrat', var(--font-montserrat), sans-serif;
-    font-weight: 600 !important;
+    font-weight: 800 !important;
     font-size: clamp(1.1rem, 5vw, 1.45rem) !important;
     line-height: var(--heading-line-height, 1.1) !important;
     letter-spacing: var(--heading-letter-spacing, -0.03em) !important;
@@ -402,17 +402,19 @@
     margin-left: auto !important;
     margin-right: auto !important;
     text-align: center !important;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.25);
   }
 
   @media (min-width: 768px) {
     .hero-title {
       font-size: var(--title-size-desktop, var(--text-heading)) !important;
+      font-weight: 800 !important;
     }
   }
 
   @media (max-width: 768px) {
     .hero-title {
-      font-weight: 600 !important;
+      font-weight: 800 !important;
       max-width: fit-content !important;
       width: auto !important;
       line-height: var(--heading-line-height, 1.1) !important;
@@ -421,10 +423,13 @@
 
   .hero-subheadline {
     font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   }
   @media (min-width: 768px) {
     .hero-subheadline {
       font-size: var(--subheadline-size-desktop, clamp(1rem, 2.5vw, 1.875rem)) !important;
+      font-weight: 800 !important;
     }
   }
 

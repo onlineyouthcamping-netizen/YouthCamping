@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { db, usersTable, tripsTable, attendanceTable, assignmentsTable, payoutsTable, guideWorkDaysTable, guideDayReportsTable } from "@workspace/db";
+import { db, usersTable, tripsTable, attendanceTable, assignmentsTable, payoutsTable, guideWorkDaysTable, guideDayReportsTable, guideExpensesTable, travelerAttendanceTable, tripStatusUpdatesTable } from "@workspace/db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { requireAuth, AuthenticatedRequest } from "../middlewares/auth";
+import { fetchTrips, fetchBookingsForTrip } from "../lib/mainBackendProxy";
 
 const adminRouter = Router();
 
@@ -370,7 +371,7 @@ adminRouter.get("/trips", async (req: Request, res: Response) => {
 // 7. POST /admin/guides - Create a new guide user
 adminRouter.post("/guides", async (req: Request, res: Response) => {
   try {
-    const { name, phone, dailyRate, emergencyContact, isActive } = req.body;
+    const { name, phone, dailyRate, emergencyContact, isActive, email, profilePhoto, address, notes } = req.body;
 
     if (!name || !phone) {
       res.status(400).json({ error: "Name and phone are required" });
@@ -386,6 +387,10 @@ adminRouter.post("/guides", async (req: Request, res: Response) => {
         dailyRate: dailyRate ?? 1500,
         emergencyContact: emergencyContact ?? null,
         isActive: isActive ?? "active",
+        email: email ?? null,
+        profilePhoto: profilePhoto ?? null,
+        address: address ?? null,
+        notes: notes ?? null,
       })
       .returning();
 
@@ -402,7 +407,7 @@ adminRouter.post("/guides", async (req: Request, res: Response) => {
 adminRouter.put("/guides/:id", async (req: Request, res: Response) => {
   try {
     const guideId = parseInt(req.params.id as string, 10);
-    const { name, phone, dailyRate, emergencyContact, isActive } = req.body;
+    const { name, phone, dailyRate, emergencyContact, isActive, email, profilePhoto, address, notes } = req.body;
 
     if (isNaN(guideId)) {
       res.status(400).json({ error: "Invalid guide ID" });
@@ -415,6 +420,10 @@ adminRouter.put("/guides/:id", async (req: Request, res: Response) => {
     if (dailyRate !== undefined) updateData.dailyRate = dailyRate;
     if (emergencyContact !== undefined) updateData.emergencyContact = emergencyContact;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (email !== undefined) updateData.email = email ?? null;
+    if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto ?? null;
+    if (address !== undefined) updateData.address = address ?? null;
+    if (notes !== undefined) updateData.notes = notes ?? null;
 
     if (Object.keys(updateData).length === 0) {
       res.status(400).json({ error: "No fields to update" });
@@ -441,6 +450,71 @@ adminRouter.put("/guides/:id", async (req: Request, res: Response) => {
   }
 });
 
+// 8b. DELETE /admin/guides/:id - Delete a guide and clean up dependencies
+adminRouter.delete("/guides/:id", async (req: Request, res: Response) => {
+  try {
+    const guideId = parseInt(req.params.id as string, 10);
+
+    if (isNaN(guideId)) {
+      res.status(400).json({ error: "Invalid guide ID" });
+      return;
+    }
+
+    // Verify if guide exists
+    const [guide] = await db.select().from(usersTable).where(eq(usersTable.id, guideId));
+    if (!guide) {
+      res.status(404).json({ error: "Guide not found" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      // 1. Delete day reports
+      await tx.delete(guideDayReportsTable).where(eq(guideDayReportsTable.guideId, guideId));
+      
+      // 2. Delete work days
+      await tx.delete(guideWorkDaysTable).where(eq(guideWorkDaysTable.guideId, guideId));
+      
+      // 3. Delete traveler attendance
+      await tx.delete(travelerAttendanceTable).where(eq(travelerAttendanceTable.markedByGuideId, guideId));
+      
+      // 4. Delete status updates
+      await tx.delete(tripStatusUpdatesTable).where(eq(tripStatusUpdatesTable.guideId, guideId));
+      
+      // 5. Delete guide expenses
+      await tx.delete(guideExpensesTable).where(eq(guideExpensesTable.guideId, guideId));
+      
+      // 6. Nullify verifiedBy in attendance
+      await tx.update(attendanceTable).set({ verifiedBy: null }).where(eq(attendanceTable.verifiedBy, guideId));
+      
+      // 7. Delete attendance
+      await tx.delete(attendanceTable).where(eq(attendanceTable.guideId, guideId));
+      
+      // 8. Delete payouts
+      await tx.delete(payoutsTable).where(eq(payoutsTable.guideId, guideId));
+      
+      // 9. Delete assignments
+      await tx.delete(assignmentsTable).where(eq(assignmentsTable.guideId, guideId));
+      
+      // 10. Clean up any trips where this guide is leadGuideId
+      const guideTrips = await tx.select().from(tripsTable).where(eq(tripsTable.leadGuideId, guideId));
+      for (const trip of guideTrips) {
+        await tx.delete(assignmentsTable).where(eq(assignmentsTable.tripId, trip.id));
+        await tx.delete(attendanceTable).where(eq(attendanceTable.tripId, trip.id));
+        await tx.delete(guideWorkDaysTable).where(eq(guideWorkDaysTable.tripId, trip.id));
+        await tx.delete(guideDayReportsTable).where(eq(guideDayReportsTable.tripId, trip.id));
+      }
+      await tx.delete(tripsTable).where(eq(tripsTable.leadGuideId, guideId));
+
+      // 11. Finally, delete the guide
+      await tx.delete(usersTable).where(eq(usersTable.id, guideId));
+    });
+
+    res.json({ success: true, message: "Guide deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 // 9. GET /admin/assignments - List all assignments with guide and trip names
 adminRouter.get("/assignments", async (req: Request, res: Response) => {
   try {
@@ -457,15 +531,19 @@ adminRouter.get("/assignments", async (req: Request, res: Response) => {
         allowedLatitude: assignmentsTable.allowedLatitude,
         allowedLongitude: assignmentsTable.allowedLongitude,
         allowedRadius: assignmentsTable.allowedRadius,
+        status: assignmentsTable.status,
+        mainBackendTripId: assignmentsTable.mainBackendTripId,
+        mainBackendTripName: assignmentsTable.mainBackendTripName,
         createdAt: assignmentsTable.createdAt,
       })
       .from(assignmentsTable)
       .innerJoin(usersTable, eq(assignmentsTable.guideId, usersTable.id))
-      .innerJoin(tripsTable, eq(assignmentsTable.tripId, tripsTable.id))
+      .leftJoin(tripsTable, eq(assignmentsTable.tripId, tripsTable.id))
       .orderBy(desc(assignmentsTable.createdAt));
 
     const formatted = assignments.map((a) => ({
       ...a,
+      tripName: a.tripName || a.mainBackendTripName || "Unknown Trip",
       createdAt: a.createdAt.toISOString(),
     }));
 
@@ -478,10 +556,10 @@ adminRouter.get("/assignments", async (req: Request, res: Response) => {
 // 10. POST /admin/assignments - Create an assignment
 adminRouter.post("/assignments", async (req: Request, res: Response) => {
   try {
-    const { guideId, tripId, departureDate, role, perDayAmount, allowedLatitude, allowedLongitude, allowedRadius } = req.body;
+    const { guideId, tripId, departureDate, role, perDayAmount, allowedLatitude, allowedLongitude, allowedRadius, status, mainBackendTripId, mainBackendTripName } = req.body;
 
-    if (!guideId || !tripId || !departureDate || !role || perDayAmount === undefined) {
-      res.status(400).json({ error: "guideId, tripId, departureDate, role, and perDayAmount are required" });
+    if (!guideId || (!tripId && !mainBackendTripId) || !departureDate || !role || perDayAmount === undefined) {
+      res.status(400).json({ error: "guideId, departureDate, role, perDayAmount, and either tripId or mainBackendTripId are required" });
       return;
     }
 
@@ -489,13 +567,16 @@ adminRouter.post("/assignments", async (req: Request, res: Response) => {
       .insert(assignmentsTable)
       .values({
         guideId,
-        tripId,
+        tripId: tripId || null,
         departureDate,
         role,
         perDayAmount,
         allowedLatitude: allowedLatitude ?? null,
         allowedLongitude: allowedLongitude ?? null,
         allowedRadius: allowedRadius ?? 3000,
+        status: status ?? "assigned",
+        mainBackendTripId: mainBackendTripId ?? null,
+        mainBackendTripName: mainBackendTripName ?? null,
       })
       .returning();
 
@@ -512,7 +593,7 @@ adminRouter.post("/assignments", async (req: Request, res: Response) => {
 adminRouter.put("/assignments/:id", async (req: Request, res: Response) => {
   try {
     const assignmentId = parseInt(req.params.id as string, 10);
-    const { guideId, tripId, departureDate, role, perDayAmount, allowedLatitude, allowedLongitude, allowedRadius } = req.body;
+    const { guideId, tripId, departureDate, role, perDayAmount, allowedLatitude, allowedLongitude, allowedRadius, status, mainBackendTripId, mainBackendTripName } = req.body;
 
     if (isNaN(assignmentId)) {
       res.status(400).json({ error: "Invalid assignment ID" });
@@ -528,6 +609,9 @@ adminRouter.put("/assignments/:id", async (req: Request, res: Response) => {
     if (allowedLatitude !== undefined) updateData.allowedLatitude = allowedLatitude;
     if (allowedLongitude !== undefined) updateData.allowedLongitude = allowedLongitude;
     if (allowedRadius !== undefined) updateData.allowedRadius = allowedRadius;
+    if (status !== undefined) updateData.status = status;
+    if (mainBackendTripId !== undefined) updateData.mainBackendTripId = mainBackendTripId;
+    if (mainBackendTripName !== undefined) updateData.mainBackendTripName = mainBackendTripName;
 
     if (Object.keys(updateData).length === 0) {
       res.status(400).json({ error: "No fields to update" });
@@ -564,17 +648,309 @@ adminRouter.delete("/assignments/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const [deleted] = await db
-      .delete(assignmentsTable)
-      .where(eq(assignmentsTable.id, assignmentId))
-      .returning();
-
-    if (!deleted) {
+    // Check if assignment exists
+    const [assignment] = await db.select().from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
+    if (!assignment) {
       res.status(404).json({ error: "Assignment not found" });
       return;
     }
 
+    await db.transaction(async (tx) => {
+      // 1. Delete day reports
+      await tx.delete(guideDayReportsTable).where(eq(guideDayReportsTable.assignmentId, assignmentId));
+      
+      // 2. Delete work days
+      await tx.delete(guideWorkDaysTable).where(eq(guideWorkDaysTable.assignmentId, assignmentId));
+      
+      // 3. Delete traveler attendance
+      await tx.delete(travelerAttendanceTable).where(eq(travelerAttendanceTable.assignmentId, assignmentId));
+      
+      // 4. Delete status updates
+      await tx.delete(tripStatusUpdatesTable).where(eq(tripStatusUpdatesTable.assignmentId, assignmentId));
+      
+      // 5. Delete expenses
+      await tx.delete(guideExpensesTable).where(eq(guideExpensesTable.assignmentId, assignmentId));
+      
+      // 6. Finally delete the assignment
+      await tx.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
+    });
+
     res.json({ message: "Assignment deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Proxy routes and new features endpoints
+// GET /admin/main-trips - Fetch trips from main backend for assignment dropdown selection
+adminRouter.get("/main-trips", async (req: Request, res: Response) => {
+  try {
+    const trips = await fetchTrips();
+    res.json(trips);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// GET /admin/assignment-travelers/:assignmentId - Fetch confirmed travelers for assignment's trip from main backend bookings
+adminRouter.get("/assignment-travelers/:assignmentId", async (req: Request, res: Response) => {
+  try {
+    const assignmentId = parseInt(req.params.assignmentId as string, 10);
+    if (isNaN(assignmentId)) {
+      res.status(400).json({ error: "Invalid assignment ID" });
+      return;
+    }
+    const [assignment] = await db
+      .select()
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.id, assignmentId))
+      .limit(1);
+
+    if (!assignment) {
+      res.status(404).json({ error: "Assignment not found" });
+      return;
+    }
+
+    const tripId = assignment.mainBackendTripId;
+    if (!tripId) {
+      res.json([]); // Not a main backend assignment
+      return;
+    }
+
+    const bookings = await fetchBookingsForTrip(tripId);
+    // Confirmed bookings only
+    const confirmedBookings = bookings.filter(b => b.status === "confirmed");
+
+    // Expand to individual travelers (passengers list + Booker)
+    const travelers: any[] = [];
+    confirmedBookings.forEach(booking => {
+      // Booker is traveler 1
+      travelers.push({
+        bookingId: booking.bookingId,
+        name: booking.name,
+        phone: booking.phone,
+        email: booking.email,
+        departureDate: booking.departureDate,
+        pickupCity: booking.pickupCity,
+        paymentStatus: booking.paymentStatus,
+        totalAmount: booking.totalAmount,
+        advancePaid: booking.advancePaid,
+        remainingAmount: booking.remainingAmount,
+        isPrimaryBooker: true,
+        age: booking.age || null,
+        gender: booking.gender || null,
+      });
+
+      // Other passengers
+      const persons = booking.passengers || [];
+      persons.forEach((p: any) => {
+        travelers.push({
+          bookingId: booking.bookingId,
+          name: p.name || p.fullName,
+          phone: p.phone || p.mobile || booking.phone,
+          email: booking.email,
+          departureDate: booking.departureDate,
+          pickupCity: booking.pickupCity,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: 0,
+          advancePaid: 0,
+          remainingAmount: 0,
+          isPrimaryBooker: false,
+          age: p.age || null,
+          gender: p.gender || null,
+        });
+      });
+    });
+
+    res.json(travelers);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// GET /admin/expenses - List all uploaded expenses (filterable by guide, assignment, category, status)
+adminRouter.get("/expenses", async (req: Request, res: Response) => {
+  try {
+    const { guideId, assignmentId, category, status } = req.query;
+    const whereConditions = [];
+
+    if (guideId) whereConditions.push(eq(guideExpensesTable.guideId, parseInt(guideId as string, 10)));
+    if (assignmentId) whereConditions.push(eq(guideExpensesTable.assignmentId, parseInt(assignmentId as string, 10)));
+    if (category) whereConditions.push(eq(guideExpensesTable.category, category as string));
+    if (status) whereConditions.push(eq(guideExpensesTable.status, status as string));
+
+    const query = db
+      .select({
+        id: guideExpensesTable.id,
+        guideId: guideExpensesTable.guideId,
+        guideName: usersTable.name,
+        assignmentId: guideExpensesTable.assignmentId,
+        tripName: assignmentsTable.mainBackendTripName,
+        category: guideExpensesTable.category,
+        amount: guideExpensesTable.amount,
+        description: guideExpensesTable.description,
+        receiptUrl: guideExpensesTable.receiptUrl,
+        status: guideExpensesTable.status,
+        adminRemarks: guideExpensesTable.adminRemarks,
+        createdAt: guideExpensesTable.createdAt,
+      })
+      .from(guideExpensesTable)
+      .innerJoin(usersTable, eq(guideExpensesTable.guideId, usersTable.id))
+      .innerJoin(assignmentsTable, eq(guideExpensesTable.assignmentId, assignmentsTable.id));
+
+    const expenses = whereConditions.length > 0 
+      ? await query.where(and(...whereConditions)).orderBy(desc(guideExpensesTable.createdAt))
+      : await query.orderBy(desc(guideExpensesTable.createdAt));
+
+    const formatted = expenses.map((e) => ({
+      ...e,
+      createdAt: e.createdAt.toISOString(),
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// PUT /admin/expenses/:id/status - Approve or reject an expense and add remarks
+adminRouter.put("/expenses/:id/status", async (req: Request, res: Response) => {
+  try {
+    const expenseId = parseInt(req.params.id as string, 10);
+    const { status, adminRemarks } = req.body;
+
+    if (isNaN(expenseId) || !status) {
+      res.status(400).json({ error: "Invalid expense ID or missing status" });
+      return;
+    }
+
+    if (status !== "approved" && status !== "rejected") {
+      res.status(400).json({ error: "Status must be 'approved' or 'rejected'" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(guideExpensesTable)
+      .set({ status, adminRemarks: adminRemarks || null, updatedAt: new Date() })
+      .where(eq(guideExpensesTable.id, expenseId))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Expense not found" });
+      return;
+    }
+
+    res.json({
+      ...updated,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// GET /admin/traveler-attendance/:assignmentId - Monitor live traveler attendance for an assignment
+adminRouter.get("/traveler-attendance/:assignmentId", async (req: Request, res: Response) => {
+  try {
+    const assignmentId = parseInt(req.params.assignmentId as string, 10);
+    if (isNaN(assignmentId)) {
+      res.status(400).json({ error: "Invalid assignment ID" });
+      return;
+    }
+
+    const attendance = await db
+      .select({
+        id: travelerAttendanceTable.id,
+        assignmentId: travelerAttendanceTable.assignmentId,
+        bookingId: travelerAttendanceTable.bookingId,
+        travelerName: travelerAttendanceTable.travelerName,
+        travelerPhone: travelerAttendanceTable.travelerPhone,
+        status: travelerAttendanceTable.status,
+        notes: travelerAttendanceTable.notes,
+        markedByGuideId: travelerAttendanceTable.markedByGuideId,
+        markedByGuideName: usersTable.name,
+        updatedAt: travelerAttendanceTable.updatedAt,
+      })
+      .from(travelerAttendanceTable)
+      .innerJoin(usersTable, eq(travelerAttendanceTable.markedByGuideId, usersTable.id))
+      .where(eq(travelerAttendanceTable.assignmentId, assignmentId))
+      .orderBy(desc(travelerAttendanceTable.updatedAt));
+
+    const formatted = attendance.map((a) => ({
+      ...a,
+      updatedAt: a.updatedAt.toISOString(),
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// GET /admin/trip-status/recent - Fetch recent status updates across all assignments
+adminRouter.get("/trip-status/recent", async (req: Request, res: Response) => {
+  try {
+    const statusUpdates = await db
+      .select({
+        id: tripStatusUpdatesTable.id,
+        assignmentId: tripStatusUpdatesTable.assignmentId,
+        tripName: assignmentsTable.mainBackendTripName,
+        guideId: tripStatusUpdatesTable.guideId,
+        guideName: usersTable.name,
+        status: tripStatusUpdatesTable.status,
+        notes: tripStatusUpdatesTable.notes,
+        location: tripStatusUpdatesTable.location,
+        updatedAt: tripStatusUpdatesTable.updatedAt,
+      })
+      .from(tripStatusUpdatesTable)
+      .innerJoin(usersTable, eq(tripStatusUpdatesTable.guideId, usersTable.id))
+      .innerJoin(assignmentsTable, eq(tripStatusUpdatesTable.assignmentId, assignmentsTable.id))
+      .orderBy(desc(tripStatusUpdatesTable.updatedAt))
+      .limit(5);
+
+    const formatted = statusUpdates.map((s) => ({
+      ...s,
+      updatedAt: s.updatedAt.toISOString(),
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// GET /admin/trip-status/:assignmentId - Fetch the timeline history of trip statuses for a trip
+adminRouter.get("/trip-status/:assignmentId", async (req: Request, res: Response) => {
+  try {
+    const assignmentId = parseInt(req.params.assignmentId as string, 10);
+    if (isNaN(assignmentId)) {
+      res.status(400).json({ error: "Invalid assignment ID" });
+      return;
+    }
+
+    const statusUpdates = await db
+      .select({
+        id: tripStatusUpdatesTable.id,
+        assignmentId: tripStatusUpdatesTable.assignmentId,
+        guideId: tripStatusUpdatesTable.guideId,
+        guideName: usersTable.name,
+        status: tripStatusUpdatesTable.status,
+        notes: tripStatusUpdatesTable.notes,
+        location: tripStatusUpdatesTable.location,
+        updatedAt: tripStatusUpdatesTable.updatedAt,
+      })
+      .from(tripStatusUpdatesTable)
+      .innerJoin(usersTable, eq(tripStatusUpdatesTable.guideId, usersTable.id))
+      .where(eq(tripStatusUpdatesTable.assignmentId, assignmentId))
+      .orderBy(desc(tripStatusUpdatesTable.updatedAt));
+
+    const formatted = statusUpdates.map((s) => ({
+      ...s,
+      updatedAt: s.updatedAt.toISOString(),
+    }));
+
+    res.json(formatted);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

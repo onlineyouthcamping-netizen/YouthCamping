@@ -24,6 +24,38 @@ function renderFormattedText(text: string) {
   });
 }
 
+// Helper functions for mobile itinerary card optimization
+function formatMealsMobile(meals: string): string {
+  if (!meals) return "";
+  const lower = meals.toLowerCase();
+  const hasB = lower.includes("breakfast");
+  const hasL = lower.includes("lunch");
+  const hasD = lower.includes("dinner");
+  const parts = [];
+  if (hasB) parts.push("B");
+  if (hasL) parts.push("L");
+  if (hasD) parts.push("D");
+  if (parts.length > 0) {
+    return parts.join(" • ");
+  }
+  return meals;
+}
+
+function formatStayMobile(stay: string): string {
+  if (!stay) return "";
+  const lower = stay.toLowerCase();
+  if (lower.includes("camp")) {
+    return "Camp";
+  }
+  if (lower.includes("hotel") || lower.includes("cottage")) {
+    return "Hotel";
+  }
+  if (lower.includes("travel") || lower.includes("train") || lower.includes("journey")) {
+    return "Travel";
+  }
+  return stay;
+}
+
 interface ItineraryAccordionProps {
   itinerary: ItineraryDay[];
   startDate?: string | null;
@@ -85,15 +117,15 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
         >
           <button
             onClick={() => toggleDay(day.displayDay)}
-            className="w-full flex items-center p-2.5 md:p-3.5 text-left gap-3 md:gap-5"
+            className="w-full flex items-center py-2 px-2.5 md:p-3.5 text-left gap-2.5 md:gap-5"
           >
             {/* Left Section: Day Badge & Dynamic Date */}
-            <div className="shrink-0 flex flex-row items-center gap-3 md:gap-5 min-w-[90px] md:min-w-[140px]">
-              <div className="px-4 py-2 bg-[#525B60] text-white rounded-[12px] md:rounded-[14px] text-[11px] md:text-[13px] font-bold text-center shadow-sm border border-white/10 shrink-0">
+            <div className="shrink-0 flex flex-row items-center gap-2 md:gap-5 min-w-0 md:min-w-[140px]">
+              <div className="px-3 py-1.5 md:px-4 md:py-2 bg-[#525B60] text-white rounded-[10px] md:rounded-[14px] text-[10px] md:text-[13px] font-bold text-center shadow-sm border border-white/10 shrink-0">
                 Day {day.displayDay}
               </div>
               {startDate && (
-                <div className="flex flex-col items-start leading-none shrink-0">
+                <div className="hidden md:flex flex-col items-start leading-none shrink-0">
                   <span className="text-[10px] md:text-[11px] font-bold text-[#D84E2D] capitalize tracking-wider">
                     {(() => {
                         const d = new Date(startDate);
@@ -113,29 +145,46 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
                 )}
               </div>
   
-              {/* Middle Section: Title */}
-              <div className="flex-1 min-w-0">
-                <span className="text-[11px] md:text-sm font-bold text-navy leading-tight line-clamp-2">
+              {/* Middle Section: Title & Date (below on Mobile) */}
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5 md:gap-0">
+                <span className="text-[11px] md:text-sm font-semibold md:font-bold text-navy leading-tight line-clamp-2 block">
                   {day.title}
                 </span>
+                {startDate && (
+                  <span className="text-[9px] font-medium text-[#D84E2D]/90 md:hidden mt-0.5">
+                    {(() => {
+                      const d = new Date(startDate);
+                      d.setDate(d.getDate() + day.originalDay - 1);
+                      const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+                      const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
+                      return `${dateStr} • ${dayName}`;
+                    })()}
+                  </span>
+                )}
               </div>
   
               {/* Right Section: Stay & Meals */}
               {(day.stay || day.meals) && (
-                <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                  <div className="w-[1.5px] md:w-[2px] h-8 md:h-10 bg-navy/60 md:bg-navy/80 rounded-full" />
-                  <div className="flex flex-col gap-0.5 md:gap-1 min-w-[90px] md:min-w-[140px]">
+                <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
+                  <div className="w-[1px] md:w-[2px] h-7 md:h-10 bg-navy/20 md:bg-navy/80 rounded-full" />
+                  <div className="flex flex-col gap-1 min-w-0 md:min-w-[140px] shrink-0">
                     {day.meals && (
                       <div className="flex items-center gap-1.5 md:gap-2 text-navy/80">
-                        <Utensils className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 shrink-0" />
-                        <span className="text-[8px] md:text-[10px] font-medium leading-none">{day.meals}</span>
+                        <Utensils className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 shrink-0 hidden md:block" />
+                        <span className="text-[8px] md:text-[10px] font-medium leading-none hidden md:block">{day.meals}</span>
+                        <span className="text-[8px] font-bold leading-none md:hidden text-navy/60 shrink-0">
+                          {formatMealsMobile(day.meals)}
+                        </span>
                       </div>
                     )}
                     {day.stay && (
                       <div className="flex items-center gap-1.5 md:gap-2 text-navy">
-                        <BedDouble className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 shrink-0 text-navy/60" />
-                        <span className="text-[8px] md:text-[10px] font-bold leading-none truncate max-w-[70px] md:max-w-none">
+                        <BedDouble className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 shrink-0 text-navy/60 hidden md:block" />
+                        <span className="text-[8px] md:text-[10px] font-bold leading-none truncate max-w-[70px] md:max-w-none hidden md:block">
                           {day.stay}
+                        </span>
+                        <span className="text-[8px] font-bold leading-none md:hidden text-navy/80 shrink-0 truncate max-w-[80px]">
+                          {formatStayMobile(day.stay)}
                         </span>
                       </div>
                     )}

@@ -159,12 +159,12 @@ export default function CommunityTrips({
     : title;
 
   return (
-    <div className="overflow-hidden section-wrapper bg-transparent relative">
+    <div className="overflow-hidden section-wrapper bg-white relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       
       <div className="max-w-[1440px] mx-auto relative px-2">
         {/* Header Section */}
-        <div className="flex flex-col mb-6 md:mb-8">
+        <div className="flex flex-col mb-6 md:mb-10">
           {topLabel && (
             <span className="section-label">
               {topLabel}
@@ -201,7 +201,7 @@ export default function CommunityTrips({
         </div>
 
         {/* Month Pills */}
-        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 md:mb-8 pb-1">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 md:mb-10 pb-1">
           {displayMonths.map((m) => {
             const isActive = activeMonth === m;
             return (
@@ -243,7 +243,7 @@ export default function CommunityTrips({
           <div 
             ref={scrollRef}
             className={cn(
-              "flex gap-6 md:gap-8 overflow-x-auto no-scrollbar pb-8 select-none",
+              "flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-8 select-none",
               isMouseDown ? "cursor-grabbing scroll-auto" : "cursor-grab snap-x snap-mandatory scroll-smooth"
             )}
             onMouseDown={handleMouseDown}
@@ -278,7 +278,7 @@ export default function CommunityTrips({
                   >
                     <div 
                       className={cn(
-                        "avian-card group relative overflow-hidden transition-all duration-300 border border-zinc-200/50",
+                        "avian-card group relative overflow-hidden transition-all duration-300 border border-zinc-200/50 flex flex-col justify-between",
                         theme?.cardHoverAnimation === 'lift' ? "hover:-translate-y-2 shadow-2xl" : "",
                         theme?.cardHoverAnimation === 'shadow' ? "hover:shadow-2xl" : ""
                       )}
@@ -289,84 +289,83 @@ export default function CommunityTrips({
                         boxShadow: 'var(--shadow-card)',
                       }}
                     >
-                      <OptimizedImage 
-                        src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
-                        alt={trip.title} 
-                        loading="lazy"
-                        cloudinaryWidth={800}
-                        width={400}
-                        height={240}
-                        className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-1000", hoverScaleClass)}
-                        style={{
-                          filter: 'brightness(var(--card-brightness))',
-                        }}
-                      />
-                      
-                      {/* Top Badge - Location */}
-                      <div className="absolute top-5 right-5 z-10">
-                        <div 
-                          className="font-bold text-[10px] md:text-xs uppercase tracking-wide px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-zinc-100"
+                      {/* Image Section (Height: 70%) */}
+                      <div className="relative h-[70%] w-full overflow-hidden rounded-t-[inherit]">
+                        <OptimizedImage 
+                          src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
+                          alt={trip.title} 
+                          loading="lazy"
+                          cloudinaryWidth={800}
+                          width={400}
+                          height={240}
+                          className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-1000", hoverScaleClass)}
                           style={{
-                            backgroundColor: 'var(--card-badge-bg)',
-                            color: 'var(--card-badge-text)',
+                            filter: 'brightness(var(--card-brightness))',
                           }}
-                        >
-                          <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
-                          {trip.location}
+                        />
+                        
+                        {/* Top Badge - Location (Floating on Image) */}
+                        <div className="absolute top-5 right-5 z-10">
+                          <div 
+                            className="font-bold text-[10px] md:text-xs uppercase tracking-wide px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-zinc-100"
+                            style={{
+                              backgroundColor: 'var(--card-badge-bg)',
+                              color: 'var(--card-badge-text)',
+                            }}
+                          >
+                            <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
+                            {trip.location}
+                          </div>
                         </div>
                       </div>
  
-                      {/* Bottom Content with Cinematic Gradient */}
+                      {/* Content Section (Height: 30%) */}
                       <div 
-                        className="absolute inset-0 flex flex-col justify-end p-4 md:p-8 text-white"
-                        style={{
-                          background: `linear-gradient(to top, rgba(0,0,0,${overlayOpacity * 1.7}) 0%, rgba(0,0,0,${overlayOpacity * 0.5}) 50%, transparent 100%)`
-                        }}
+                        className="h-[30%] w-full bg-white rounded-b-[inherit] p-3 md:p-5 flex flex-col justify-between text-zinc-900 border-t border-zinc-100/50"
                       >
                         <h3 
-                          className="mb-2 md:mb-4 leading-tight tracking-tight capitalize break-words text-white"
+                          className="leading-tight tracking-tight capitalize break-words text-[#0B1F3A] hover:text-[#FF6B00] group-hover:text-[#FF6B00] transition-colors line-clamp-2"
                           style={{
                             fontSize: 'var(--card-title-size)',
-                            fontWeight: 'var(--font-weight-heading, 500)'
+                            fontWeight: 700
                           }}
                         >
                           {trip.title}
                         </h3>
                         
-                        <div className="flex flex-col gap-3 md:gap-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-2 text-white/90">
-                                <Clock className="w-4 h-4 text-primary-orange" style={{ color: 'var(--accent-color)' }} />
-                                <span className="text-[11px] md:text-xs font-semibold tracking-wide uppercase">{trip.duration}</span>
-                              </div>
-                              
-                              <div className="flex items-center gap-3">
-                                <span 
-                                  className="text-lg md:text-xl font-bold tracking-wide"
-                                  style={{
-                                    color: 'var(--card-price-color)',
-                                  }}
-                                >
-                                  ₹{trip.price.toLocaleString()}
-                                </span>
-                                <span className="text-xs md:text-sm font-normal text-white/40 line-through decoration-white/60">
-                                  ₹{(trip.price + 4000).toLocaleString()}
-                                </span>
-                              </div>
+                        <div className="flex items-end justify-between mt-auto w-full">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-[#6B7280]">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-[10px] md:text-xs font-semibold tracking-wide uppercase">{trip.duration}</span>
                             </div>
                             
-                            {/* CTA/Button style */}
-                            {theme?.cardButtonStyle === 'pill' ? (
-                              <div className="px-5 py-2 bg-white text-navy hover:bg-primary-orange hover:text-white transition-all shadow-md font-semibold text-xs rounded-full flex items-center gap-1">
-                                Book Now <ChevronRight className="w-3 h-3" />
-                              </div>
-                            ) : theme?.cardButtonStyle === 'none' ? null : (
-                              <div className="w-11 h-11 bg-white text-navy rounded-full flex items-center justify-center hover:bg-primary-orange hover:text-white transition-all shadow-md group/btn">
-                                <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-0.5 transition-transform" />
-                              </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                              <span 
+                                className="text-base md:text-lg font-bold tracking-wide"
+                                style={{
+                                  color: '#FF6B00',
+                                  fontWeight: 700
+                                }}
+                              >
+                                ₹{trip.price.toLocaleString()}
+                              </span>
+                              <span className="text-xs md:text-sm font-normal text-zinc-400 line-through decoration-zinc-400">
+                                ₹{(trip.price + 4000).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
+                          
+                          {/* CTA/Button style */}
+                          {theme?.cardButtonStyle === 'pill' ? (
+                            <div className="px-4 py-2 bg-white text-navy hover:bg-[#FF6B00] hover:text-white transition-all shadow-sm font-semibold text-[10px] rounded-full flex items-center gap-1 border border-zinc-200/50">
+                              Book Now <ChevronRight className="w-3 h-3" />
+                            </div>
+                          ) : theme?.cardButtonStyle === 'none' ? null : (
+                            <div className="w-10 h-10 bg-white text-navy rounded-full flex items-center justify-center hover:bg-[#FF6B00] hover:text-white transition-all shadow-sm group/btn border border-zinc-200/50 shrink-0">
+                              <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+                            </div>
+                          )}
                         </div>
                       </div>
 

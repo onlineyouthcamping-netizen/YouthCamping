@@ -3,6 +3,7 @@ import { guideService, Guide } from "@/services/guide.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +14,9 @@ import {
   Edit2, 
   AlertTriangle,
   Loader2,
-  Phone
+  Phone,
+  MessageSquare,
+  Trash2
 } from "lucide-react";
 
 export default function GuidesListPage() {
@@ -32,7 +35,11 @@ export default function GuidesListPage() {
     phone: "",
     dailyRate: 1500,
     emergencyContact: "",
-    isActive: "active"
+    isActive: "active",
+    email: "",
+    profilePhoto: "",
+    address: "",
+    notes: ""
   });
 
   const fetchGuides = async () => {
@@ -54,7 +61,6 @@ export default function GuidesListPage() {
     fetchGuides();
   }, []);
 
-
   const handleOpenAdd = () => {
     setEditingGuide(null);
     setForm({
@@ -62,22 +68,43 @@ export default function GuidesListPage() {
       phone: "",
       dailyRate: 1500,
       emergencyContact: "",
-      isActive: "active"
+      isActive: "active",
+      email: "",
+      profilePhoto: "",
+      address: "",
+      notes: ""
     });
     setModalOpen(true);
   };
 
   const handleOpenEdit = (guide: Guide) => {
     setEditingGuide(guide);
-    // Let's get details or guess if emergencyContact is missing
     setForm({
       name: guide.name,
       phone: guide.phone,
-      dailyRate: 1500, // default if not returned in listing, edit will update
-      emergencyContact: "",
-      isActive: guide.todayStatus === "idle" ? "active" : "active" // fallback
+      dailyRate: guide.dailyRate || 1500,
+      emergencyContact: guide.emergencyContact || "",
+      isActive: guide.isActive || "active",
+      email: guide.email || "",
+      profilePhoto: guide.profilePhoto || "",
+      address: guide.address || "",
+      notes: guide.notes || ""
     });
     setModalOpen(true);
+  };
+
+  const handleDeleteGuide = async (id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${name}? This will delete all of their assignments, work days, and logs.`)) {
+      return;
+    }
+    try {
+      await guideService.deleteGuide(id);
+      toast.success("Guide removed successfully");
+      fetchGuides();
+    } catch (err: any) {
+      const msg = err.response?.data?.error || "Failed to delete guide";
+      toast.error(msg);
+    }
   };
 
   const handleSubmit = async () => {
@@ -94,7 +121,11 @@ export default function GuidesListPage() {
           phone: form.phone,
           dailyRate: Number(form.dailyRate),
           emergencyContact: form.emergencyContact || undefined,
-          isActive: form.isActive
+          isActive: form.isActive,
+          email: form.email || null,
+          profilePhoto: form.profilePhoto || null,
+          address: form.address || null,
+          notes: form.notes || null
         });
         toast.success("Guide profile updated successfully");
       } else {
@@ -103,7 +134,11 @@ export default function GuidesListPage() {
           phone: form.phone,
           dailyRate: Number(form.dailyRate),
           emergencyContact: form.emergencyContact || undefined,
-          isActive: form.isActive
+          isActive: form.isActive,
+          email: form.email || null,
+          profilePhoto: form.profilePhoto || null,
+          address: form.address || null,
+          notes: form.notes || null
         });
         toast.success("New guide registered successfully");
       }
@@ -182,7 +217,7 @@ export default function GuidesListPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/50">
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Name</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Name & Email</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Phone</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Trip</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Today Status</th>
@@ -196,13 +231,30 @@ export default function GuidesListPage() {
                   <tr key={guide.id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded bg-orange-50 flex items-center justify-center text-[10px] font-bold text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
-                          {guide.name.substring(0, 2).toUpperCase()}
+                        {guide.profilePhoto ? (
+                          <img src={guide.profilePhoto} alt={guide.name} className="h-7 w-7 rounded-full object-cover border border-slate-200 shadow-sm" />
+                        ) : (
+                          <div className="h-7 w-7 rounded bg-orange-50 flex items-center justify-center text-[10px] font-bold text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                            {guide.name.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold text-slate-800">{guide.name}</span>
+                          {guide.email && <span className="text-[10px] text-slate-400 font-medium">{guide.email}</span>}
                         </div>
-                        <span className="text-xs font-semibold text-slate-800">{guide.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500 font-medium">{guide.phone}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span>{guide.phone}</span>
+                        <a href={`tel:+91${guide.phone}`} className="p-1 rounded hover:bg-slate-105 hover:text-primary transition-all text-slate-400">
+                          <Phone className="w-3.5 h-3.5" />
+                        </a>
+                        <a href={`https://wa.me/91${guide.phone}`} target="_blank" rel="noreferrer" className="p-1 rounded hover:bg-slate-105 hover:text-emerald-500 transition-all text-slate-400">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-xs text-slate-650 font-semibold">{guide.activeTripName || <span className="text-slate-300 italic font-medium">None</span>}</td>
                     <td className="px-4 py-3">
                       <StatusBadge 
@@ -230,14 +282,24 @@ export default function GuidesListPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button 
-                        onClick={() => handleOpenEdit(guide)}
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 hover:bg-slate-100 hover:text-primary transition-all rounded-lg"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button 
+                          onClick={() => handleOpenEdit(guide)}
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-slate-100 hover:text-primary transition-all rounded-lg"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button 
+                          onClick={() => handleDeleteGuide(guide.id, guide.name)}
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-rose-50 hover:text-destructive transition-all rounded-lg"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -264,10 +326,10 @@ export default function GuidesListPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         title={editingGuide ? "Modify Guide Profile" : "Register New Guide"}
-        description={editingGuide ? "Update daily rates, active status, or phone configuration" : "Add a guide to start assigning them to trails"}
+        description={editingGuide ? "Update daily rates, active status, or contact configuration" : "Add a guide to start assigning them to trails"}
         footer={modalFooter}
       >
-        <div className="space-y-6">
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Full Name *</Label>
@@ -295,6 +357,15 @@ export default function GuidesListPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
+              <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Email Address</Label>
+              <Input 
+                type="email"
+                value={form.email} 
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                placeholder="e.g. rahul@example.com" 
+              />
+            </div>
+            <div className="space-y-2">
               <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Daily Payout Rate (₹) *</Label>
               <Input 
                 type="number"
@@ -303,14 +374,34 @@ export default function GuidesListPage() {
                 placeholder="1500" 
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Emergency Contact Number</Label>
               <Input 
                 value={form.emergencyContact} 
                 onChange={e => setForm({ ...form, emergencyContact: e.target.value })}
-                placeholder="Optional 10-digit number" 
+                placeholder="Emergency contact number" 
               />
             </div>
+            <div className="space-y-2">
+              <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Profile Photo URL</Label>
+              <Input 
+                value={form.profilePhoto} 
+                onChange={e => setForm({ ...form, profilePhoto: e.target.value })}
+                placeholder="https://example.com/avatar.jpg" 
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Home Address</Label>
+            <Input 
+              value={form.address} 
+              onChange={e => setForm({ ...form, address: e.target.value })}
+              placeholder="Home address details" 
+            />
           </div>
 
           <div className="space-y-2">
@@ -324,6 +415,16 @@ export default function GuidesListPage() {
                 <SelectItem value="inactive">Inactive (Suspended / On Leave)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Bio / Notes</Label>
+            <Textarea 
+              value={form.notes} 
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              placeholder="Additional details or special notes about the guide..." 
+              className="rounded-xl border-slate-200"
+            />
           </div>
         </div>
       </AdminModal>

@@ -11,6 +11,10 @@ export const usersTable = pgTable("users", {
   dailyRate: integer("daily_rate").default(1500).notNull(),
   emergencyContact: text("emergency_contact"),
   isActive: text("is_active").default("active").notNull(), // 'active' | 'inactive'
+  email: text("email"),
+  profilePhoto: text("profile_photo"),
+  address: text("address"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -67,14 +71,56 @@ export const payoutsTable = pgTable("payouts", {
 export const assignmentsTable = pgTable("assignments", {
   id: serial("id").primaryKey(),
   guideId: integer("guide_id").references(() => usersTable.id).notNull(),
-  tripId: integer("trip_id").references(() => tripsTable.id).notNull(),
+  tripId: integer("trip_id").references(() => tripsTable.id), // Nullable now
   departureDate: date("departure_date").notNull(),
-  role: text("role").notNull(), // 'guide' | 'coordinator' | 'captain'
+  role: text("role").notNull(), // 'guide' | 'coordinator' | 'captain' | 'lead_guide' | 'assistant_guide'
   perDayAmount: integer("per_day_amount").notNull(),
   allowedLatitude: doublePrecision("allowed_latitude"),
   allowedLongitude: doublePrecision("allowed_longitude"),
   allowedRadius: integer("allowed_radius").default(3000).notNull(),
+  status: text("status").default("assigned").notNull(), // 'assigned' | 'ongoing' | 'completed' | 'cancelled'
+  mainBackendTripId: text("main_backend_trip_id"),
+  mainBackendTripName: text("main_backend_trip_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// New Table: Guide Expenses
+export const guideExpensesTable = pgTable("guide_expenses", {
+  id: serial("id").primaryKey(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  category: text("category").notNull(), // 'hotel_payment' | 'toll_receipt' | 'fuel_bill' | 'entry_ticket' | 'misc_expense'
+  amount: integer("amount").notNull(),
+  description: text("description").notNull(),
+  receiptUrl: text("receipt_url").notNull(),
+  status: text("status").default("pending").notNull(), // 'pending' | 'approved' | 'rejected'
+  adminRemarks: text("admin_remarks"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// New Table: Traveler Attendance
+export const travelerAttendanceTable = pgTable("traveler_attendance", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  bookingId: text("booking_id").notNull(),
+  travelerName: text("traveler_name").notNull(),
+  travelerPhone: text("traveler_phone"),
+  status: text("status").notNull(), // 'arrived_pickup' | 'boarded_train' | 'reached_destination' | 'missing_delayed'
+  notes: text("notes"),
+  markedByGuideId: integer("marked_by_guide_id").references(() => usersTable.id).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// New Table: Trip Status Updates / Timeline
+export const tripStatusUpdatesTable = pgTable("trip_status_updates", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  status: text("status").notNull(), // 'trip_started' | 'train_boarded' | 'destination_reached' | 'hotel_checkin_complete' | 'sightseeing_started' | 'return_journey_started'
+  notes: text("notes"),
+  location: text("location"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Relationships
@@ -83,6 +129,9 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   attendance: many(attendanceTable),
   payouts: many(payoutsTable),
   assignments: many(assignmentsTable),
+  expenses: many(guideExpensesTable),
+  markedTravelerAttendance: many(travelerAttendanceTable),
+  tripStatusUpdates: many(tripStatusUpdatesTable),
 }));
 
 export const tripsRelations = relations(tripsTable, ({ one, many }) => ({
@@ -116,7 +165,7 @@ export const payoutsRelations = relations(payoutsTable, ({ one }) => ({
   }),
 }));
 
-export const assignmentsRelations = relations(assignmentsTable, ({ one }) => ({
+export const assignmentsRelations = relations(assignmentsTable, ({ one, many }) => ({
   guide: one(usersTable, {
     fields: [assignmentsTable.guideId],
     references: [usersTable.id],
@@ -125,13 +174,49 @@ export const assignmentsRelations = relations(assignmentsTable, ({ one }) => ({
     fields: [assignmentsTable.tripId],
     references: [tripsTable.id],
   }),
+  expenses: many(guideExpensesTable),
+  travelerAttendance: many(travelerAttendanceTable),
+  tripStatusUpdates: many(tripStatusUpdatesTable),
+}));
+
+export const guideExpensesRelations = relations(guideExpensesTable, ({ one }) => ({
+  guide: one(usersTable, {
+    fields: [guideExpensesTable.guideId],
+    references: [usersTable.id],
+  }),
+  assignment: one(assignmentsTable, {
+    fields: [guideExpensesTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+}));
+
+export const travelerAttendanceRelations = relations(travelerAttendanceTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [travelerAttendanceTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  markedByGuide: one(usersTable, {
+    fields: [travelerAttendanceTable.markedByGuideId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const tripStatusUpdatesRelations = relations(tripStatusUpdatesTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [tripStatusUpdatesTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [tripStatusUpdatesTable.guideId],
+    references: [usersTable.id],
+  }),
 }));
 
 // Day-wise guide work plan table
 export const guideWorkDaysTable = pgTable("guide_work_days", {
   id: serial("id").primaryKey(),
   assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
-  tripId: integer("trip_id").references(() => tripsTable.id).notNull(),
+  tripId: integer("trip_id").references(() => tripsTable.id), // Nullable now too to support main backend trips
   guideId: integer("guide_id").references(() => usersTable.id).notNull(),
   dayNumber: integer("day_number").notNull(),
   date: date("date").notNull(), // YYYY-MM-DD
@@ -155,7 +240,7 @@ export const guideDayReportsTable = pgTable("guide_day_reports", {
   workDayId: integer("work_day_id").references(() => guideWorkDaysTable.id).notNull(),
   assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
   guideId: integer("guide_id").references(() => usersTable.id).notNull(),
-  tripId: integer("trip_id").references(() => tripsTable.id).notNull(),
+  tripId: integer("trip_id").references(() => tripsTable.id), // Nullable now too
   attendanceId: integer("attendance_id").references(() => attendanceTable.id),
   reportText: text("report_text").notNull(),
   uploadedPhotoUrls: json("uploaded_photo_urls").$type<string[]>().default([]).notNull(),
@@ -221,6 +306,15 @@ export const selectPayoutSchema = createSelectSchema(payoutsTable);
 export const insertAssignmentSchema = createInsertSchema(assignmentsTable);
 export const selectAssignmentSchema = createSelectSchema(assignmentsTable);
 
+export const insertGuideExpenseSchema = createInsertSchema(guideExpensesTable);
+export const selectGuideExpenseSchema = createSelectSchema(guideExpensesTable);
+
+export const insertTravelerAttendanceSchema = createInsertSchema(travelerAttendanceTable);
+export const selectTravelerAttendanceSchema = createSelectSchema(travelerAttendanceTable);
+
+export const insertTripStatusUpdateSchema = createInsertSchema(tripStatusUpdatesTable);
+export const selectTripStatusUpdateSchema = createSelectSchema(tripStatusUpdatesTable);
+
 export const insertGuideWorkDaySchema = createInsertSchema(guideWorkDaysTable);
 export const selectGuideWorkDaySchema = createSelectSchema(guideWorkDaysTable);
 
@@ -241,6 +335,15 @@ export type InsertPayout = typeof payoutsTable.$inferInsert;
 
 export type Assignment = typeof assignmentsTable.$inferSelect;
 export type InsertAssignment = typeof assignmentsTable.$inferInsert;
+
+export type GuideExpense = typeof guideExpensesTable.$inferSelect;
+export type InsertGuideExpense = typeof guideExpensesTable.$inferInsert;
+
+export type TravelerAttendance = typeof travelerAttendanceTable.$inferSelect;
+export type InsertTravelerAttendance = typeof travelerAttendanceTable.$inferInsert;
+
+export type TripStatusUpdate = typeof tripStatusUpdatesTable.$inferSelect;
+export type InsertTripStatusUpdate = typeof tripStatusUpdatesTable.$inferInsert;
 
 export type GuideWorkDay = typeof guideWorkDaysTable.$inferSelect;
 export type InsertGuideWorkDay = typeof guideWorkDaysTable.$inferInsert;

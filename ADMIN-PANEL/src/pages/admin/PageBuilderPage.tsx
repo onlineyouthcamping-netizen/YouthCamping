@@ -1593,74 +1593,85 @@ export default function PageBuilderPage() {
                         <Input value={selectedSection.draft.title || ''} onChange={e => updateSelectedSection({ title: e.target.value })} className="h-14 rounded-2xl border-2 font-bold text-lg" />
                       </div>
 
-                      <div className="space-y-6">
-                        <Label className="text-xs font-black uppercase tracking-widest">Slider Items</Label>
-                        <div className="space-y-6">
-                          {(selectedSection.draft.items || []).map((item: any, i: number) => (
-                            <div key={i} className="p-8 bg-muted/20 rounded-[32px] border-2 border-border/50 relative group">
-                              <button 
-                                onClick={() => {
-                                  const next = [...selectedSection.draft.items];
-                                  next.splice(i, 1);
-                                  updateSelectedSection({ items: next });
-                                }}
-                                className="absolute top-6 right-6 p-2 rounded-xl bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <div className="md:col-span-1">
-                                  <ImageUpload 
-                                    label="Slide Image" 
-                                    value={item.image} 
-                                    onUpload={url => {
-                                      const next = [...selectedSection.draft.items];
-                                      next[i] = { ...next[i], image: url };
-                                      updateSelectedSection({ items: next });
-                                    }} 
-                                  />
-                                </div>
-                                <div className="md:col-span-2 space-y-4">
-                                  <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label className="text-[10px] font-black opacity-50 uppercase tracking-widest">Small Subtitle</Label>
-                                        <Input value={item.subtitle} onChange={e => {
-                                          const next = [...selectedSection.draft.items];
-                                          next[i].subtitle = e.target.value.toUpperCase();
-                                          updateSelectedSection({ items: next });
-                                        }} className="rounded-xl border-2 font-black text-[10px] tracking-widest" />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label className="text-[10px] font-black opacity-50 uppercase tracking-widest">Main Title</Label>
-                                        <Input value={item.title} onChange={e => {
-                                          const next = [...selectedSection.draft.items];
-                                          next[i].title = e.target.value.toUpperCase();
-                                          updateSelectedSection({ items: next });
-                                        }} className="rounded-xl border-2 font-black" />
-                                      </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label className="text-[10px] font-black opacity-50 uppercase tracking-widest">Explore Link (optional)</Label>
-                                      <Input value={item.link} onChange={e => {
-                                        const next = [...selectedSection.draft.items];
-                                        next[i].link = e.target.value;
-                                        updateSelectedSection({ items: next });
-                                      }} className="rounded-xl border-2 font-mono text-[10px]" />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          <Button variant="outline" className="w-full rounded-3xl border-2 border-dashed h-20 font-black text-[10px] tracking-widest gap-2" onClick={() => {
-                            const next = [...(selectedSection.draft.items || []), { title: '', tagline: '', image: '', link: '', price: '', rating: '' }];
-                            updateSelectedSection({ items: next });
-                          }}>
-                            <Plus className="w-5 h-5" /> ADD NEW SLIDE
-                          </Button>
+                      <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border">
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-xs font-black uppercase tracking-widest">Show Title on Section</Label>
+                          <span className="text-[10px] text-muted-foreground font-medium">Render section header and title if enabled</span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedSection({ showTitle: !selectedSection.draft.showTitle })}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                            selectedSection.draft.showTitle ? 'bg-primary' : 'bg-slate-200'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                              selectedSection.draft.showTitle ? 'translate-x-4' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <VideoUpload
+                          label="Upload Self-Hosted Video"
+                          value={selectedSection.draft.videoUrl || ''}
+                          onUpload={({ url, publicId, posterUrl }) => {
+                            updateSelectedSection({
+                              videoUrl: url,
+                              videoPublicId: publicId,
+                              videoPosterUrl: posterUrl || selectedSection.draft.videoPosterUrl,
+                              videoEnabled: !!url
+                            });
+                          }}
+                        />
+                        <ImageUpload
+                          label="Video Poster Image"
+                          value={selectedSection.draft.videoPosterUrl || ''}
+                          onUpload={url => updateSelectedSection({ videoPosterUrl: url })}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black uppercase tracking-widest">Or paste Video URL directly</Label>
+                          <Input 
+                            value={selectedSection.draft.videoUrl || ''} 
+                            onChange={e => updateSelectedSection({ videoUrl: e.target.value })} 
+                            placeholder="https://example.com/video.mp4" 
+                            className="rounded-xl border-2 font-bold" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black uppercase tracking-widest">Or paste Poster Image URL directly</Label>
+                          <Input 
+                            value={selectedSection.draft.videoPosterUrl || ''} 
+                            onChange={e => updateSelectedSection({ videoPosterUrl: e.target.value })} 
+                            placeholder="https://example.com/image.jpg" 
+                            className="rounded-xl border-2 font-bold" 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black uppercase tracking-widest">Border Radius</Label>
+                        <Select 
+                          value={selectedSection.draft.borderRadius || 'rounded-[20px] md:rounded-[32px]'} 
+                          onValueChange={v => updateSelectedSection({ borderRadius: v })}
+                        >
+                          <SelectTrigger className="h-9 rounded-lg text-xs font-bold">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl shadow-xl">
+                            <SelectItem value="rounded-none">None (0px)</SelectItem>
+                            <SelectItem value="rounded-xl">Extra Large (12px)</SelectItem>
+                            <SelectItem value="rounded-[20px] md:rounded-[32px]">Double Extra Large (20px - Default)</SelectItem>
+                            <SelectItem value="rounded-3xl">Triple Extra Large (24px)</SelectItem>
+                            <SelectItem value="rounded-[32px]">Widescreen Rounded (32px)</SelectItem>
+                            <SelectItem value="rounded-[40px]">Max Rounded (40px)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   )}

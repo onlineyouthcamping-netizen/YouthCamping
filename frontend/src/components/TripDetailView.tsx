@@ -10,7 +10,6 @@ import TripFAQ from "./TripFAQ";
 import ReviewReels from "./ReviewReels";
 import TripReviews from "./TripReviews";
 import PopupDetails from "./PopupDetails";
-import FullCircuit from "./FullCircuit";
 import { Trip } from "@/types";
 
 interface TripDetailViewProps {
@@ -25,13 +24,12 @@ export default function TripDetailView({ trip }: TripDetailViewProps) {
   }, [trip.id]);
 
   return (
-    <div className="lg:col-span-8 space-y-12 md:space-y-16">
+    <div className="lg:col-span-8 space-y-8 md:space-y-16">
       <div id="about">
         <AboutTrip description={trip.description || ""} />
       </div>
       
       <div id="itinerary">
-        <FullCircuit route={trip.route || []} />
         <TripBookingSection 
           trip={trip} 
           onDateSelect={(date) => setSelectedDate(date)}

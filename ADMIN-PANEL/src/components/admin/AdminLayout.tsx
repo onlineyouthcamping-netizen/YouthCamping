@@ -86,6 +86,7 @@ const navGroups = [
       { title: "Attendance Logs", url: "/admin/attendance-logs", icon: CalendarCheck, roles: ['admin', 'superadmin'] },
       { title: "Assignments", url: "/admin/assignments", icon: Map, roles: ['admin', 'superadmin'] },
       { title: "Payroll & Payouts", url: "/admin/payroll", icon: Banknote, roles: ['admin', 'superadmin'] },
+      { title: "Expense Approvals", url: "/admin/expenses", icon: Banknote, roles: ['admin', 'superadmin'] },
     ]
   },
   {

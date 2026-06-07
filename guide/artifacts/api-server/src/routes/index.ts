@@ -5,6 +5,7 @@ import tripsRouter from "./trips";
 import attendanceRouter from "./attendance";
 import adminRouter from "./admin";
 import workdaysRouter from "./workdays";
+import guideRouter from "./guide-dashboard";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(tripsRouter);
 router.use(attendanceRouter);
 router.use(workdaysRouter);
 router.use("/admin", adminRouter);
+router.use("/guide", guideRouter);
 
 export default router;

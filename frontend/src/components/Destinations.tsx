@@ -91,10 +91,10 @@ export default function Destinations({
   };
 
   return (
-    <section className="section-wrapper bg-[#ffffff] overflow-hidden relative">
+    <section className="section-wrapper bg-[#f4f4f5] overflow-hidden relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto">
-        <div className="flex flex-row items-end justify-between mb-12">
+        <div className="flex flex-row items-end justify-between mb-6 md:mb-10">
           <div className="flex flex-col">
             {topLabel && (
               <span className="section-label">
@@ -125,7 +125,7 @@ export default function Destinations({
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex gap-6 overflow-x-auto no-scrollbar pb-10 snap-x">
+        <div ref={scrollRef} className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-10 snap-x">
           {items.map((dest, i) => (
             <motion.div
               key={i}
