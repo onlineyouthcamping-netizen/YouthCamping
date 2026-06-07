@@ -49,6 +49,9 @@ const SECTION_TYPES = [
   { type: 'upcoming_trips', label: 'Upcoming Trips', icon: Megaphone, desc: 'Display a list of upcoming group departures.' },
   { type: 'bestie', label: 'Why Us (Bestie)', icon: Users, desc: 'Showcase why you are the traveler bestie.' },
   { type: 'social_proof', label: 'Social Proof Bar', icon: CheckCircle2, desc: 'Display trust stats and badges.' },
+  { type: 'cinematic_banner', label: 'Cinematic Banner', icon: Layout, desc: 'Panoramic slide banner with title overlays.' },
+  { type: 'photo_slider', label: 'Photo Slider', icon: ImageIcon, desc: 'Simple horizontal photo slider.' },
+  { type: 'vibe', label: 'Vibe Section', icon: Star, desc: 'Vibe check reels showcasing traveler moments.' },
 ];
 
 
@@ -364,6 +367,18 @@ export default function PageBuilderPage() {
             { image: 'https://youthcamping.online/wp-content/uploads/2024/05/scenic-1.jpg' },
             { image: 'https://youthcamping.online/wp-content/uploads/2024/05/scenic-2.jpg' }
           ]
+        };
+      case 'cinematic_banner':
+        return {
+          slides: [
+            { title: 'CINEMATIC ADVENTURE', subtitle: 'JOIN OUR NEXT QUEST', image: 'https://youthcamping.online/wp-content/uploads/2024/05/scenic-1.jpg', link: '/trips' }
+          ]
+        };
+      case 'vibe':
+        return {
+          title: 'Vibe with Us',
+          backgroundColor: '#ffffff',
+          padding: '80px'
         };
       default:
         return { backgroundColor: '#ffffff', padding: '80px', title: `New ${type.replace('_', ' ')}` };
@@ -1280,13 +1295,6 @@ export default function PageBuilderPage() {
                         </div>
                       )}
 
-                      {/* ── DESTINATIONS SECTION ── */}
-                      {selectedSection.type === 'destinations' && (
-                        <div className="space-y-6">
-                           <Label className="text-xs font-black uppercase tracking-widest">Section Title</Label>
-                           <Input value={selectedSection.draft.title || ''} onChange={e => updateSelectedSection({ title: e.target.value })} className="rounded-xl border-2 font-bold" />
-                        </div>
-                      )}
 
                       {selectedSection.type === 'cta_banner' && (
                     <div className="space-y-6">
@@ -1855,35 +1863,27 @@ export default function PageBuilderPage() {
                     </div>
                   )}
 
-                  {selectedSection.type === 'rich_text' && (
-                    <div className="space-y-6">
+                  {selectedSection.type === 'vibe' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                       <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-widest">Section Title (Optional)</Label>
+                        <Label className="text-xs font-black uppercase tracking-widest">Section Title (Vibe Reels)</Label>
                         <Input 
                           value={selectedSection.draft.title || ''} 
                           onChange={e => updateSelectedSection({ title: e.target.value })} 
                           className="text-lg font-bold h-12 rounded-xl border-2" 
-                          placeholder="e.g. Our Story" 
+                          placeholder="Vibe with Us" 
                         />
                       </div>
-                      <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-widest text-primary">Content Paragraphs (Rich Text)</Label>
-                        <RichTextEditor 
-                          content={selectedSection.draft.body || ''} 
-                          onChange={val => updateSelectedSection({ body: val })} 
-                        />
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest italic">Tip: Use Shift+Enter for single line breaks. Paste your content here.</p>
-                      </div>
-                      <div className="space-y-4 pt-4 border-t border-border">
-                        <Label className="text-xs font-black uppercase tracking-widest">Content Width</Label>
-                        <Select value={selectedSection.draft.maxWidth || 'standard'} onValueChange={v => updateSelectedSection({ maxWidth: v })}>
-                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="narrow">Narrow</SelectItem>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="full">Full Width</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="p-8 bg-primary/5 rounded-[32px] border-2 border-primary/10 flex flex-col items-center justify-center text-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-primary/10">
+                          <Star className="w-8 h-8 text-primary fill-primary animate-pulse" />
+                        </div>
+                        <div>
+                          <h4 className="font-black uppercase tracking-tight text-lg">Travel Vibe Reels</h4>
+                          <p className="text-[11px] text-muted-foreground font-medium max-w-sm mx-auto mt-1">
+                            This section displays a cinematic feed of Instagram-style reels highlighting actual trip vibes and user stories.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
