@@ -146,14 +146,16 @@
   --mobile-navbar-height: 64px;
   
   /* Card Extended */
-  --card-height: 550px;
-  --card-width: 400px;
+  --card-height: 390px !important;
+  --card-width: 310px !important;
   --card-overlay: 50;
   --card-brightness: 100%;
-  --card-title-size: 20px;
+  --card-title-size: 17px !important;
   --card-price-color: #FF5B00;
   --card-badge-bg: #FFFFFF;
   --card-badge-text: #1F2937;
+  --card-image-height: 60% !important;
+  --card-content-height: 40% !important;
   
   /* Button Extended */
   --button-padding-x: 24px;
@@ -235,9 +237,12 @@
     --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
     --section-spacing: 60px !important;
-    --card-width: 275px;
-    --card-height: 350px;
+    --card-width: 240px !important;
+    --card-height: 310px !important;
     --title-size-multiplier: 0.78;
+    --card-image-height: 60% !important;
+    --card-content-height: 40% !important;
+    --card-title-size: 14px !important;
   }
 
 
@@ -277,8 +282,8 @@
 
   .hero-container {
     height: auto !important;
-    aspect-ratio: 18 / 9 !important;
-    min-height: 220px !important;
+    aspect-ratio: 16 / 10 !important;
+    min-height: 310px !important;
     overflow: hidden !important;
   }
 
@@ -503,23 +508,75 @@
   }
 
   .section-wrapper {
-    @apply px-4 sm:px-6 md:px-12 lg:px-20;
-    padding-top: 120px;
-    padding-bottom: 120px;
+    @apply px-4 sm:px-6 md:px-10 lg:px-12;
+    padding-top: 72px !important;
+    padding-bottom: 72px !important;
   }
 
   @media (max-width: 1024px) {
     .section-wrapper {
-      padding-top: 80px;
-      padding-bottom: 80px;
+      padding-top: 60px !important;
+      padding-bottom: 60px !important;
     }
   }
 
   @media (max-width: 768px) {
     .section-wrapper {
-      padding-top: 60px !important;
-      padding-bottom: 60px !important;
+      padding-top: 48px !important;
+      padding-bottom: 48px !important;
     }
+  }
+
+  /* Prevent double-stacking of padding between adjacent content sections */
+  .page-section-wrapper + .page-section-wrapper .section-wrapper {
+    padding-top: 24px !important;
+  }
+  @media (max-width: 768px) {
+    .page-section-wrapper + .page-section-wrapper .section-wrapper {
+      padding-top: 16px !important;
+    }
+  }
+
+  /* First content section below hero gets full padding */
+  .page-section-wrapper:first-child .section-wrapper,
+  .page-section-wrapper:nth-child(2) .section-wrapper,
+  .section-wrapper.first-section {
+    padding-top: 80px !important;
+  }
+  @media (max-width: 768px) {
+    .page-section-wrapper:first-child .section-wrapper,
+    .page-section-wrapper:nth-child(2) .section-wrapper,
+    .section-wrapper.first-section {
+      padding-top: 48px !important;
+    }
+  }
+
+  /* Last content section before footer gets full padding */
+  .page-section-wrapper:last-child .section-wrapper,
+  .section-wrapper.last-section {
+    padding-bottom: 80px !important;
+  }
+  @media (max-width: 768px) {
+    .page-section-wrapper:last-child .section-wrapper,
+    .section-wrapper.last-section {
+      padding-bottom: 48px !important;
+    }
+  }
+
+  /* Specific section overrides */
+  .reviews-section {
+    padding-top: 20px !important;
+  }
+  @media (max-width: 768px) {
+    .reviews-section {
+      padding-top: 16px !important;
+    }
+  }
+
+  /* Container max-width overrides */
+  .max-w-7xl,
+  .max-w-\[1440px\] {
+    max-width: 1440px !important;
   }
 }
 

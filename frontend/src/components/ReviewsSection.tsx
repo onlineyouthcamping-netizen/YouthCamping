@@ -49,10 +49,10 @@ export default function ReviewsSection({
     setIsModalOpen(true);
   };
   return (
-    <div className="overflow-hidden relative section-wrapper bg-transparent">
+    <div className="overflow-hidden relative section-wrapper reviews-section bg-transparent">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto relative">
-        <div className="flex flex-row items-end justify-between mb-6 md:mb-10">
+        <div className="flex flex-row items-end justify-between mb-8">
           <div className="flex flex-col">
             {topLabel && (
               <span className="section-label">
@@ -79,7 +79,7 @@ export default function ReviewsSection({
           </Link>
         </div>
 
-        <div className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-12 snap-x">
+        <div className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x">
           {reviews.map((rev, i) => (
             <ReviewCard key={rev._id || rev.id || i} rev={rev} i={i} onClick={() => openReview(rev)} reduceMotion={reduceMotion} />
           ))}

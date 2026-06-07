@@ -168,7 +168,7 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
         };
 
         return (
-          <div key={index} className={`${getBackgroundClass(index)} transition-colors duration-500`}>
+          <div key={index} className={`page-section-wrapper ${getBackgroundClass(index)} transition-colors duration-500`}>
             {renderSection()}
           </div>
         );

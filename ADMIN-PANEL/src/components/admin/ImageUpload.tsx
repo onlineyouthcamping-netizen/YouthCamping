@@ -7,6 +7,7 @@ import api from "@/services/api";
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
+  onMultipleUpload?: (urls: string[]) => void;
   label?: string;
   value?: string;
   multiple?: boolean;
@@ -27,7 +28,7 @@ const formatUrl = (url: any): string => {
   return `${serverBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-export function ImageUpload({ onUpload, label, value, multiple = false, className, compact = false }: ImageUploadProps) {
+export function ImageUpload({ onUpload, onMultipleUpload, label, value, multiple = false, className, compact = false }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -61,7 +62,11 @@ export function ImageUpload({ onUpload, label, value, multiple = false, classNam
             }
           });
           if (res.data.success) {
-            res.data.urls.forEach((url: string) => onUpload(url));
+            if (onMultipleUpload) {
+              onMultipleUpload(res.data.urls);
+            } else {
+              res.data.urls.forEach((url: string) => onUpload(url));
+            }
           } else {
             alert("Upload failed: " + (res.data.message || "Unknown error"));
           }

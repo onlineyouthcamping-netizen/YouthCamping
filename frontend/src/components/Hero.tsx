@@ -81,6 +81,7 @@ interface HeroProps {
   settings?: any;
   videoEnabled?: boolean;
   videoPosterUrl?: string;
+  slides?: Array<{ image?: string; url?: string; alt?: string }>;
 }
 
 export default function Hero({ 
@@ -93,21 +94,28 @@ export default function Hero({
   settings,
   videoEnabled,
   videoPosterUrl,
+  slides = [],
 }: HeroProps) {
   const { theme } = useTheme();
   const prefersReducedMotion = useReducedMotion();
   const isMobile = useIsMobile();
+
+  // Map custom slides from page builder or fallback to default slides
+  const activeSlides = (slides && slides.length > 0)
+    ? slides.map(s => ({ url: s.image || s.url || "", alt: s.alt || "" }))
+    : SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    if (activeSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
-    }, 5500);
+      setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+    }, 3500);
     return () => clearInterval(timer);
-  }, []);
+  }, [activeSlides.length]);
 
   const normalizedBg = normalizeImageUrl(backgroundImage);
   
@@ -174,14 +182,14 @@ export default function Hero({
           />
         ) : (
           <div className="absolute inset-0 w-full h-full overflow-hidden bg-navy">
-            {SLIDES.map((slide, index) => {
+            {activeSlides.map((slide, index) => {
               const isActive = index === currentSlide;
               return (
                 <motion.div
                   key={slide.url}
                   initial={{ opacity: index === 0 ? 1 : 0 }}
                   animate={{ opacity: isActive ? 1 : 0 }}
-                  transition={{ duration: 1.2, ease: "easeInOut" }}
+                  transition={{ duration: 0.8, ease: "easeInOut" }}
                   className="absolute inset-0 w-full h-full"
                   style={{
                     zIndex: isActive ? 10 : 1,
@@ -189,8 +197,8 @@ export default function Hero({
                   }}
                 >
                   <motion.div
-                    animate={isActive && !reduceMotion ? { scale: 1.08 } : { scale: 1.02 }}
-                    transition={isActive && !reduceMotion ? { duration: 5.5, ease: "linear" } : { duration: 0 }}
+                    animate={isActive && !reduceMotion ? { scale: 1.03 } : { scale: 1.00 }}
+                    transition={isActive && !reduceMotion ? { duration: 4.5, ease: "linear" } : { duration: 0 }}
                     className="w-full h-full"
                   >
                     <OptimizedImage

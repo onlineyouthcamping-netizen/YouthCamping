@@ -66,7 +66,7 @@ export default function Footer({
   };
 
   return (
-    <footer className="bg-[#0F1820] text-white pt-20 relative overflow-hidden flex flex-col items-center text-center font-montserrat border-t border-white/5">
+    <footer className="bg-[#0F1820] text-white pt-12 relative overflow-hidden flex flex-col items-center text-center font-montserrat border-t border-white/5">
       <div className="w-full max-w-6xl mx-auto px-6 relative z-10 flex flex-col items-center">
         
         {/* Top Links Grid (Desktop) */}

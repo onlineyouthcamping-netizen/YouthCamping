@@ -350,6 +350,9 @@ exports.updateBooking = async (req, res, next) => {
         roomType: updateData.roomType !== undefined ? updateData.roomType : currentPassengers.details.roomType,
         basePrice: updateData.basePrice !== undefined ? updateData.basePrice : currentPassengers.details.basePrice,
         gstAmount: updateData.gstAmount !== undefined ? updateData.gstAmount : currentPassengers.details.gstAmount,
+        foodPreference: req.body.foodPreference !== undefined ? req.body.foodPreference : currentPassengers.details.foodPreference,
+        mealPreference: req.body.mealPreference !== undefined ? req.body.mealPreference : currentPassengers.details.mealPreference,
+        dietary: req.body.dietary !== undefined ? req.body.dietary : currentPassengers.details.dietary,
       },
       persons: updateData.passengers !== undefined ? updateData.passengers : currentPassengers.persons
     };
@@ -357,6 +360,9 @@ exports.updateBooking = async (req, res, next) => {
     delete updateData.trainClass;
     delete updateData.ticketStatus;
     delete updateData.roomType;
+    delete updateData.foodPreference;
+    delete updateData.mealPreference;
+    delete updateData.dietary;
     if (updateData.basePrice !== undefined) {
       updateData.baseAmount = updateData.basePrice !== null ? parseFloat(updateData.basePrice) : null;
       delete updateData.basePrice;

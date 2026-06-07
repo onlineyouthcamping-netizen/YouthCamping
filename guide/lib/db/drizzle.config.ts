@@ -33,6 +33,13 @@ export default defineConfig({
     "guide_day_reports",
     "guide_expenses",
     "traveler_attendance",
-    "trip_status_updates"
+    "trip_status_updates",
+    "guide_trip_updates",
+    "guide_checkin_points",
+    "guide_hotel_updates",
+    "guide_food_updates",
+    "guide_group_photos",
+    "guide_movement_updates",
+    "guide_food_preference_audits"
   ]
 });

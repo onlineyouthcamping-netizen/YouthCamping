@@ -32,14 +32,14 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
 
   return (
     <div className="bg-white min-h-screen font-montserrat pb-32 md:pb-0">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-32 pb-24">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-20 pb-20">
         {/* Photo Gallery on Top */}
         <TripGallerySection trip={trip} />
 
         {/* Title Section (Below Photo Gallery) */}
-        <div className="mt-6 md:mt-10 mb-6 md:mb-12">
-          <h1 className="text-2xl md:text-7xl font-bold text-black mb-2 md:mb-4 tracking-tighter leading-[0.9] italic">
-            <span className="text-black not-italic font-semibold">{trip.title || "Our Expedition"}</span>
+        <div className="mt-6 md:mt-8 mb-6 md:mb-10">
+          <h1 className="text-2xl md:text-5xl font-bold text-black mb-2 md:mb-3 tracking-tighter leading-tight">
+            <span className="text-black font-semibold">{trip.title || "Our Expedition"}</span>
           </h1>
         </div>
 

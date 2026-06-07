@@ -164,7 +164,7 @@ export default function CommunityTrips({
       
       <div className="max-w-[1440px] mx-auto relative px-2">
         {/* Header Section */}
-        <div className="flex flex-col mb-6 md:mb-10">
+        <div className="flex flex-col mb-5">
           {topLabel && (
             <span className="section-label">
               {topLabel}
@@ -201,7 +201,7 @@ export default function CommunityTrips({
         </div>
 
         {/* Month Pills */}
-        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 md:mb-10 pb-1">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 pb-1">
           {displayMonths.map((m) => {
             const isActive = activeMonth === m;
             return (
@@ -243,7 +243,7 @@ export default function CommunityTrips({
           <div 
             ref={scrollRef}
             className={cn(
-              "flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-8 select-none",
+              "flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 select-none",
               isMouseDown ? "cursor-grabbing scroll-auto" : "cursor-grab snap-x snap-mandatory scroll-smooth"
             )}
             onMouseDown={handleMouseDown}
@@ -289,8 +289,11 @@ export default function CommunityTrips({
                         boxShadow: 'var(--shadow-card)',
                       }}
                     >
-                      {/* Image Section (Height: 70%) */}
-                      <div className="relative h-[70%] w-full overflow-hidden rounded-t-[inherit]">
+                      {/* Image Section */}
+                      <div 
+                        className="relative w-full overflow-hidden rounded-t-[inherit]"
+                        style={{ height: 'var(--card-image-height, 65%)' }}
+                      >
                         <OptimizedImage 
                           src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
                           alt={trip.title} 
@@ -319,41 +322,42 @@ export default function CommunityTrips({
                         </div>
                       </div>
  
-                      {/* Content Section (Height: 30%) */}
+                      {/* Content Section */}
                       <div 
-                        className="h-[30%] w-full bg-white rounded-b-[inherit] p-3 md:p-5 flex flex-col justify-between text-zinc-900 border-t border-zinc-100/50"
+                        className="w-full bg-white rounded-b-[inherit] p-4 md:py-4 md:px-5 flex flex-col justify-between text-zinc-900 border-t border-zinc-100/50"
+                        style={{ height: 'var(--card-content-height, 35%)' }}
                       >
-                        <h3 
-                          className="leading-tight tracking-tight capitalize break-words text-[#0B1F3A] hover:text-[#FF6B00] group-hover:text-[#FF6B00] transition-colors line-clamp-2"
-                          style={{
-                            fontSize: 'var(--card-title-size)',
-                            fontWeight: 700
-                          }}
-                        >
-                          {trip.title}
-                        </h3>
+                        <div className="space-y-1 md:space-y-2">
+                          <h3 
+                            className="leading-tight tracking-tight capitalize break-words text-[#0B1F3A] hover:text-[#FF6B00] group-hover:text-[#FF6B00] transition-colors line-clamp-2"
+                            style={{
+                              fontSize: 'var(--card-title-size)',
+                              fontWeight: 'var(--font-weight-heading, 600)'
+                            }}
+                          >
+                            {trip.title}
+                          </h3>
+                          
+                          <div className="flex items-center gap-2 text-[#6B7280]">
+                            <Clock className="w-4 h-4 text-zinc-400" />
+                            <span className="text-[10px] md:text-xs font-semibold tracking-wide uppercase">{trip.duration}</span>
+                          </div>
+                        </div>
                         
-                        <div className="flex items-end justify-between mt-auto w-full">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 text-[#6B7280]">
-                              <Clock className="w-4 h-4" />
-                              <span className="text-[10px] md:text-xs font-semibold tracking-wide uppercase">{trip.duration}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <span 
-                                className="text-base md:text-lg font-bold tracking-wide"
-                                style={{
-                                  color: '#FF6B00',
-                                  fontWeight: 700
-                                }}
-                              >
-                                ₹{trip.price.toLocaleString()}
-                              </span>
-                              <span className="text-xs md:text-sm font-normal text-zinc-400 line-through decoration-zinc-400">
-                                ₹{(trip.price + 4000).toLocaleString()}
-                              </span>
-                            </div>
+                        <div className="flex items-end justify-between w-full pt-1">
+                          <div className="flex items-baseline gap-1.5">
+                            <span 
+                              className="text-xs md:text-sm font-bold tracking-wide"
+                              style={{
+                                color: '#FF6B00',
+                                fontWeight: 700
+                              }}
+                            >
+                              ₹{trip.price.toLocaleString()}
+                            </span>
+                            <span className="text-[9px] md:text-[11px] font-normal text-zinc-400 line-through decoration-zinc-400">
+                              ₹{(trip.price + 4000).toLocaleString()}
+                            </span>
                           </div>
                           
                           {/* CTA/Button style */}
@@ -362,7 +366,7 @@ export default function CommunityTrips({
                               Book Now <ChevronRight className="w-3 h-3" />
                             </div>
                           ) : theme?.cardButtonStyle === 'none' ? null : (
-                            <div className="w-10 h-10 bg-white text-navy rounded-full flex items-center justify-center hover:bg-[#FF6B00] hover:text-white transition-all shadow-sm group/btn border border-zinc-200/50 shrink-0">
+                            <div className="w-9 h-9 bg-white text-navy rounded-full flex items-center justify-center hover:bg-[#FF6B00] hover:text-white transition-all shadow-sm group/btn border border-zinc-200/50 shrink-0">
                               <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
                             </div>
                           )}

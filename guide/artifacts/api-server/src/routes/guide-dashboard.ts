@@ -97,11 +97,19 @@ guideRouter.get("/my-travelers/:assignmentId", async (req: AuthenticatedRequest,
     const bookings = await fetchBookingsForTrip(tripId);
     const confirmedBookings = bookings.filter(b => b.status === "confirmed");
 
+    const getFoodPreference = (p: any): "Jain" | "Non-Jain" | "Other" => {
+      const pref = (p.foodPreference || p.mealPreference || p.dietary || p.food || p.meal || "").toLowerCase().trim();
+      if (pref.includes("jain")) return "Jain";
+      if (pref.includes("non-jain") || pref.includes("nonjain") || pref.includes("non veg") || pref.includes("non-veg") || pref.includes("nonveg")) return "Non-Jain";
+      return "Other";
+    };
+
     const travelers: any[] = [];
     confirmedBookings.forEach(booking => {
       // Booker
       travelers.push({
         bookingId: booking.bookingId,
+        bookingCuid: booking.id,
         name: booking.name,
         phone: booking.phone,
         email: booking.email,
@@ -114,6 +122,7 @@ guideRouter.get("/my-travelers/:assignmentId", async (req: AuthenticatedRequest,
         isPrimaryBooker: true,
         age: booking.age || null,
         gender: booking.gender || null,
+        foodPreference: getFoodPreference(booking),
       });
 
       // Passengers
@@ -121,6 +130,7 @@ guideRouter.get("/my-travelers/:assignmentId", async (req: AuthenticatedRequest,
       persons.forEach((p: any) => {
         travelers.push({
           bookingId: booking.bookingId,
+          bookingCuid: booking.id,
           name: p.name || p.fullName,
           phone: p.phone || p.mobile || booking.phone,
           email: booking.email,
@@ -133,6 +143,7 @@ guideRouter.get("/my-travelers/:assignmentId", async (req: AuthenticatedRequest,
           isPrimaryBooker: false,
           age: p.age || null,
           gender: p.gender || null,
+          foodPreference: getFoodPreference(p),
         });
       });
     });

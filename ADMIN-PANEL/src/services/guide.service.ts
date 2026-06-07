@@ -91,6 +91,7 @@ export interface MainBackendTrip {
 
 export interface TravelerInfo {
   bookingId: string;
+  bookingCuid?: string;
   name: string;
   phone: string;
   email: string;
@@ -103,6 +104,7 @@ export interface TravelerInfo {
   isPrimaryBooker: boolean;
   age: number | null;
   gender: string | null;
+  foodPreference?: string;
 }
 
 export interface Expense {
@@ -364,6 +366,158 @@ export const guideService = {
     location?: string | null;
   }) {
     const res = await guideApi.post<TripStatusUpdate>('/guide/trip-status', data);
+    return res.data;
+  },
+
+  // ─── Live Trip Operations APIs ───
+  async uploadMedia(formData: FormData) {
+    const res = await guideApi.post<{ url: string }>('/guide/operations/upload-media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
+
+  async submitCheckinPoint(data: {
+    assignmentId: number;
+    checkinType: 'railway_station' | 'bus_pickup' | 'hotel' | 'sightseeing' | 'return_journey';
+    locationName: string;
+    latitude?: number;
+    longitude?: number;
+    photoUrl: string;
+    notes?: string;
+  }) {
+    const res = await guideApi.post('/guide/operations/checkin', data);
+    return res.data;
+  },
+
+  async submitHotelUpdate(data: {
+    assignmentId: number;
+    hotelName: string;
+    roomsUsed?: number;
+    roomAllocationStatus?: string;
+    hotelPhotos?: string[];
+    notes?: string;
+    status?: 'pending' | 'done' | 'issue_reported';
+  }) {
+    const res = await guideApi.post('/guide/operations/hotel', data);
+    return res.data;
+  },
+
+  async submitFoodUpdate(data: {
+    assignmentId: number;
+    dayNumber: number;
+    photoUrl?: string;
+    videoUrl?: string;
+    rating: number;
+    jainCount?: number;
+    nonJainCount?: number;
+    extraMeals?: number;
+    notes?: string;
+  }) {
+    const res = await guideApi.post('/guide/operations/food', data);
+    return res.data;
+  },
+
+  async submitGroupPhoto(data: {
+    assignmentId: number;
+    photoUrl: string;
+    locationName: string;
+    dayNumber: number;
+    notes?: string;
+  }) {
+    const res = await guideApi.post('/guide/operations/group-photo', data);
+    return res.data;
+  },
+
+  async submitMovementUpdate(data: {
+    assignmentId: number;
+    movementType: 'departed_pickup' | 'train_boarded' | 'bus_started' | 'reached_destination' | 'sightseeing_started' | 'sightseeing_completed' | 'return_journey_started';
+    locationName?: string;
+    photoUrl?: string;
+    videoUrl?: string;
+    notes?: string;
+  }) {
+    const res = await guideApi.post('/guide/operations/movement', data);
+    return res.data;
+  },
+
+  async submitTripTimingUpdate(data: {
+    assignmentId: number;
+    currentDestination?: string;
+    expectedArrivalTime?: string;
+    delayReason?: string;
+    nextDestination?: string;
+    actualArrivalTime?: string;
+    currentTripStatus?: string;
+  }) {
+    const res = await guideApi.post('/guide/operations/trip-timing', data);
+    return res.data;
+  },
+
+  async getLiveOperationsTimeline(filters?: {
+    tripId?: number;
+    assignmentId?: number;
+    guideId?: number;
+    date?: string;
+    type?: string;
+    status?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.tripId) params.append('tripId', String(filters.tripId));
+    if (filters?.assignmentId) params.append('assignmentId', String(filters.assignmentId));
+    if (filters?.guideId) params.append('guideId', String(filters.guideId));
+    if (filters?.date) params.append('date', filters.date);
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.status) params.append('status', filters.status);
+
+    const res = await guideApi.get<any[]>(`/admin/operations/live?${params.toString()}`);
+    return res.data;
+  },
+
+  async getLiveOperationsStats(assignmentId: number) {
+    const res = await guideApi.get<{
+      totalParticipants: number;
+      confirmedCount: number;
+      pendingCount: number;
+      cancelledCount: number;
+      maleCount: number;
+      femaleCount: number;
+      jainPreferenceCount: number;
+      nonJainPreferenceCount: number;
+      otherFoodPreferenceCount: number;
+      pickupCityBreakdown: Record<string, number>;
+    }>(`/admin/operations/stats/${assignmentId}`);
+    return res.data;
+  },
+
+  async getLiveOperationsAlerts() {
+    const res = await guideApi.get<any[]>('/admin/operations/alerts');
+    return res.data;
+  },
+
+  async approveHotelUpdate(id: number, status: 'approved' | 'rejected' | 'done', notes?: string) {
+    const res = await guideApi.put(`/admin/operations/hotel/${id}`, { status, notes });
+    return res.data;
+  },
+
+  async syncFoodPreference(
+    bookingCuid: string,
+    bookingId: string,
+    passengerName: string,
+    foodPreference: string,
+    isPrimaryBooker: boolean,
+    reason?: string
+  ) {
+    const res = await guideApi.post('/admin/operations/sync-food-preference', {
+      bookingCuid,
+      bookingId,
+      passengerName,
+      foodPreference,
+      isPrimaryBooker,
+      reason,
+    });
     return res.data;
   }
 };

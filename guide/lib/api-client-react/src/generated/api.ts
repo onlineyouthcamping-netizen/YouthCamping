@@ -36,7 +36,10 @@ import type {
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType , BodyType } from '../custom-fetch';
+import type { ErrorType } from '../custom-fetch';
+
+type BodyType<T> = T;
+
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 

@@ -21,18 +21,19 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
   const displayImages = [
     trip.heroImage,
     ...(trip.images || [])
-  ].filter(Boolean).slice(0, 4);
+  ].filter(Boolean).slice(0, 5);
 
   // Fallback images - High-quality Manali/Himalayan themed
   const fallbacks = [
     "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6?q=80&w=2070", // Solang Balloons
     "https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=2070", // Snow Peaks
     "https://images.unsplash.com/photo-1605140885332-f4ad6071b03c?q=80&w=2070", // Jogini Falls
-    "https://images.unsplash.com/photo-1533587851505-d119e13fa0d7?q=80&w=2070"  // Mall Road
+    "https://images.unsplash.com/photo-1533587851505-d119e13fa0d7?q=80&w=2070",  // Mall Road
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"   // Lakeside
   ];
 
   const finalImages = [...displayImages];
-  while (finalImages.length < 4) {
+  while (finalImages.length < 5) {
     finalImages.push(fallbacks[finalImages.length]);
   }
 
@@ -68,7 +69,7 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
         </div>
  
         {/* Desktop: Multi-image grid */}
-        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-4 aspect-[21/9] w-full rounded-[40px] overflow-hidden group shadow-2xl bg-zinc-50">
+        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-4 aspect-[3/1] w-full rounded-[40px] overflow-hidden group shadow-2xl bg-zinc-50">
           {/* Main Large Image */}
           <div 
             className="relative md:col-span-2 md:row-span-2 cursor-pointer overflow-hidden group/item"
@@ -79,33 +80,29 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
               alt={trip.title} 
               priority={true}
               cloudinaryWidth={1200}
-              className="w-full h-full object-cover transition-transform duration-1000 group-hover/item:scale-110" 
+              className="w-full h-full object-cover transition-transform duration-1000 group-hover/item:scale-104" 
             />
             <div className="absolute inset-0 bg-black/10 group-hover/item:bg-transparent transition-colors duration-500" />
           </div>
 
           {/* Right Smaller Images */}
-          {finalImages.slice(1, 4).map((img, i) => {
+          {finalImages.slice(1, 5).map((img, i) => {
             const idx = i + 1;
             return (
               <div 
                 key={i} 
-                className={cn(
-                  "relative cursor-pointer overflow-hidden group/item",
-                  i === 0 ? "md:col-span-1" : i === 1 ? "md:col-span-1" : "md:col-span-2"
-                )}
+                className="relative cursor-pointer overflow-hidden group/item md:col-span-1 md:row-span-1"
                 onClick={() => setIsGalleryOpen(true)}
               >
                 <OptimizedImage 
                   src={errorImages[idx] ? fallbacks[idx] : (normalizeImageUrl(img) || fallbacks[idx])} 
                   alt="" 
-                  
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover/item:scale-110" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover/item:scale-104" 
                 />
                 <div className="absolute inset-0 bg-black/5 group-hover/item:bg-transparent transition-colors duration-500" />
                 
                 {/* "See all" button on the last desktop image */}
-                {i === 2 && (
+                {i === 3 && (
                   <div className="absolute bottom-4 right-4 z-10">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setIsGalleryOpen(true); }}

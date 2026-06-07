@@ -74,3 +74,30 @@ export async function fetchBookingsForTrip(tripId: string): Promise<MainBackendB
     return [];
   }
 }
+
+export async function updateBookingInMainBackend(bookingId: string, updateData: any): Promise<boolean> {
+  try {
+    const url = `${MAIN_BACKEND_URL}/bookings/${encodeURIComponent(bookingId)}`;
+    logger.info(`Updating booking in main backend: ${url}`);
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+    if (MAIN_BACKEND_TOKEN) {
+      headers["Authorization"] = `Bearer ${MAIN_BACKEND_TOKEN}`;
+    }
+    const res = await fetch(url, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(updateData),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Failed to update booking. Status: ${res.status}. Response: ${text}`);
+    }
+    return true;
+  } catch (err) {
+    logger.error({ err }, "Error in updateBookingInMainBackend proxy");
+    return false;
+  }
+}
+

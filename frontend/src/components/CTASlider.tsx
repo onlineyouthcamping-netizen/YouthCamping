@@ -59,7 +59,7 @@ export default function CTASlider({
 
   return (
     <section 
-      className="relative py-12 md:py-20 overflow-hidden"
+      className="relative py-6 md:py-10 overflow-hidden"
       style={{
         background: `linear-gradient(to bottom, ${topColor} 0%, ${topColor} 50%, ${bottomColor} 50%, ${bottomColor} 100%)`
       }}

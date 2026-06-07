@@ -782,73 +782,73 @@ export default function PageBuilderPage() {
                 <div className={selectedSection.locked ? 'opacity-50 pointer-events-none' : ''}>
                   {selectedSection.type === 'hero' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/20 rounded-2xl border-2">
-                        <div className="space-y-4 col-span-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <Label className="text-xs font-black uppercase tracking-widest">Enable Self-Hosted Video</Label>
-                              <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">If enabled, this video plays instead of images/YouTube URLs.</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => updateSelectedSection({ videoEnabled: !selectedSection.draft.videoEnabled })}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                                selectedSection.draft.videoEnabled ? 'bg-primary' : 'bg-slate-200'
-                              }`}
-                            >
-                              <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                  selectedSection.draft.videoEnabled ? 'translate-x-6' : 'translate-x-1'
-                                }`}
+                      <div className="space-y-4">
+                        <ImageUpload 
+                          label="Single Background Image (Overrides Slideshow)" 
+                          value={selectedSection.draft.backgroundImage} 
+                          onUpload={url => updateSelectedSection({ backgroundImage: url })} 
+                        />
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t border-border">
+                        <Label className="text-xs font-black uppercase tracking-widest text-primary">Hero Slideshow (5-10 Photos)</Label>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest italic mb-2">
+                          If "Single Background Image" is empty, these photos will display as an animated cross-fading slideshow.
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {(selectedSection.draft.slides || []).map((slide: any, i: number) => (
+                            <div key={i} className="p-4 bg-muted/20 rounded-2xl border-2 relative group">
+                              <button 
+                                onClick={() => {
+                                  const next = [...selectedSection.draft.slides];
+                                  next.splice(i, 1);
+                                  updateSelectedSection({ slides: next });
+                                }}
+                                className="absolute top-2 right-2 p-1.5 rounded-lg bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                              <ImageUpload 
+                                label={`Slide #${i + 1}`} 
+                                value={slide.image || slide.url} 
+                                onUpload={url => {
+                                  const next = [...selectedSection.draft.slides];
+                                  next[i] = { ...next[i], image: url, url: url };
+                                  updateSelectedSection({ slides: next });
+                                }} 
                               />
-                            </button>
+                            </div>
+                          ))}
+                          
+                          <div className="grid grid-cols-2 gap-4 col-span-2 mt-2">
+                            <Button variant="outline" className="h-36 rounded-2xl border-2 border-dashed font-black text-[10px] tracking-widest gap-2 flex flex-col items-center justify-center hover:bg-muted/30" onClick={() => {
+                               const next = [...(selectedSection.draft.slides || []), { image: '', url: '' }];
+                               updateSelectedSection({ slides: next });
+                            }}>
+                               <Plus className="w-4 h-4" />
+                               <span>ADD PHOTO ROW</span>
+                            </Button>
+                            <div className="h-36">
+                              <ImageUpload
+                                compact
+                                multiple
+                                label=""
+                                value=""
+                                onUpload={() => {}}
+                                onMultipleUpload={(urls) => {
+                                  const newSlides = urls.map(url => ({ image: url, url: url }));
+                                  const next = [...(selectedSection.draft.slides || []), ...newSlides];
+                                  updateSelectedSection({ slides: next });
+                                }}
+                                className="h-full [&>div]:h-full [&>div]:justify-between"
+                              />
+                            </div>
                           </div>
                         </div>
-
-                        <div className="space-y-4">
-                          <VideoUpload
-                            label="Upload Self-Hosted Video"
-                            value={selectedSection.draft.videoUrl}
-                            onUpload={({ url, publicId, posterUrl }) => {
-                              updateSelectedSection({
-                                videoUrl: url,
-                                videoPublicId: publicId,
-                                videoPosterUrl: posterUrl || selectedSection.draft.videoPosterUrl,
-                                videoEnabled: url ? true : false
-                              });
-                            }}
-                          />
-                        </div>
-
-                        <div className="space-y-4">
-                          <ImageUpload
-                            label="Video Poster (Fallback Image)"
-                            value={selectedSection.draft.videoPosterUrl}
-                            onUpload={url => updateSelectedSection({ videoPosterUrl: url })}
-                          />
-                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-                        <div className="space-y-4">
-                          <Label className="text-xs font-black uppercase tracking-widest">Legacy YouTube URL (Fallback)</Label>
-                          <Input 
-                            value={selectedSection.draft.videoUrl || ''} 
-                            onChange={e => updateSelectedSection({ videoUrl: e.target.value })}
-                            placeholder="e.g. https://www.youtube.com/embed/..."
-                            className="rounded-xl border-2 font-mono text-[10px]"
-                          />
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest italic">Use only if not uploading self-hosted video</p>
-                        </div>
-                        <div className="space-y-4">
-                          <ImageUpload 
-                            label="Background Image (Static Fallback)" 
-                            value={selectedSection.draft.backgroundImage} 
-                            onUpload={url => updateSelectedSection({ backgroundImage: url })} 
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-4">
+                      <div className="space-y-4 pt-4 border-t border-border">
                         <Label className="text-xs font-black uppercase tracking-widest">Overlay Opacity ({selectedSection.draft.overlayOpacity || 30}%)</Label>
                         <input 
                           type="range" 
@@ -987,12 +987,30 @@ export default function PageBuilderPage() {
                                />
                             </div>
                           ))}
-                          <Button variant="outline" className="w-full rounded-2xl border-2 border-dashed h-16 font-black text-[10px] tracking-widest gap-2" onClick={() => {
-                             const next = [...(selectedSection.draft.images || []), { url: '', alt: '' }];
-                             updateSelectedSection({ images: next });
-                          }}>
-                             <Plus className="w-4 h-4" /> ADD IMAGE URL
-                          </Button>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Button variant="outline" className="h-32 rounded-2xl border-2 border-dashed font-black text-[10px] tracking-widest gap-2 flex flex-col items-center justify-center hover:bg-muted/30" onClick={() => {
+                               const next = [...(selectedSection.draft.images || []), { url: '', alt: '' }];
+                               updateSelectedSection({ images: next });
+                            }}>
+                               <Plus className="w-4 h-4" />
+                               <span>ADD IMAGE ROW</span>
+                            </Button>
+                            <div className="h-32">
+                              <ImageUpload
+                                compact
+                                multiple
+                                label=""
+                                value=""
+                                onUpload={() => {}}
+                                onMultipleUpload={(urls) => {
+                                  const newImages = urls.map(url => ({ url, alt: '' }));
+                                  const next = [...(selectedSection.draft.images || []), ...newImages];
+                                  updateSelectedSection({ images: next });
+                                }}
+                                className="h-full [&>div]:h-full [&>div]:justify-between"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1044,12 +1062,30 @@ export default function PageBuilderPage() {
                                />
                             </div>
                           ))}
-                          <Button variant="outline" className="h-full min-h-[200px] rounded-[40px] border-2 border-dashed font-black text-[10px] tracking-widest flex flex-col gap-4" onClick={() => {
-                             const next = [...(selectedSection.draft.images || []), { url: '', alt: '' }];
-                             updateSelectedSection({ images: next });
-                          }}>
-                             <Plus className="w-6 h-6" /> ADD MEMORY
-                          </Button>
+                          <div className="grid grid-cols-2 gap-4 col-span-2">
+                            <Button variant="outline" className="h-44 rounded-3xl border-2 border-dashed font-black text-[10px] tracking-widest gap-2 flex flex-col items-center justify-center hover:bg-muted/30" onClick={() => {
+                               const next = [...(selectedSection.draft.images || []), { url: '', alt: '' }];
+                               updateSelectedSection({ images: next });
+                            }}>
+                               <Plus className="w-6 h-6" />
+                               <span>ADD PHOTO ROW</span>
+                            </Button>
+                            <div className="h-44">
+                              <ImageUpload
+                                compact
+                                multiple
+                                label=""
+                                value=""
+                                onUpload={() => {}}
+                                onMultipleUpload={(urls) => {
+                                  const newImages = urls.map(url => ({ url, alt: '' }));
+                                  const next = [...(selectedSection.draft.images || []), ...newImages];
+                                  updateSelectedSection({ images: next });
+                                }}
+                                className="h-full [&>div]:h-full [&>div]:justify-between"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1780,12 +1816,30 @@ export default function PageBuilderPage() {
                               />
                             </div>
                           ))}
-                          <Button variant="outline" className="h-full min-h-[160px] rounded-2xl border-2 border-dashed font-black text-[10px] tracking-widest flex flex-col gap-2" onClick={() => {
-                            const next = [...(selectedSection.draft.slides || []), { image: '' }];
-                            updateSelectedSection({ slides: next });
-                          }}>
-                            <Plus className="w-4 h-4" /> ADD PHOTO
-                          </Button>
+                          <div className="grid grid-cols-2 gap-4 col-span-2">
+                            <Button variant="outline" className="h-36 rounded-2xl border-2 border-dashed font-black text-[10px] tracking-widest gap-2 flex flex-col items-center justify-center hover:bg-muted/30" onClick={() => {
+                               const next = [...(selectedSection.draft.slides || []), { image: '' }];
+                               updateSelectedSection({ slides: next });
+                            }}>
+                               <Plus className="w-4 h-4" />
+                               <span>ADD PHOTO ROW</span>
+                            </Button>
+                            <div className="h-36">
+                              <ImageUpload
+                                compact
+                                multiple
+                                label=""
+                                value=""
+                                onUpload={() => {}}
+                                onMultipleUpload={(urls) => {
+                                  const newSlides = urls.map(url => ({ image: url }));
+                                  const next = [...(selectedSection.draft.slides || []), ...newSlides];
+                                  updateSelectedSection({ slides: next });
+                                }}
+                                className="h-full [&>div]:h-full [&>div]:justify-between"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -42,6 +42,7 @@ import {
   CollectionsPage, PromotionsPage, DistributionPage, 
   ReportsPage, BillingPage 
 } from "./pages/admin/PlaceholderPages.tsx";
+import LiveTripOperationsPage from "./pages/admin/LiveTripOperationsPage.tsx";
 import { AdminLayout } from "./components/admin/AdminLayout.tsx";
 
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/admin/assignments" element={<AdminRoute><AssignmentsPage /></AdminRoute>} />
               <Route path="/admin/payroll" element={<AdminRoute><PayrollPage /></AdminRoute>} />
               <Route path="/admin/expenses" element={<AdminRoute><ExpensesApprovalPage /></AdminRoute>} />
+              <Route path="/admin/live-operations" element={<AdminRoute><LiveTripOperationsPage /></AdminRoute>} />
               <Route path="/admin/guide-portal" element={<AdminRoute><GuideDashboardPage /></AdminRoute>} />
               <Route path="/admin/guide-portal/trip/:assignmentId" element={<AdminRoute><GuideTripDetailPage /></AdminRoute>} />
               <Route path="*" element={<NotFound />} />

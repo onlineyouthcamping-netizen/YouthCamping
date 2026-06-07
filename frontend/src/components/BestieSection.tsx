@@ -78,7 +78,7 @@ export default function BestieSection({
 
       <div className="max-w-[1440px] mx-auto relative z-20 px-6">
         {/* ... (rest of content) */}
-        <div className="mb-6 md:mb-20 text-center">
+        <div className="mb-6 md:mb-10 text-center">
           <motion.h2 
             initial={reduceMotion ? false : { opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -103,7 +103,7 @@ export default function BestieSection({
         </div>
 
         {/* Reason Grid - 3+2 Layout */}
-        <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-4 md:mt-12">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-4 md:mt-8">
           {displayReasons.map((reason, i) => (
             <motion.div
               key={i}

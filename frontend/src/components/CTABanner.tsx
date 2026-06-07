@@ -31,7 +31,7 @@ export default function CTABanner({
 
   return (
     <div 
-      className="relative w-full z-10 py-12 md:py-20"
+      className="relative w-full z-10 py-6 md:py-10"
       style={{
         background: 'linear-gradient(to bottom, #f3f3f3 0%, #f3f3f3 50%, #ffffff 50%, #ffffff 100%)'
       }}

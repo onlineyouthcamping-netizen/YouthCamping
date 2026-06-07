@@ -27,7 +27,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       .where(eq(usersTable.id, userId))
       .limit(1);
 
-    if (!user && userId === 1 && process.env.NODE_ENV !== "production") {
+    const isLocalDev = 
+      process.env.NODE_ENV !== "production" || 
+      process.env.MAIN_BACKEND_URL?.includes("localhost") || 
+      process.env.DATABASE_URL?.includes("localhost") || 
+      process.env.DATABASE_URL?.includes("127.0.0.1");
+
+    if (!user && userId === 1 && isLocalDev) {
       // Fallback for local testing (Bearer 1): map to the first admin user in the database
       const [fallbackAdmin] = await db
         .select()

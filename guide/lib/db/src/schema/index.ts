@@ -123,6 +123,103 @@ export const tripStatusUpdatesTable = pgTable("trip_status_updates", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// 1. guide_trip_updates
+export const guideTripUpdatesTable = pgTable("guide_trip_updates", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  currentDestination: text("current_destination"),
+  expectedArrivalTime: timestamp("expected_arrival_time"),
+  delayReason: text("delay_reason"),
+  nextDestination: text("next_destination"),
+  actualArrivalTime: timestamp("actual_arrival_time"),
+  currentTripStatus: text("current_trip_status"), // e.g. 'ongoing', 'delayed', etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 2. guide_checkin_points
+export const guideCheckinPointsTable = pgTable("guide_checkin_points", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  checkinType: text("checkin_type").notNull(), // 'railway_station' | 'bus_pickup' | 'hotel' | 'sightseeing' | 'return_journey'
+  locationName: text("location_name").notNull(),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  photoUrl: text("photo_url").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 3. guide_hotel_updates
+export const guideHotelUpdatesTable = pgTable("guide_hotel_updates", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  hotelName: text("hotel_name").notNull(),
+  checkinTime: timestamp("checkin_time").notNull(),
+  roomsUsed: integer("rooms_used").notNull(),
+  roomAllocationStatus: text("room_allocation_status").notNull(),
+  hotelPhotos: json("hotel_photos").$type<string[]>().default([]).notNull(),
+  notes: text("notes"),
+  status: text("status").default("pending").notNull(), // 'pending' | 'done' | 'issue_reported'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 4. guide_food_updates
+export const guideFoodUpdatesTable = pgTable("guide_food_updates", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  dayNumber: integer("day_number").notNull(),
+  photoUrl: text("photo_url"),
+  videoUrl: text("video_url"),
+  rating: integer("rating").notNull(), // 1 to 5
+  jainCount: integer("jain_count").notNull(),
+  nonJainCount: integer("non_jain_count").notNull(),
+  extraMeals: integer("extra_meals").default(0).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 5. guide_group_photos
+export const guideGroupPhotosTable = pgTable("guide_group_photos", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  photoUrl: text("photo_url").notNull(),
+  locationName: text("location_name").notNull(),
+  dayNumber: integer("day_number").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 6. guide_movement_updates
+export const guideMovementUpdatesTable = pgTable("guide_movement_updates", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => assignmentsTable.id).notNull(),
+  guideId: integer("guide_id").references(() => usersTable.id).notNull(),
+  movementType: text("movement_type").notNull(), // 'departed_pickup' | 'train_boarded' | 'bus_started' | 'reached_destination' | 'sightseeing_started' | 'sightseeing_completed' | 'return_journey_started'
+  locationName: text("location_name"),
+  photoUrl: text("photo_url"),
+  videoUrl: text("video_url"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// New Table: Guide Food Preference Audits
+export const guideFoodPreferenceAuditsTable = pgTable("guide_food_preference_audits", {
+  id: serial("id").primaryKey(),
+  bookingId: text("booking_id").notNull(),
+  travelerName: text("traveler_name").notNull(),
+  oldPreference: text("old_preference"),
+  newPreference: text("new_preference").notNull(),
+  approvedBy: text("approved_by").notNull(),
+  approvedAt: timestamp("approved_at").defaultNow().notNull(),
+  source: text("source").default("Guide Operation").notNull(),
+  notes: text("notes"),
+});
+
 // Relationships
 export const usersRelations = relations(usersTable, ({ many }) => ({
   trips: many(tripsTable),
@@ -132,6 +229,12 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   expenses: many(guideExpensesTable),
   markedTravelerAttendance: many(travelerAttendanceTable),
   tripStatusUpdates: many(tripStatusUpdatesTable),
+  guideTripUpdates: many(guideTripUpdatesTable),
+  guideCheckinPoints: many(guideCheckinPointsTable),
+  guideHotelUpdates: many(guideHotelUpdatesTable),
+  guideFoodUpdates: many(guideFoodUpdatesTable),
+  guideGroupPhotos: many(guideGroupPhotosTable),
+  guideMovementUpdates: many(guideMovementUpdatesTable),
 }));
 
 export const tripsRelations = relations(tripsTable, ({ one, many }) => ({
@@ -177,6 +280,12 @@ export const assignmentsRelations = relations(assignmentsTable, ({ one, many }) 
   expenses: many(guideExpensesTable),
   travelerAttendance: many(travelerAttendanceTable),
   tripStatusUpdates: many(tripStatusUpdatesTable),
+  guideTripUpdates: many(guideTripUpdatesTable),
+  guideCheckinPoints: many(guideCheckinPointsTable),
+  guideHotelUpdates: many(guideHotelUpdatesTable),
+  guideFoodUpdates: many(guideFoodUpdatesTable),
+  guideGroupPhotos: many(guideGroupPhotosTable),
+  guideMovementUpdates: many(guideMovementUpdatesTable),
 }));
 
 export const guideExpensesRelations = relations(guideExpensesTable, ({ one }) => ({
@@ -350,3 +459,114 @@ export type InsertGuideWorkDay = typeof guideWorkDaysTable.$inferInsert;
 
 export type GuideDayReport = typeof guideDayReportsTable.$inferSelect;
 export type InsertGuideDayReport = typeof guideDayReportsTable.$inferInsert;
+
+// Relationships for new operational tables
+export const guideTripUpdatesRelations = relations(guideTripUpdatesTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [guideTripUpdatesTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [guideTripUpdatesTable.guideId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const guideCheckinPointsRelations = relations(guideCheckinPointsTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [guideCheckinPointsTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [guideCheckinPointsTable.guideId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const guideHotelUpdatesRelations = relations(guideHotelUpdatesTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [guideHotelUpdatesTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [guideHotelUpdatesTable.guideId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const guideFoodUpdatesRelations = relations(guideFoodUpdatesTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [guideFoodUpdatesTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [guideFoodUpdatesTable.guideId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const guideGroupPhotosRelations = relations(guideGroupPhotosTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [guideGroupPhotosTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [guideGroupPhotosTable.guideId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const guideMovementUpdatesRelations = relations(guideMovementUpdatesTable, ({ one }) => ({
+  assignment: one(assignmentsTable, {
+    fields: [guideMovementUpdatesTable.assignmentId],
+    references: [assignmentsTable.id],
+  }),
+  guide: one(usersTable, {
+    fields: [guideMovementUpdatesTable.guideId],
+    references: [usersTable.id],
+  }),
+}));
+
+// Zod schemas for new operational tables
+export const insertGuideTripUpdateSchema = createInsertSchema(guideTripUpdatesTable);
+export const selectGuideTripUpdateSchema = createSelectSchema(guideTripUpdatesTable);
+
+export const insertGuideCheckinPointSchema = createInsertSchema(guideCheckinPointsTable);
+export const selectGuideCheckinPointSchema = createSelectSchema(guideCheckinPointsTable);
+
+export const insertGuideHotelUpdateSchema = createInsertSchema(guideHotelUpdatesTable);
+export const selectGuideHotelUpdateSchema = createSelectSchema(guideHotelUpdatesTable);
+
+export const insertGuideFoodUpdateSchema = createInsertSchema(guideFoodUpdatesTable);
+export const selectGuideFoodUpdateSchema = createSelectSchema(guideFoodUpdatesTable);
+
+export const insertGuideGroupPhotoSchema = createInsertSchema(guideGroupPhotosTable);
+export const selectGuideGroupPhotoSchema = createSelectSchema(guideGroupPhotosTable);
+
+export const insertGuideMovementUpdateSchema = createInsertSchema(guideMovementUpdatesTable);
+export const selectGuideMovementUpdateSchema = createSelectSchema(guideMovementUpdatesTable);
+
+export const insertGuideFoodPreferenceAuditSchema = createInsertSchema(guideFoodPreferenceAuditsTable);
+export const selectGuideFoodPreferenceAuditSchema = createSelectSchema(guideFoodPreferenceAuditsTable);
+
+// Inferred typings for new operational tables
+export type GuideTripUpdate = typeof guideTripUpdatesTable.$inferSelect;
+export type InsertGuideTripUpdate = typeof guideTripUpdatesTable.$inferInsert;
+
+export type GuideCheckinPoint = typeof guideCheckinPointsTable.$inferSelect;
+export type InsertGuideCheckinPoint = typeof guideCheckinPointsTable.$inferInsert;
+
+export type GuideHotelUpdate = typeof guideHotelUpdatesTable.$inferSelect;
+export type InsertGuideHotelUpdate = typeof guideHotelUpdatesTable.$inferInsert;
+
+export type GuideFoodUpdate = typeof guideFoodUpdatesTable.$inferSelect;
+export type InsertGuideFoodUpdate = typeof guideFoodUpdatesTable.$inferInsert;
+
+export type GuideGroupPhoto = typeof guideGroupPhotosTable.$inferSelect;
+export type InsertGuideGroupPhoto = typeof guideGroupPhotosTable.$inferInsert;
+
+export type GuideMovementUpdate = typeof guideMovementUpdatesTable.$inferSelect;
+export type InsertGuideMovementUpdate = typeof guideMovementUpdatesTable.$inferInsert;
+
+export type GuideFoodPreferenceAudit = typeof guideFoodPreferenceAuditsTable.$inferSelect;
+export type InsertGuideFoodPreferenceAudit = typeof guideFoodPreferenceAuditsTable.$inferInsert;
