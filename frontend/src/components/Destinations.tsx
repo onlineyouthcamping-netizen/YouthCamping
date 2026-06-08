@@ -91,7 +91,7 @@ export default function Destinations({
   };
 
   return (
-    <section className="section-wrapper bg-[#f4f4f5] overflow-hidden relative">
+    <section className="section-wrapper bg-[#f3f4f6] overflow-hidden relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto">
         <div className="flex flex-row items-end justify-between mb-8">

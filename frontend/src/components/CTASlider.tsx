@@ -22,7 +22,7 @@ export default function CTASlider({
   videoPosterUrl = "https://images.unsplash.com/photo-1581793745862-99f579601e1b?q=80&w=2070",
   borderRadius = "rounded-[20px] md:rounded-[32px]",
   topColor = "#ffffff",
-  bottomColor = "#f4f4f5",
+  bottomColor = "#f3f4f6",
 }: CTASliderProps) {
   const [isInView, setIsInView] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

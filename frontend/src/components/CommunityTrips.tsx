@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
 import { useTheme } from "@/components/DynamicThemeProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import TripCard from "./TripCard";
 
 interface CommunityTripsProps {
   trips: Trip[];
@@ -158,6 +159,22 @@ export default function CommunityTrips({
     ? "Upcoming Community Trips" 
     : title;
 
+  const renderFormattedTitle = (rawTitle: string) => {
+    const trimmed = rawTitle.trim();
+    const words = trimmed.split(" ");
+    if (words.length > 1) {
+      const lastWord = words.pop();
+      const rest = words.join(" ");
+      return (
+        <span className="font-extrabold whitespace-nowrap">
+          <span className="text-[#082B5B]">{rest} </span>
+          <span className="text-[#FF5B00]">{lastWord}</span>
+        </span>
+      );
+    }
+    return <span className="text-[#082B5B] font-extrabold whitespace-nowrap">{trimmed}</span>;
+  };
+
   return (
     <div className="overflow-hidden section-wrapper bg-white relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
@@ -177,7 +194,7 @@ export default function CommunityTrips({
               titleStyle === 'boxed' && "p-4 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-navy force-single-line truncate max-md:!text-[16px] max-md:!leading-none"
+                className="section-heading force-single-line truncate whitespace-nowrap max-md:!text-[16px] max-md:!leading-none"
                 style={{ 
                   fontSize: isMobile 
                     ? '16px' 
@@ -185,7 +202,7 @@ export default function CommunityTrips({
                   fontWeight: titleWeight ? titleWeight : undefined
                 }}
               >
-                {displayTitle}
+                {renderFormattedTitle(displayTitle)}
               </h2>
             </div>
 
@@ -263,10 +280,7 @@ export default function CommunityTrips({
                     const mStr = `${mName} '${mYear}`;
                     return mStr === activeMonth;
                   });
-                } catch (e) { return false; }
-              }).map((trip, i) => {
-                const hoverScaleClass = theme?.cardHoverAnimation === 'scale' || !theme?.cardHoverAnimation ? "group-hover:scale-105" : "";
-                
+                } catch (e) { return false; }              }).map((trip, i) => {
                 return (
                   <motion.div
                     key={trip.id}
@@ -276,111 +290,12 @@ export default function CommunityTrips({
                     className="flex-none snap-start"
                     style={{ width: 'var(--card-width)' }}
                   >
-                    <div 
-                      className={cn(
-                        "avian-card group relative overflow-hidden transition-all duration-300 border border-zinc-200/50 flex flex-col justify-between",
-                        theme?.cardHoverAnimation === 'lift' ? "hover:-translate-y-2 shadow-2xl" : "",
-                        theme?.cardHoverAnimation === 'shadow' ? "hover:shadow-2xl" : ""
-                      )}
-                      style={{
-                        height: 'var(--card-height)',
-                        borderRadius: 'var(--radius-card)',
-                        backgroundColor: 'var(--card)',
-                        boxShadow: 'var(--shadow-card)',
-                      }}
-                    >
-                      {/* Image Section */}
-                      <div 
-                        className="relative w-full overflow-hidden rounded-t-[inherit]"
-                        style={{ height: 'var(--card-image-height, 65%)' }}
-                      >
-                        <OptimizedImage 
-                          src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"} 
-                          alt={trip.title} 
-                          loading="lazy"
-                          cloudinaryWidth={800}
-                          width={400}
-                          height={240}
-                          className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-1000", hoverScaleClass)}
-                          style={{
-                            filter: 'brightness(var(--card-brightness))',
-                          }}
-                        />
-                        
-                        {/* Top Badge - Location (Floating on Image) */}
-                        <div className="absolute top-5 right-5 z-10">
-                          <div 
-                            className="font-bold text-[10px] md:text-xs uppercase tracking-wide px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-zinc-100"
-                            style={{
-                              backgroundColor: 'var(--card-badge-bg)',
-                              color: 'var(--card-badge-text)',
-                            }}
-                          >
-                            <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
-                            {trip.location}
-                          </div>
-                        </div>
-                      </div>
- 
-                      {/* Content Section */}
-                      <div 
-                        className="w-full bg-white rounded-b-[inherit] p-4 md:py-4 md:px-5 flex flex-col justify-between text-zinc-900 border-t border-zinc-100/50"
-                        style={{ height: 'var(--card-content-height, 35%)' }}
-                      >
-                        <div className="space-y-1 md:space-y-2">
-                          <h3 
-                            className="leading-tight tracking-tight capitalize break-words text-[#0B1F3A] hover:text-[#FF6B00] group-hover:text-[#FF6B00] transition-colors line-clamp-2"
-                            style={{
-                              fontSize: 'var(--card-title-size)',
-                              fontWeight: 'var(--font-weight-heading, 600)'
-                            }}
-                          >
-                            {trip.title}
-                          </h3>
-                          
-                          <div className="flex items-center gap-2 text-[#6B7280]">
-                            <Clock className="w-4 h-4 text-zinc-400" />
-                            <span className="text-[10px] md:text-xs font-semibold tracking-wide uppercase">{trip.duration}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-end justify-between w-full pt-1">
-                          <div className="flex items-baseline gap-1.5">
-                            <span 
-                              className="text-xs md:text-sm font-bold tracking-wide"
-                              style={{
-                                color: '#FF6B00',
-                                fontWeight: 700
-                              }}
-                            >
-                              ₹{trip.price.toLocaleString()}
-                            </span>
-                            <span className="text-[9px] md:text-[11px] font-normal text-zinc-400 line-through decoration-zinc-400">
-                              ₹{(trip.price + 4000).toLocaleString()}
-                            </span>
-                          </div>
-                          
-                          {/* CTA/Button style */}
-                          {theme?.cardButtonStyle === 'pill' ? (
-                            <div className="px-4 py-2 bg-white text-navy hover:bg-[#FF6B00] hover:text-white transition-all shadow-sm font-semibold text-[10px] rounded-full flex items-center gap-1 border border-zinc-200/50">
-                              Book Now <ChevronRight className="w-3 h-3" />
-                            </div>
-                          ) : theme?.cardButtonStyle === 'none' ? null : (
-                            <div className="w-9 h-9 bg-white text-navy rounded-full flex items-center justify-center hover:bg-[#FF6B00] hover:text-white transition-all shadow-sm group/btn border border-zinc-200/50 shrink-0">
-                              <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Invisible Link Overlay - Moved to very end for top-layer priority */}
-                      <Link 
-                        href={`/trips/${trip.slug}`} 
-                        className="absolute inset-0 z-[50] cursor-pointer"
-                        aria-label={`View ${trip.title}`}
-                        onClick={handleLinkClick}
-                      />
-                    </div>
+                    <TripCard 
+                      trip={trip} 
+                      index={i} 
+                      onClick={handleLinkClick}
+                      activeMonth={activeMonth}
+                    />
                   </motion.div>
                 );
               })}

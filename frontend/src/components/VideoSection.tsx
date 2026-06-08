@@ -19,6 +19,8 @@ interface VideoSectionProps {
   title?: string;
   subtitle?: string;
   videos?: VideoItem[];
+  topColor?: string;
+  bottomColor?: string;
 }
 
 const VIDEOS: VideoItem[] = [
@@ -43,14 +45,21 @@ const VIDEOS: VideoItem[] = [
 export default function VideoSection({ 
   title = "Videos", 
   subtitle = "Exclusive footage from our expeditions",
-  videos 
+  videos,
+  topColor = "#ffffff",
+  bottomColor = "#f3f4f6"
 }: VideoSectionProps) {
   const activeVideos = (videos && videos.length > 0) ? videos : VIDEOS;
   const [activeVideo, setActiveVideo] = useState<{ url: string; poster?: string } | null>(null);
 
   return (
     <>
-      <section className="py-16 bg-[#E5E8EB] overflow-hidden">
+      <section 
+        className="py-8 md:py-12 overflow-hidden relative"
+        style={{
+          background: `linear-gradient(to bottom, ${topColor} 0%, ${topColor} 50%, ${bottomColor} 50%, ${bottomColor} 100%)`
+        }}
+      >
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
             <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter">{title}</h2>

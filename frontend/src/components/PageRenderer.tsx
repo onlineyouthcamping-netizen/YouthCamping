@@ -82,6 +82,12 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
         const getBgColor = (idx: number) => {
           const s = visibleSections[idx];
           if (!s) return '#ffffff';
+          
+          // Map exact backgrounds for components with custom/hardcoded styling
+          if (s.type === 'destinations') return '#f3f4f6';
+          if (s.type === 'bestie') return '#BDD5D5';
+          if (s.type === 'video_section') return '#f3f4f6';
+          
           if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner'].includes(s.type)) return 'transparent';
           
           const patterns = ['#ffffff', '#f6f6f6'];

@@ -146,8 +146,8 @@
   --mobile-navbar-height: 64px;
   
   /* Card Extended */
-  --card-height: 390px !important;
-  --card-width: 310px !important;
+  --card-height: 380px !important;
+  --card-width: 350px !important;
   --card-overlay: 50;
   --card-brightness: 100%;
   --card-title-size: 17px !important;
@@ -237,8 +237,8 @@
     --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
     --section-spacing: 60px !important;
-    --card-width: 240px !important;
-    --card-height: 310px !important;
+    --card-width: 270px !important;
+    --card-height: 300px !important;
     --title-size-multiplier: 0.78;
     --card-image-height: 60% !important;
     --card-content-height: 40% !important;

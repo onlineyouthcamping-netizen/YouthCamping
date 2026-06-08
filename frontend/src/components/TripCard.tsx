@@ -4,17 +4,91 @@ import { Trip } from "@/types";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-import { Clock, MapPin, ArrowUpRight } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import { cn } from "@/lib/utils";
 
 interface TripCardProps {
   trip: Trip;
   index: number;
+  className?: string;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  activeMonth?: string;
 }
 
-export default function TripCard({ trip, index }: TripCardProps) {
+export default function TripCard({ trip, index, className, onClick, activeMonth }: TripCardProps) {
+  // Original Price Formatter (Calculated from variants or defaults)
+  const getOriginalPrice = () => {
+    let variantsList: any[] = [];
+    if (trip.variants) {
+      try {
+        variantsList = typeof trip.variants === 'string'
+          ? JSON.parse(trip.variants)
+          : trip.variants;
+      } catch (e) {}
+    }
 
+    if (Array.isArray(variantsList) && variantsList.length > 0) {
+      const firstVariant = variantsList[0];
+      if (firstVariant && (firstVariant.originalPrice || firstVariant.discountedPrice)) {
+        return firstVariant.originalPrice || (firstVariant.discountedPrice + 3000);
+      }
+    }
+
+    return (trip.price || 12000) + 3000;
+  };
+
+  // Route Summary Formatter (Extracts key stops for subtitle)
+  const getRouteSummary = () => {
+    let routeList: any[] = [];
+    if (trip.route) {
+      try {
+        routeList = typeof trip.route === 'string'
+          ? JSON.parse(trip.route)
+          : trip.route;
+      } catch (e) {}
+    }
+
+    const routeLabels = routeList.map(r => typeof r === 'string' ? r : r.label).filter(Boolean);
+    if (routeLabels.length > 1) {
+      return `with ${routeLabels.slice(0, 2).join(" & ")}`;
+    }
+    return trip.location ? `Expedition in ${trip.location}` : trip.description || "";
+  };
+
+  // Split title helper for orange & navyblue color theme uniformity
+  const renderFormattedTitle = (rawTitle: string) => {
+    const trimmed = rawTitle.trim();
+    const words = trimmed.split(" ");
+    if (words.length > 1) {
+      const lastWord = words.pop();
+      const rest = words.join(" ");
+      return (
+        <span>
+          <span className="text-[#082B5B]">{rest} </span>
+          <span className="text-[#FF5B00]">{lastWord}</span>
+        </span>
+      );
+    }
+    return <span className="text-[#082B5B]">{trimmed}</span>;
+  };
+
+  // Duration Formatter to match "DAYS / NIGHTS" style
+  const getFormattedDuration = (dur: string) => {
+    if (!dur) return "";
+    const nightsMatch = dur.match(/(\d+)\s*(?:Nights|N)/i);
+    const daysMatch = dur.match(/(\d+)\s*(?:Days|D)/i);
+    if (nightsMatch && daysMatch) {
+      const nights = parseInt(nightsMatch[1]);
+      const days = parseInt(daysMatch[1]);
+      return `${days} DAYS / ${nights} NIGHTS`;
+    }
+    return dur.toUpperCase();
+  };
+
+  const originalPrice = getOriginalPrice();
+  const discount = originalPrice - (trip.price || 0);
 
   return (
     <motion.div
@@ -22,55 +96,104 @@ export default function TripCard({ trip, index }: TripCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
       viewport={{ once: true }}
-      className="avian-card group relative bg-white rounded-[32px] overflow-hidden border border-zinc-100 hover:border-primary-orange/30 transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.015] active:scale-[0.985] cursor-pointer h-full"
+      className={cn(
+        "group relative bg-white rounded-[24px] overflow-hidden border border-zinc-100/50 shadow-md hover:shadow-xl hover:scale-[1.015] active:scale-[0.985] cursor-pointer transition-all duration-300 w-full h-[300px] md:h-[350px] lg:h-[380px] max-w-[var(--card-width)] mx-auto flex flex-col p-2.5 md:p-3",
+        className
+      )}
     >
       {/* Invisible Link Overlay - Ensures 100% clickability */}
       <Link 
         href={`/trips/${trip.slug}`} 
         className="absolute inset-0 z-30 cursor-pointer"
         aria-label={`View ${trip.title}`}
+        onClick={onClick}
       />
 
-      <div className="relative aspect-[16/10] md:aspect-[4/3] overflow-hidden">
+      {/* Photo Container (Occupies 63% of the card height, large rounded corners) */}
+      <div className="relative w-full h-[190px] md:h-[215px] lg:h-[240px] rounded-[20px] md:rounded-[24px] overflow-hidden shrink-0">
         <OptimizedImage
           src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"}
           alt={trip.title}
           width={400}
-          height={300}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+          height={250}
+          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          style={{
+            filter: "contrast(1.08) saturate(1.1)"
+          }}
         />
-        
-        {/* Hover Arrow */}
-        <div className="absolute bottom-6 right-6 w-14 h-14 bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 shadow-2xl z-10">
-          <ArrowUpRight className="w-6 h-6 text-navy" />
+
+        {/* Carousel Pagination Dots Overlay */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 select-none">
+          {[0, 1, 2, 3, 4].map((dot, dIdx) => (
+            <div 
+              key={dIdx} 
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                dIdx === 0 ? "bg-white scale-110 shadow-sm" : "bg-white/50"
+              )}
+            />
+          ))}
         </div>
+
+        {/* Floating Place/Category Badge on Top-Right */}
+        {(trip.location || trip.category) && (
+          <div 
+            className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full shadow-sm flex items-center border border-white/10 select-none"
+            style={{
+              background: "rgba(0, 0, 0, 0.45)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)"
+            }}
+          >
+            <MapPin className="w-3 h-3 text-[#FFA366] mr-1 shrink-0" />
+            <span className="text-white font-bold text-[9px] md:text-[10px] uppercase tracking-wide">
+              {trip.location || trip.category}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="p-5 md:p-8">
-        <div className="flex items-center gap-2 text-primary-orange text-[10px] md:text-xs font-semibold uppercase tracking-wide mb-2 md:mb-4">
-          <MapPin className="w-3.5 h-3.5 md:w-4 h-4" />
-          {trip.location}
-        </div>
-        
-        <h3 
-          className="text-lg md:text-xl text-navy mb-3 md:mb-6 leading-tight tracking-tight group-hover:text-primary-orange transition-colors break-words"
-          style={{ fontWeight: 'var(--font-weight-heading, 500)' }}
-        >
-          {trip.title}
+      {/* Content Area (Tightened Spacing, no excessive padding) */}
+      <div className="flex-1 flex flex-col pt-2 md:pt-2.5 px-0.5">
+        {/* Duration */}
+        <span className="text-[9px] md:text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5 block">
+          {getFormattedDuration(trip.duration)}
+        </span>
+
+        {/* Title */}
+        <h3 className="font-extrabold text-xs md:text-sm lg:text-base leading-tight tracking-tight line-clamp-1 mb-0.5 select-none">
+          {renderFormattedTitle(trip.title)}
         </h3>
 
-        <div className="space-y-4 pt-4 md:pt-6 border-t border-zinc-50">
+        {/* Route Summary */}
+        <p className="text-[10px] md:text-[11px] text-zinc-500 font-medium line-clamp-1 mb-1.5">
+          {getRouteSummary()}
+        </p>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 md:gap-2 text-zinc-400 text-[10px] md:text-xs font-semibold uppercase tracking-wide">
-              <Clock className="w-4 h-4 md:w-5 h-5 text-primary-orange" />
-              {trip.duration}
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] text-zinc-400 font-normal uppercase tracking-wide mb-0.5 md:mb-1">Starts at</p>
-              <p className="text-lg md:text-xl font-semibold tracking-wide text-navy">₹{trip.price.toLocaleString()}</p>
-            </div>
+        {/* Divider */}
+        <div className="h-px bg-zinc-100 my-1.5 w-full shrink-0" />
+
+        {/* Pricing & Savings Row (Combined inline to eliminate empty area) */}
+        <div className="flex items-center justify-between select-none mt-auto pb-0.5 pl-0.5 w-full shrink-0">
+          <div className="flex items-baseline">
+            <span className="text-[#FF5B00] text-sm md:text-base lg:text-lg font-extrabold">
+              ₹{Number(trip.price).toLocaleString('en-IN')}
+            </span>
+            {discount > 0 && (
+              <span className="text-zinc-400 text-[10px] md:text-xs line-through ml-2 font-normal">
+                ₹{originalPrice.toLocaleString('en-IN')}
+              </span>
+            )}
           </div>
+
+          {discount > 0 && (
+            <div className="flex items-center gap-1 bg-[#E8F8F0] text-[#047857] px-2 py-0.5 rounded-md text-[9px] md:text-[10px] font-bold select-none shrink-0">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-[#10B981] shrink-0">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Save {discount.toLocaleString('en-IN')}</span>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
