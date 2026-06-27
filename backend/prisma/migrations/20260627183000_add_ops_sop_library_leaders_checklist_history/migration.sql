@@ -19,6 +19,7 @@ ALTER TABLE "OpsSopLibrary" ADD CONSTRAINT "OpsSopLibrary_archivedById_fkey" FOR
 
 -- AlterTable for OpsTripLeader
 ALTER TABLE "OpsTripLeader" DROP CONSTRAINT IF EXISTS "OpsTripLeader_tripId_departureDate_key";
+ALTER TABLE "OpsTripLeader" ALTER COLUMN "leaderType" DROP DEFAULT;
 ALTER TABLE "OpsTripLeader" ALTER COLUMN "leaderType" TYPE "OpsLeaderType" USING "leaderType"::"OpsLeaderType";
 ALTER TABLE "OpsTripLeader" ALTER COLUMN "leaderType" SET DEFAULT 'INTERNAL';
 ALTER TABLE "OpsTripLeader" ADD COLUMN "isPrimary" BOOLEAN NOT NULL DEFAULT false;
