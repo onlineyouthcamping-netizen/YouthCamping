@@ -188,6 +188,28 @@ exports.upsertTripExpense = async (req, res) => {
   }
 };
 
+exports.deleteDayItinerary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.opsDayItinerary.delete({ where: { id } });
+    return res.json({ success: true, message: 'Itinerary row deleted' });
+  } catch (err) {
+    console.error('deleteDayItinerary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete itinerary row' });
+  }
+};
+
+exports.deleteTripExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.opsTripExpense.delete({ where: { id } });
+    return res.json({ success: true, message: 'Expense row deleted' });
+  } catch (err) {
+    console.error('deleteTripExpense error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete expense row' });
+  }
+};
+
 // ── HOTEL BOOKINGS TRACKER ──
 exports.getHotelBookings = async (req, res) => {
   try {

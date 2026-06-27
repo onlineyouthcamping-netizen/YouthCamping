@@ -5,8 +5,10 @@ const {
   createVendor,
   getDayItinerary,
   upsertDayItinerary,
+  deleteDayItinerary,
   getTripExpenses,
   upsertTripExpense,
+  deleteTripExpense,
   getHotelBookings,
   createHotelBooking,
   getTransportFleet,
@@ -34,8 +36,10 @@ router.post('/vendors', requirePermission('ops.manage'), createVendor);
 // Excel Match Grids (Scoped by departureDate in query params)
 router.get('/itinerary/:tripId', requirePermission('ops.view'), getDayItinerary);
 router.post('/itinerary/:tripId', requirePermission('ops.manage'), upsertDayItinerary);
+router.delete('/itinerary/:id', requirePermission('ops.manage'), deleteDayItinerary);
 router.get('/expenses/:tripId', requirePermission('ops.view'), getTripExpenses);
 router.post('/expenses/:tripId', requirePermission('ops.manage'), upsertTripExpense);
+router.delete('/expenses/:id', requirePermission('ops.manage'), deleteTripExpense);
 
 // Trackers
 router.get('/hotels/:tripId', requirePermission('ops.view'), getHotelBookings);
