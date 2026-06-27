@@ -41,7 +41,16 @@ function parseDepartureFilter(req, res, requireDepartureDate = true) {
   const where = { tenantId, tripId };
   if (departureDate) where.departureDate = departureDate;
 
-  return { tenantId, tripId, departureDate, where };
+  let bookingWhere = { tenantId, tripId, status: { notIn: ['cancelled', 'rejected'] } };
+  if (departureDate) {
+    const startOfDay = new Date(departureDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(departureDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+    bookingWhere.departureDate = { gte: startOfDay, lte: endOfDay };
+  }
+
+  return { tenantId, tripId, departureDate, where, bookingWhere };
 }
 
 // ── VENDORS DIRECTORY ──
@@ -360,7 +369,7 @@ exports.getOpsAccountingSummary = async (req, res) => {
     const ctx = parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
-    const bookingWhere = { tripId: ctx.tripId, departureDate: ctx.departureDate, status: { notIn: ['cancelled', 'rejected'] } };
+    const bookingWhere = ctx.bookingWhere;
 
     const [hotels, transport, guides, misc, expenses, bookings] = await Promise.all([
       prisma.opsHotelBooking.findMany({ where: ctx.where }),
@@ -451,7 +460,7 @@ exports.getSeatConfig = async (req, res) => {
       });
     }
 
-    const bookingWhere = { tripId: ctx.tripId, departureDate: ctx.departureDate, status: { notIn: ['cancelled', 'rejected'] } };
+    const bookingWhere = ctx.bookingWhere;
     const bookings = await prisma.booking.findMany({ where: bookingWhere });
     const seatsSold = bookings.reduce((s, b) => s + (b.numberOfTravelers || 1), 0);
     const seatsAvailable = Math.max(0, config.totalSeatsCap - seatsSold - config.blockedSeats);
@@ -552,7 +561,7 @@ exports.generateAllocation = async (req, res) => {
     const ctx = parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
-    const bookingWhere = { tripId: ctx.tripId, departureDate: ctx.departureDate, status: { notIn: ['cancelled', 'rejected'] } };
+    const bookingWhere = ctx.bookingWhere;
 
     const [bookings, fleet] = await Promise.all([
       prisma.booking.findMany({ where: bookingWhere }),
