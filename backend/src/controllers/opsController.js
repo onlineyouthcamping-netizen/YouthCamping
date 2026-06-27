@@ -632,16 +632,19 @@ exports.createRoomInventory = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
-    const { roomLabel, roomType, genderGroup, capacity, hotelName, notes, quantity } = req.body;
-    const qty = parseInt(quantity) || 1;
 
-    if (qty > 1) {
+    const items = Array.isArray(req.body.rooms) ? req.body.rooms : [req.body];
+    const roomsData = [];
+
+    for (const item of items) {
+      const { roomLabel, roomType, genderGroup, capacity, hotelName, notes, quantity } = item;
+      const qty = parseInt(quantity) || 1;
+
       const cleanLabel = roomLabel || 'Room 101';
       const match = cleanLabel.match(/\d+$/);
       let baseNum = match ? parseInt(match[0]) : 1;
       let labelPrefix = match ? cleanLabel.slice(0, cleanLabel.lastIndexOf(match[0])) : `${cleanLabel} `;
 
-      const roomsData = [];
       for (let i = 0; i < qty; i++) {
         roomsData.push({
           tenantId: ctx.tenantId,
@@ -651,29 +654,17 @@ exports.createRoomInventory = async (req, res) => {
           roomType: roomType || 'TWIN',
           genderGroup: genderGroup || 'BOYS',
           capacity: parseInt(capacity) || 2,
-          hotelName,
-          notes
+          hotelName: hotelName || null,
+          notes: notes || null
         });
       }
-
-      await prisma.opsRoomInventory.createMany({ data: roomsData });
-      return res.status(201).json({ success: true, message: `Successfully created ${qty} rooms` });
-    } else {
-      const room = await prisma.opsRoomInventory.create({
-        data: {
-          tenantId: ctx.tenantId,
-          tripId: ctx.tripId,
-          departureDate: ctx.departureDate,
-          roomLabel: roomLabel || `Room ${Date.now()}`,
-          roomType: roomType || 'TWIN',
-          genderGroup: genderGroup || 'BOYS',
-          capacity: parseInt(capacity) || 2,
-          hotelName,
-          notes
-        }
-      });
-      return res.status(201).json({ success: true, data: room });
     }
+
+    if (roomsData.length > 0) {
+      await prisma.opsRoomInventory.createMany({ data: roomsData });
+    }
+
+    return res.status(201).json({ success: true, message: `Successfully created ${roomsData.length} rooms` });
   } catch (err) {
     console.error('createRoomInventory error:', err);
     return res.status(500).json({ success: false, message: 'Failed to create room(s)' });
