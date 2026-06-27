@@ -142,15 +142,26 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
       return roomSlots.find(r => r.genderGroup === genderGroup && r.remaining >= count);
     };
 
-    // Step 1: Assign multi-person groups to GROUP rooms (or any room with capacity)
+    // Step 1: Assign multi-person groups to GROUP/COUPLE rooms
     multiGroups.forEach(groupMembers => {
-      let room = findRoom('GROUP', groupMembers.length)
-                || findRoom('FAMILY', groupMembers.length)
-                || findRoom('COUPLE', groupMembers.length);
-      // If no GROUP/FAMILY room fits, try any room with enough capacity
+      let room = null;
+      if (groupMembers.length === 2) {
+        // For couples / duos: prioritize COUPLE rooms, then GROUP, then FAMILY
+        room = findRoom('COUPLE', 2)
+              || findRoom('GROUP', 2)
+              || findRoom('FAMILY', 2);
+      } else {
+        // For larger groups: prioritize GROUP, then FAMILY, then COUPLE
+        room = findRoom('GROUP', groupMembers.length)
+              || findRoom('FAMILY', groupMembers.length)
+              || findRoom('COUPLE', groupMembers.length);
+      }
+
+      // If no matching gender group room fits, fallback to any room with capacity
       if (!room) {
         room = roomSlots.find(r => r.remaining >= groupMembers.length);
       }
+
       if (room) {
         groupMembers.forEach(t => {
           room.assigned.push(t);
