@@ -11,8 +11,10 @@ const {
   deleteTripExpense,
   getHotelBookings,
   createHotelBooking,
+  deleteHotelBooking,
   getTransportFleet,
   createTransportFleet,
+  deleteTransportFleet,
   getGuidePayments,
   createGuidePayment,
   getOpsAccountingSummary,
@@ -44,8 +46,10 @@ router.delete('/expenses/:id', requirePermission('ops.manage'), deleteTripExpens
 // Trackers
 router.get('/hotels/:tripId', requirePermission('ops.view'), getHotelBookings);
 router.post('/hotels/:tripId', requirePermission('ops.manage'), createHotelBooking);
+router.delete('/hotels/:id', requirePermission('ops.manage'), deleteHotelBooking);
 router.get('/transport/:tripId', requirePermission('ops.view'), getTransportFleet);
 router.post('/transport/:tripId', requirePermission('ops.manage'), createTransportFleet);
+router.delete('/transport/:id', requirePermission('ops.manage'), deleteTransportFleet);
 router.get('/guides/:tripId', requirePermission('ops.view'), getGuidePayments);
 router.post('/guides/:tripId', requirePermission('ops.manage'), createGuidePayment);
 

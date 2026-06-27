@@ -200,7 +200,7 @@ exports.upsertTripExpense = async (req, res) => {
 exports.deleteDayItinerary = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.opsDayItinerary.delete({ where: { id } });
+    await prisma.opsDayItinerary.deleteMany({ where: { id } });
     return res.json({ success: true, message: 'Itinerary row deleted' });
   } catch (err) {
     console.error('deleteDayItinerary error:', err);
@@ -211,7 +211,7 @@ exports.deleteDayItinerary = async (req, res) => {
 exports.deleteTripExpense = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.opsTripExpense.delete({ where: { id } });
+    await prisma.opsTripExpense.deleteMany({ where: { id } });
     return res.json({ success: true, message: 'Expense row deleted' });
   } catch (err) {
     console.error('deleteTripExpense error:', err);
@@ -269,6 +269,17 @@ exports.createHotelBooking = async (req, res) => {
   }
 };
 
+exports.deleteHotelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.opsHotelBooking.deleteMany({ where: { id } });
+    return res.json({ success: true, message: 'Hotel booking deleted' });
+  } catch (err) {
+    console.error('deleteHotelBooking error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete hotel booking' });
+  }
+};
+
 // ── TRANSPORT FLEET TRACKER ──
 exports.getTransportFleet = async (req, res) => {
   try {
@@ -314,6 +325,17 @@ exports.createTransportFleet = async (req, res) => {
   } catch (err) {
     console.error('createTransportFleet error:', err);
     return res.status(500).json({ success: false, message: 'Failed to create transport fleet' });
+  }
+};
+
+exports.deleteTransportFleet = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.opsTransportFleet.deleteMany({ where: { id } });
+    return res.json({ success: true, message: 'Transport vehicle deleted' });
+  } catch (err) {
+    console.error('deleteTransportFleet error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete transport vehicle' });
   }
 };
 
