@@ -172,14 +172,7 @@ function runAutoAllocation(bookings, fleet) {
   }
 
   // ── WHATSAPP TEXT FORMATTING ──
-  let whatsappTempoText = `🚌 *TEMPO & VEHICLE ALLOCATION LIST*\n\n`;
-  fleetStatus.forEach((f, idx) => {
-    whatsappTempoText += `*${f.vehicleType.toUpperCase()} ${idx + 1} (${f.capacity} Seater)* — ${f.assignedTravelers.length}/${f.capacity} filled\n`;
-    f.assignedTravelers.forEach((t, i) => {
-      whatsappTempoText += `${i + 1}. ${t.name}\n`;
-    });
-    whatsappTempoText += `\n`;
-  });
+  const whatsappTempoText = buildWhatsappTempoText(vehicleAllocations, fleetStatus);
 
   let whatsappRoomText = `🏨 *HOTEL ROOM ALLOCATION LIST*\n\n`;
   const roomMap = {};
@@ -205,6 +198,41 @@ function runAutoAllocation(bookings, fleet) {
   };
 }
 
+function buildWhatsappTempoText(vehicleAllocations = [], fleetStatus = []) {
+  let whatsappTempoText = `🚌 *TEMPO & VEHICLE ALLOCATION LIST*\n\n`;
+  
+  // Group allocations by fleetId
+  const fleetMap = {};
+  vehicleAllocations.forEach(va => {
+    if (!fleetMap[va.fleetId]) fleetMap[va.fleetId] = [];
+    fleetMap[va.fleetId].push(va);
+  });
+
+  if (fleetStatus.length > 0) {
+    fleetStatus.forEach((f, idx) => {
+      const allocs = fleetMap[f.id] || [];
+      whatsappTempoText += `*${f.vehicleType.toUpperCase()} ${idx + 1} (${f.capacity} Seater)* — ${allocs.length}/${f.capacity} filled\n`;
+      allocs.forEach((t, i) => {
+        const seatStr = t.seatNumber ? ` [Seat #${t.seatNumber}]` : ` [Seat #${i + 1}]`;
+        whatsappTempoText += `${i + 1}. ${t.travelerName}${seatStr}\n`;
+      });
+      whatsappTempoText += `\n`;
+    });
+  } else {
+    // Fallback if fleetStatus array not provided
+    Object.entries(fleetMap).forEach(([fleetId, allocs], idx) => {
+      whatsappTempoText += `*VEHICLE ${idx + 1}* — ${allocs.length} assigned\n`;
+      allocs.forEach((t, i) => {
+        const seatStr = t.seatNumber ? ` [Seat #${t.seatNumber}]` : ` [Seat #${i + 1}]`;
+        whatsappTempoText += `${i + 1}. ${t.travelerName}${seatStr}\n`;
+      });
+      whatsappTempoText += `\n`;
+    });
+  }
+  return whatsappTempoText.trim();
+}
+
 module.exports = {
-  runAutoAllocation
+  runAutoAllocation,
+  buildWhatsappTempoText
 };
