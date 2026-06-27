@@ -132,6 +132,8 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/theme', require('./routes/themeRoutes'));
 app.use('/api/booking-verifications', require('./routes/bookingVerificationRoutes'));
 app.use('/api/train-tickets', require('./routes/trainTicketRoutes'));
+app.use('/api/accounting', require('./routes/accountingRoutes'));
+
 
 // Serve Static Files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

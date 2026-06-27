@@ -37,6 +37,11 @@ model Admin {
   approvalActors        TrainTicketApproval[]    @relation("ApprovalActorAdmin")
   trainTicketGroups     TrainTicketGroup[]       @relation("GroupCreatedByAdmin")
 
+  // Accounting relations
+  salesAccountingEntries   AccountingEntry[] @relation("SalesAccountingEntries")
+  actionedAccountingEntries AccountingEntry[] @relation("ActionedAccountingEntries")
+  accountingLogs            AccountingEntryLog[]
+
   @@index([tenantId])
 }
 
@@ -298,6 +303,7 @@ model Booking {
   trainTicket       TrainTicketRequest?
   trainTickets      TrainTicket[]
   trainTicketGroups TrainTicketGroup[]
+  accountingEntries AccountingEntry[]
 
   @@index([tenantId])
   @@index([status])
@@ -793,4 +799,73 @@ model TrainTicketAlertEvent {
   @@index([tenantId])
   @@index([bookingId, alertType])
   @@index([trainTicketId])
+}
+
+// ── NEW: Accounting Payment Mode Enum ──
+enum AccountingPaymentMode {
+  CASH
+  UPI
+  BANK_TRANSFER
+}
+
+// ── NEW: Accounting Entry Status Enum ──
+enum AccountingEntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ── NEW: Accounting Entry Model ──
+model AccountingEntry {
+  id              String                @id @default(cuid())
+  tenantId        String                @default("default")
+  bookingId       String
+  amount          Float
+  paymentMode     AccountingPaymentMode
+  referenceNumber String?
+  status          AccountingEntryStatus @default(PENDING)
+  notes           String?               @db.Text
+  rejectionReason String?               @db.Text
+
+  salespersonId   String
+  actionedById    String?
+
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  booking         Booking               @relation(fields: [bookingId], references: [bookingId], onDelete: Cascade)
+  salesperson     Admin                 @relation("SalesAccountingEntries", fields: [salespersonId], references: [id])
+  actionedBy      Admin?                @relation("ActionedAccountingEntries", fields: [actionedById], references: [id])
+  history         AccountingEntryLog[]
+
+  @@index([tenantId])
+  @@index([bookingId])
+  @@index([salespersonId])
+  @@index([status])
+}
+
+// ── NEW: Accounting Entry Log Model ──
+model AccountingEntryLog {
+  id                String                @id @default(cuid())
+  accountingEntryId String
+  action            String
+  notes             String?               @db.Text
+  actorId           String
+  createdAt         DateTime              @default(now())
+
+  accountingEntry   AccountingEntry       @relation(fields: [accountingEntryId], references: [id], onDelete: Cascade)
+  actor             Admin                 @relation(fields: [actorId], references: [id])
+
+  @@index([accountingEntryId])
+}
+
+// ── NEW: Accounting Alert Dedupe Model ──
+model AccountingAlertDedupe {
+  id        String   @id @default(cuid())
+  alertType String
+  bookingId String
+  sentAt    DateTime @default(now())
+
+  @@unique([alertType, bookingId])
+  @@index([bookingId])
 }
