@@ -42,6 +42,14 @@ model Admin {
   actionedAccountingEntries AccountingEntry[] @relation("ActionedAccountingEntries")
   accountingLogs            AccountingEntryLog[]
 
+  // Ops relations
+  opsChecklistsCompleted   OpsTripChecklist[]       @relation("ChecklistCompletedByAdmin")
+  opsIncidentsReported     OpsIncidentLog[]         @relation("IncidentReportedByAdmin")
+  guideOpsPayments         OpsGuidePayment[]        @relation("GuideAssignments")
+  approvedOpsPayments      OpsGuidePayment[]        @relation("GuidePaymentApprovals")
+  opsAllocationRuns        OpsAllocationRun[]
+  opsAllocationOverrides   OpsAllocationOverride[]
+
   @@index([tenantId])
 }
 
@@ -245,6 +253,20 @@ model Trip {
   guideAssignments TripAssignment[]
   trainTemplates  TrainTemplate[]
 
+  // Ops relations
+  opsHotelBookings   OpsHotelBooking[]
+  opsTransportFleets OpsTransportFleet[]
+  opsGuidePayments   OpsGuidePayment[]
+  opsMiscExpenses    OpsMiscExpense[]
+  opsSeatConfigs     OpsSeatConfig[]
+  opsChecklists      OpsTripChecklist[]
+  opsIncidents       OpsIncidentLog[]
+  opsRoomAllocations OpsRoomAllocation[]
+  opsVehicleAllocations OpsVehicleAllocation[]
+  opsDayItineraries  OpsDayItinerary[]
+  opsTripExpenses    OpsTripExpense[]
+  opsAllocationRuns  OpsAllocationRun[]
+
   @@index([tenantId])
   @@index([category])
   @@index([status])
@@ -304,6 +326,8 @@ model Booking {
   trainTickets      TrainTicket[]
   trainTicketGroups TrainTicketGroup[]
   accountingEntries AccountingEntry[]
+  opsVehicleAllocations OpsVehicleAllocation[]
+  opsRoomAllocations    OpsRoomAllocation[]
 
   @@index([tenantId])
   @@index([status])
@@ -868,4 +892,351 @@ model AccountingAlertDedupe {
 
   @@unique([alertType, bookingId])
   @@index([bookingId])
+}
+
+// ── NEW: OPS & AUTO ALLOCATION ENUMS ──
+enum OpsVendorType {
+  HOTEL
+  TRANSPORT
+  GUIDE
+  MEALS
+  MISC
+}
+
+enum OpsBookingStatus {
+  UNCONFIRMED
+  CONFIRMED
+  CANCELLED
+}
+
+enum OpsSOPStage {
+  PRE_TRIP_30D
+  PRE_TRIP_7D
+  PRE_TRIP_1D
+  DEPARTURE_DAY
+  DURING_TRIP
+  POST_TRIP
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ── VENDOR DIRECTORY ENHANCEMENTS ──
+model OpsVendor {
+  id            String              @id @default(cuid())
+  tenantId      String              @default("default")
+  name          String
+  type          OpsVendorType
+  contactPerson String?
+  email         String?
+  phone         String?
+  location      String?
+  rating        Float?              @default(5.0)
+  notes         String?             @db.Text
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  hotelBookings  OpsHotelBooking[]
+  transportFleet OpsTransportFleet[]
+  guidePayments  OpsGuidePayment[]
+
+  @@index([tenantId])
+  @@index([type])
+}
+
+// ── HOTEL BOOKINGS TRACKER ──
+model OpsHotelBooking {
+  id            String           @id @default(cuid())
+  tenantId      String           @default("default")
+  tripId        String
+  departureDate DateTime         @db.Date
+  vendorId      String?
+  hotelName     String
+  location      String?
+  checkIn       DateTime?
+  checkOut      DateTime?
+  roomType      String?
+  numberOfRooms Int              @default(1)
+  confirmed     OpsBookingStatus @default(UNCONFIRMED)
+  totalAmount   Float            @default(0)
+  advancePaid   Float            @default(0)
+  balanceAmount Float            @default(0)
+  contactPerson String?
+  contactPhone  String?
+  notes         String?          @db.Text
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  trip          Trip             @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  vendor        OpsVendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tripId, departureDate])
+}
+
+// ── TRANSPORT FLEET TRACKER ──
+model OpsTransportFleet {
+  id            String                 @id @default(cuid())
+  tenantId      String                 @default("default")
+  tripId        String
+  departureDate DateTime               @db.Date
+  vendorId      String?
+  vehicleType   String
+  capacity      Int                    @default(13)
+  route         String?
+  pickupPoints  String?
+  dropPoints    String?
+  totalAmount   Float                  @default(0)
+  advancePaid   Float                  @default(0)
+  balanceAmount Float                  @default(0)
+  driverName    String?
+  driverPhone   String?
+  notes         String?                @db.Text
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  trip          Trip                   @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  vendor        OpsVendor?             @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  allocations   OpsVehicleAllocation[]
+
+  @@index([tenantId])
+  @@index([tripId, departureDate])
+}
+
+// ── GUIDE PAYMENTS TRACKER ──
+model OpsGuidePayment {
+  id            String    @id @default(cuid())
+  tenantId      String    @default("default")
+  tripId        String
+  departureDate DateTime  @db.Date
+  guideAdminId  String?
+  vendorId      String?
+  guideName     String
+  daysWorked    Int       @default(1)
+  agreedAmount  Float     @default(0)
+  advancePaid   Float     @default(0)
+  balanceAmount Float     @default(0)
+  paymentStatus String    @default("PENDING")
+  approvedById  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  trip          Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  guideAdmin    Admin?    @relation("GuideAssignments", fields: [guideAdminId], references: [id])
+  approvedBy    Admin?    @relation("GuidePaymentApprovals", fields: [approvedById], references: [id])
+  vendor        OpsVendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tripId, departureDate])
+}
+
+// ── OPERATIONAL MISC EXPENSES ──
+model OpsMiscExpense {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  tripId        String
+  departureDate DateTime @db.Date
+  category      String
+  description   String
+  amount        Float    @default(0)
+  createdAt     DateTime @default(now())
+
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Restrict)
+
+  @@index([tripId, departureDate])
+}
+
+// ── SEAT MANAGEMENT CONFIG & ALERTS ──
+model OpsSeatConfig {
+  id             String   @id @default(cuid())
+  tenantId       String   @default("default")
+  tripId         String
+  departureDate  DateTime @db.Date
+  totalSeatsCap  Int      @default(30)
+  alertThreshold Int      @default(25)
+  blockedSeats   Int      @default(0)
+  alertSent      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  trip           Trip     @relation(fields: [tripId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, tripId, departureDate])
+}
+
+// ── TRIP SOP LIBRARY ──
+model OpsSOPTemplate {
+  id          String      @id @default(cuid())
+  tenantId    String      @default("default")
+  destination String
+  stage       OpsSOPStage
+  taskName    String
+  description String?     @db.Text
+  createdAt   DateTime    @default(now())
+
+  @@index([tenantId, destination])
+}
+
+// ── TRIP-WISE CHECKLIST ITEM ──
+model OpsTripChecklist {
+  id            String      @id @default(cuid())
+  tenantId      String      @default("default")
+  tripId        String
+  departureDate DateTime    @db.Date
+  stage         OpsSOPStage
+  taskName      String
+  isCompleted   Boolean     @default(false)
+  completedById String?
+  completedAt   DateTime?
+  notes         String?
+
+  trip          Trip        @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  completedBy   Admin?      @relation("ChecklistCompletedByAdmin", fields: [completedById], references: [id])
+
+  @@index([tripId, departureDate, stage])
+}
+
+// ── INCIDENT / ISSUE LOG ──
+model OpsIncidentLog {
+  id            String           @id @default(cuid())
+  tenantId      String           @default("default")
+  tripId        String
+  departureDate DateTime         @db.Date
+  title         String
+  severity      IncidentSeverity @default(MEDIUM)
+  description   String           @db.Text
+  resolution    String?          @db.Text
+  reportedById  String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  trip          Trip             @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  reportedBy    Admin            @relation("IncidentReportedByAdmin", fields: [reportedById], references: [id])
+
+  @@index([tripId, departureDate])
+}
+
+// ── AUTO ALLOCATION RUN & OVERRIDE MODELS ──
+model OpsAllocationRun {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  tripId        String
+  departureDate DateTime @db.Date
+  version       Int      @default(1)
+  status        String   @default("DRAFT") // DRAFT | CONFIRMED
+  resultJson    Json
+  actorId       String?
+  createdAt     DateTime @default(now())
+
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  actor         Admin?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  overrides     OpsAllocationOverride[]
+
+  @@index([tenantId, tripId, departureDate])
+}
+
+model OpsAllocationOverride {
+  id              String   @id @default(cuid())
+  tenantId        String   @default("default")
+  allocationRunId String
+  targetType      String   // VEHICLE | ROOM
+  targetId        String
+  beforeValue     Json?
+  afterValue      Json
+  reason          String   @db.Text
+  actorId         String
+  createdAt       DateTime @default(now())
+
+  run             OpsAllocationRun @relation(fields: [allocationRunId], references: [id], onDelete: Restrict)
+  actor           Admin            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([allocationRunId])
+}
+
+model OpsVehicleAllocation {
+  id            String            @id @default(cuid())
+  tripId        String
+  departureDate DateTime          @db.Date
+  fleetId       String
+  bookingId     String
+  travelerName  String
+  seatNumber    Int?
+  createdAt     DateTime          @default(now())
+
+  trip          Trip              @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  fleet         OpsTransportFleet @relation(fields: [fleetId], references: [id], onDelete: Restrict)
+  booking       Booking           @relation(fields: [bookingId], references: [bookingId], onDelete: Restrict)
+
+  @@index([tripId, departureDate])
+  @@index([fleetId])
+  @@index([bookingId])
+}
+
+model OpsRoomAllocation {
+  id            String    @id @default(cuid())
+  tripId        String
+  departureDate DateTime  @db.Date
+  roomNumber    String
+  roomType      String
+  genderGroup   String
+  bookingId     String
+  travelerName  String
+  createdAt     DateTime  @default(now())
+
+  trip          Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  booking       Booking   @relation(fields: [bookingId], references: [bookingId], onDelete: Restrict)
+
+  @@index([tripId, departureDate])
+}
+
+// ── DAY ITINERARY GRID (EXCEL SHEET MATCH) ──
+model OpsDayItinerary {
+  id                 String    @id @default(cuid())
+  tenantId           String    @default("default")
+  tripId             String
+  departureDate      DateTime  @db.Date
+  date               DateTime?
+  dayTitle           String
+  paxCount           Int       @default(0)
+  hotelName          String?
+  hotelVerified      Boolean   @default(false)
+  vehicleType        String?
+  vehicleVerified    Boolean   @default(false)
+  remarks            String?   @db.Text
+  guideDriverDetails String?
+  guideVerified      Boolean   @default(false)
+  checkInDone        Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  trip               Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+
+  @@index([tripId, departureDate])
+}
+
+// ── TRIP DETAILED EXPENSE GRID (EXCEL SHEET MATCH) ──
+model OpsTripExpense {
+  id            String    @id @default(cuid())
+  tenantId      String    @default("default")
+  tripId        String
+  departureDate DateTime  @db.Date
+  serviceDate   DateTime?
+  activity      String
+  paymentDate   DateTime?
+  totalAmount   Float     @default(0)
+  amountPaid    Float     @default(0)
+  dueAmount     Float     @default(0)
+  paymentStatus String    @default("Due")
+  remarks       String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  trip          Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+
+  @@index([tripId, departureDate])
 }

@@ -133,6 +133,8 @@ app.use('/api/theme', require('./routes/themeRoutes'));
 app.use('/api/booking-verifications', require('./routes/bookingVerificationRoutes'));
 app.use('/api/train-tickets', require('./routes/trainTicketRoutes'));
 app.use('/api/accounting', require('./routes/accountingRoutes'));
+app.use('/api/ops', require('./routes/opsRoutes'));
+
 
 
 // Serve Static Files

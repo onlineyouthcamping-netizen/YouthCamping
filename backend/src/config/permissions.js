@@ -53,7 +53,11 @@ const PERMISSIONS = [
   'tickets.alerts.view',
   'accounting.view',
   'accounting.submit',
-  'accounting.approve'
+  'accounting.approve',
+  'ops.view',
+  'ops.manage',
+  'ops.allocate',
+  'ops.checklist'
 ];
 
 const ROLE_PERMISSIONS = {
@@ -99,7 +103,11 @@ const ROLE_PERMISSIONS = {
     'tickets.alerts.view',
     'accounting.view',
     'accounting.submit',
-    'accounting.approve'
+    'accounting.approve',
+    'ops.view',
+    'ops.manage',
+    'ops.allocate',
+    'ops.checklist'
   ],
 
   sales: [
@@ -142,7 +150,11 @@ const ROLE_PERMISSIONS = {
     'tickets.reopen',
     'tickets.bulk',
     'tickets.templates.manage',
-    'tickets.alerts.view'
+    'tickets.alerts.view',
+    'ops.view',
+    'ops.manage',
+    'ops.allocate',
+    'ops.checklist'
   ],
 
   finance: [
