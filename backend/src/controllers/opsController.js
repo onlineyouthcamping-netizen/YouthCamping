@@ -362,13 +362,33 @@ exports.getOpsAccountingSummary = async (req, res) => {
 
     const perPersonOpsCost = totalOpsCost / travelerCount;
 
-    // Fetch ONLY approved accounting entries for this departure's bookings
+    // Fetch accounting entries and ticket requests for readiness summaries
     const bookingIds = bookings.map(b => b.bookingId);
-    const approvedAccounting = await prisma.accountingEntry.findMany({
-      where: { bookingId: { in: bookingIds }, status: 'APPROVED' }
-    });
+    const [allAccounting, ticketRequests] = await Promise.all([
+      prisma.accountingEntry.findMany({ where: { bookingId: { in: bookingIds } } }),
+      prisma.trainTicketRequest.findMany({ where: { bookingId: { in: bookingIds } } })
+    ]);
+
+    const approvedAccounting = allAccounting.filter(a => a.status === 'APPROVED');
     const totalRevenueCollected = approvedAccounting.reduce((s, a) => s + a.amount, 0);
     const profitPerTrip = totalRevenueCollected - totalOpsCost;
+
+    const ticketReadiness = {
+      pending: ticketRequests.filter(t => t.status === 'PENDING_VERIFICATION' || t.status === 'DRAFT').length,
+      approved: ticketRequests.filter(t => t.status === 'APPROVED').length,
+      cancelled: ticketRequests.filter(t => t.status === 'CANCELLED').length
+    };
+
+    const pendingCollection = allAccounting.filter(a => a.status === 'PENDING').reduce((s, a) => s + a.amount, 0);
+    const totalBookingAmount = bookings.reduce((s, b) => s + (b.totalPrice || 0), 0);
+    const remainingCollection = Math.max(0, totalBookingAmount - totalRevenueCollected);
+
+    const accountingReadiness = {
+      approvedCollected: totalRevenueCollected,
+      pendingCollection,
+      remainingCollection,
+      totalBookingAmount
+    };
 
     return res.json({
       success: true,
@@ -382,7 +402,9 @@ exports.getOpsAccountingSummary = async (req, res) => {
         travelerCount,
         perPersonOpsCost,
         totalRevenueCollected,
-        profitPerTrip
+        profitPerTrip,
+        ticketReadiness,
+        accountingReadiness
       }
     });
   } catch (err) {

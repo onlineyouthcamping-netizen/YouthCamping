@@ -475,7 +475,11 @@ exports.getBookingById = async (req, res, next) => {
       extra = booking.passengers.details || {};
       persons = booking.passengers.persons || [];
     }
-    const mappedBooking = { ...booking, ...extra, passengers: persons, trip: booking.tripRef };
+
+    // Connected ecosystem operational summary lookup
+    const opsSummary = await buildBookingOpsSummary(booking, tenantId);
+
+    const mappedBooking = { ...booking, ...extra, passengers: persons, trip: booking.tripRef, opsSummary };
 
     res.json({ success: true, data: mappedBooking });
   } catch (error) {
@@ -483,6 +487,98 @@ exports.getBookingById = async (req, res, next) => {
     next(error);
   }
 };
+
+async function buildBookingOpsSummary(booking, tenantId) {
+  try {
+    const bookingId = booking.bookingId;
+    const tripId = booking.tripId;
+    const departureDate = booking.departureDate;
+
+    // 1. Train Tickets
+    const ticketReq = await prisma.trainTicketRequest.findFirst({
+      where: { bookingId },
+      include: { travellers: true }
+    });
+
+    let ticketSummary = {
+      status: ticketReq ? ticketReq.status : 'NOT_CREATED',
+      totalTravelers: ticketReq && ticketReq.travellers ? ticketReq.travellers.length : 0,
+      approved: ticketReq && ticketReq.status === 'APPROVED' ? 1 : 0,
+      pending: ticketReq && (ticketReq.status === 'PENDING_VERIFICATION' || ticketReq.status === 'DRAFT') ? 1 : 0,
+      cancelled: ticketReq && ticketReq.status === 'CANCELLED' ? 1 : 0
+    };
+
+    // 2. Accounting Summary (Recognized approved collections)
+    const accountingEntries = await prisma.accountingEntry.findMany({
+      where: { bookingId }
+    });
+
+    const approvedCollection = accountingEntries.filter(a => a.status === 'APPROVED').reduce((s, a) => s + a.amount, 0);
+    const pendingCollection = accountingEntries.filter(a => a.status === 'PENDING').reduce((s, a) => s + a.amount, 0);
+    const bookingTotal = booking.totalPrice || 0;
+    const remainingAmount = Math.max(0, bookingTotal - approvedCollection);
+    const derivedCollectionStatus = approvedCollection >= bookingTotal ? 'Paid' : approvedCollection > 0 ? 'Partially Paid' : 'Pending';
+
+    let accountingSummary = {
+      bookingTotal,
+      approvedCollection,
+      pendingCollection,
+      remainingAmount,
+      derivedCollectionStatus
+    };
+
+    // 3. Operations Summary
+    let opsSummaryData = {
+      departureWorkspaceState: departureDate ? 'ACTIVE' : 'NO_DATE',
+      seatState: 'AVAILABLE',
+      roomAllocationState: 'UNASSIGNED',
+      vehicleAllocationState: 'UNASSIGNED',
+      sopCompletedCount: 0
+    };
+
+    if (tripId && departureDate) {
+      const [seatConfig, roomAlloc, vehicleAlloc, checklists] = await Promise.all([
+        prisma.opsSeatConfig.findFirst({ where: { tenantId, tripId, departureDate } }),
+        prisma.opsRoomAllocation.findFirst({ where: { tripId, departureDate, bookingId } }),
+        prisma.opsVehicleAllocation.findFirst({ where: { tripId, departureDate, bookingId } }),
+        prisma.opsTripChecklist.findMany({ where: { tripId, departureDate, isCompleted: true } })
+      ]);
+
+      if (seatConfig) {
+        opsSummaryData.seatState = seatConfig.blockedSeats > 0 ? 'BLOCKED' : 'CONFIGURED';
+      }
+      if (roomAlloc) opsSummaryData.roomAllocationState = 'ALLOCATED';
+      if (vehicleAlloc) opsSummaryData.vehicleAllocationState = 'ALLOCATED';
+      opsSummaryData.sopCompletedCount = checklists.length;
+    }
+
+    // 4. Alerts calculation
+    const alerts = [];
+    if (ticketSummary.pending > 0) alerts.push({ type: 'TICKET_PENDING', message: 'Train ticket verification pending' });
+    if (remainingAmount > 0) {
+      const now = new Date();
+      if (departureDate) {
+        const diffDays = Math.ceil((new Date(departureDate) - now) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 3 && diffDays >= 0) alerts.push({ type: 'UNPAID_BALANCE_3D', message: `Unpaid balance due within ${diffDays} days` });
+        else if (diffDays <= 7 && diffDays >= 0) alerts.push({ type: 'UNPAID_BALANCE_7D', message: `Unpaid balance due within ${diffDays} days` });
+        else if (diffDays < 0) alerts.push({ type: 'POST_DEPARTURE_COLLECTION_WARNING', message: 'Post-departure collection warning: balance remaining' });
+      }
+    }
+
+    return {
+      bookingLinkSource: booking.sourceBookingLink ? booking.sourceBookingLink.tokenPrefix : 'Direct / Manual',
+      salespersonOwner: booking.salesAdminId || 'Unassigned',
+      travelerCount: booking.numberOfTravelers || 1,
+      ticketSummary,
+      accountingSummary,
+      operationsSummary: opsSummaryData,
+      alerts
+    };
+  } catch (err) {
+    console.error('buildBookingOpsSummary error:', err);
+    return null;
+  }
+}
 
 const parseCookies = (req) => {
   const list = {};

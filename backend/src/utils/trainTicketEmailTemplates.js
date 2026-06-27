@@ -19,6 +19,16 @@ function buildApprovedEmail({ booking, ticket, template } = {}) {
       ? `\n\n${template?.waitlistDisclaimer || WAITLIST_DISCLAIMER}`
       : "";
 
+  const envUrl = process.env.PUBLIC_SITE_URL || process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  let publicBase = "https://youthcamping.in";
+  if (envUrl && typeof envUrl === "string" && envUrl.trim().length > 0) {
+    let url = envUrl.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+    publicBase = url.replace(/\/+$/, "");
+  }
+
   return {
     subject: `Your Train Ticket is Confirmed – ${booking?.tripName || "YouthCamping Trip"}`,
     html: `
@@ -34,6 +44,10 @@ function buildApprovedEmail({ booking, ticket, template } = {}) {
 ${disclaimer}
 <p>For any queries, please contact our support team.</p>
 <p>Team YouthCamping</p>
+<hr style="border:0;border-top:1px solid #eee;margin:20px 0;" />
+<p style="font-size:12px;color:#666;text-align:center;">
+  <a href="${publicBase}/terms-and-conditions" style="color:#666;text-decoration:underline;">Terms &amp; Conditions</a> | <a href="${publicBase}/cancellation-policy" style="color:#666;text-decoration:underline;">Cancellation Policy</a>
+</p>
 `.trim(),
     text: `Your ticket for ${booking?.tripName} is confirmed.\nJourney: ${ticket?.journeyDate ? new Date(ticket.journeyDate).toDateString() : "–"}\nTrain: ${[ticket?.trainName, ticket?.trainNumber].filter(Boolean).join(" / ") || "–"}\nFrom: ${ticket?.sourceStation || "–"} To: ${ticket?.destinationStation || "–"}\nStatus: ${ticket?.ticketStatus || "–"}${disclaimer ? "\n\n" + (template?.waitlistDisclaimer || WAITLIST_DISCLAIMER) : ""}`,
   };

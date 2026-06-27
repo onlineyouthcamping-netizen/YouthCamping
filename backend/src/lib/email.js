@@ -12,6 +12,18 @@ const BRAND_COLOR = '#1e293b';
 const ACCENT_COLOR = '#3b82f6';
 const LOGO_URL = 'https://youthcamping.com/logo.png'; // Update with real logo URL
 
+const getPublicSiteBaseUrl = () => {
+  const envUrl = process.env.PUBLIC_SITE_URL || process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
+    let url = envUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    return url.replace(/\/+$/, '');
+  }
+  return 'https://youthcamping.in';
+};
+
 const getBaseTemplate = (content, previewText) => `
 <!DOCTYPE html>
 <html>
@@ -49,6 +61,11 @@ const getBaseTemplate = (content, previewText) => `
     <div class="footer">
       <p style="font-weight: 900; color: #64748b; margin-bottom: 10px;">YOUTHCAMPING EXPERIENCES</p>
       <p>&copy; ${new Date().getFullYear()} YouthCamping. All rights reserved.</p>
+      <p style="margin-top: 10px; margin-bottom: 10px; font-size: 12px;">
+        <a href="${getPublicSiteBaseUrl()}/terms-and-conditions" style="color: #475569; text-decoration: underline; font-weight: 600;" target="_blank">Terms &amp; Conditions</a>
+        <span style="margin: 0 6px; color: #cbd5e1;">|</span>
+        <a href="${getPublicSiteBaseUrl()}/cancellation-policy" style="color: #475569; text-decoration: underline; font-weight: 600;" target="_blank">Cancellation Policy</a>
+      </p>
       <p>Address: Delhi, India | Support: info@youthcamping.com</p>
     </div>
   </div>

@@ -86,9 +86,9 @@ const fallbackFooterConfig = {
       links: [
         { id: "l-ql-1", label: "About Us", href: "/about-us", visible: true },
         { id: "l-ql-2", label: "Privacy Policy", href: "/privacy", visible: true },
-        { id: "l-ql-3", label: "Terms & Conditions", href: "/terms", visible: true },
+        { id: "l-ql-3", label: "Terms & Conditions", href: "/terms-and-conditions", visible: true },
         { id: "l-ql-4", label: "Customer Success & Support", href: "/questions", visible: true },
-        { id: "l-ql-5", label: "Disclaimer", href: "/terms#disclaimer", visible: true },
+        { id: "l-ql-5", label: "Cancellation Policy", href: "/cancellation-policy", visible: true },
         { id: "l-ql-6", label: "Careers", href: "/contact", visible: true },
         { id: "l-ql-7", label: "Blogs", href: "/blogs", visible: true },
         { id: "l-ql-8", label: "Payments", href: "/trips", visible: true }
@@ -168,6 +168,13 @@ export default function Footer({
     (social: any) => typeof social.url === "string" && social.url.trim().length > 0
   );
 
+  const resolveHref = (link: any) => {
+    if (!link || !link.href) return "#";
+    if (link.label === "Terms & Conditions" || link.href === "/terms") return "/terms-and-conditions";
+    if (link.label === "Cancellation Policy" || link.href === "/cancellation") return "/cancellation-policy";
+    return link.href;
+  };
+
   return (
     <footer className="bg-[#0F1820] text-white pt-12 relative overflow-hidden flex flex-col items-center text-center font-montserrat border-t border-white/5">
       <div className="w-full max-w-6xl mx-auto px-6 relative z-10 flex flex-col items-center">
@@ -187,7 +194,7 @@ export default function Footer({
                   {activeLinks.map((link: any, lIdx: number) => (
                     <Link
                       key={link.id || lIdx}
-                      href={link.href}
+                      href={resolveHref(link)}
                       className="text-zinc-400 hover:text-white transition-colors text-sm font-medium"
                     >
                       {link.label}
@@ -231,7 +238,7 @@ export default function Footer({
                     {activeLinks.map((link: any, lIdx: number) => (
                       <Link
                         key={link.id || lIdx}
-                        href={link.href}
+                        href={resolveHref(link)}
                         className="text-zinc-400 hover:text-white transition-colors text-sm font-medium"
                       >
                         {link.label}
