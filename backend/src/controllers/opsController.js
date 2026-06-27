@@ -416,11 +416,15 @@ exports.getOpsAccountingSummary = async (req, res) => {
     const perPersonOpsCost = totalOpsCost / travelerCount;
 
     // Fetch accounting entries and ticket requests for readiness summaries
-    const bookingIds = bookings.map(b => b.bookingId);
-    const [allAccounting, ticketRequests] = await Promise.all([
-      prisma.accountingEntry.findMany({ where: { bookingId: { in: bookingIds } } }),
-      prisma.trainTicketRequest.findMany({ where: { bookingId: { in: bookingIds } } })
-    ]);
+    const bookingIds = bookings.map(b => b.bookingId).filter(Boolean);
+    let allAccounting = [];
+    let ticketRequests = [];
+    if (bookingIds.length > 0) {
+      [allAccounting, ticketRequests] = await Promise.all([
+        prisma.accountingEntry.findMany({ where: { bookingId: { in: bookingIds } } }),
+        prisma.trainTicketRequest.findMany({ where: { bookingId: { in: bookingIds } } })
+      ]);
+    }
 
     const approvedAccounting = allAccounting.filter(a => a.status === 'APPROVED');
     const totalRevenueCollected = approvedAccounting.reduce((s, a) => s + a.amount, 0);
@@ -433,7 +437,7 @@ exports.getOpsAccountingSummary = async (req, res) => {
     };
 
     const pendingCollection = allAccounting.filter(a => a.status === 'PENDING').reduce((s, a) => s + a.amount, 0);
-    const totalBookingAmount = bookings.reduce((s, b) => s + (b.totalPrice || 0), 0);
+    const totalBookingAmount = bookings.reduce((s, b) => s + (b.totalAmount || b.amount || 0), 0);
     const remainingCollection = Math.max(0, totalBookingAmount - totalRevenueCollected);
 
     const accountingReadiness = {
