@@ -108,3 +108,58 @@ test('Missing departure date returns null during normalization', () => {
   assert.equal(nullResult, null);
   assert.equal(emptyResult, null);
 });
+
+test('Room inventory-based allocation fills travelers into defined rooms', () => {
+  const mockBookings = [
+    {
+      bookingId: 'BK-GRP-X',
+      sourceBookingLinkId: 'LINK-X',
+      fullName: 'Arjun & Group',
+      gender: 'Male',
+      passengers: [
+        { name: 'Arjun Singh', gender: 'Male' },
+        { name: 'Vikram Singh', gender: 'Male' }
+      ]
+    },
+    { bookingId: 'BK-BOY-1', fullName: 'Karan Mehta', gender: 'Male' },
+    { bookingId: 'BK-BOY-2', fullName: 'Rahul Deshmukh', gender: 'Male' },
+    { bookingId: 'BK-GIRL-1', fullName: 'Neha Gupta', gender: 'Female' },
+    { bookingId: 'BK-GIRL-2', fullName: 'Kavya Reddy', gender: 'Female' }
+  ];
+
+  const mockFleet = [
+    { id: 'FL-1', vehicleType: 'Tempo', capacity: 13 }
+  ];
+
+  const roomInventory = [
+    { id: 'RM-1', roomLabel: 'Room 101', roomType: 'TWIN', genderGroup: 'BOYS', capacity: 2 },
+    { id: 'RM-2', roomLabel: 'Room 102', roomType: 'TWIN', genderGroup: 'BOYS', capacity: 2 },
+    { id: 'RM-3', roomLabel: 'Room 103', roomType: 'TWIN', genderGroup: 'GIRLS', capacity: 2 },
+    { id: 'RM-4', roomLabel: 'Room 201', roomType: 'TRIPLE', genderGroup: 'GROUP', capacity: 3 }
+  ];
+
+  const result = runAutoAllocation(mockBookings, mockFleet, roomInventory);
+
+  // Group of 2 (Arjun & Vikram) should go into Room 201 (GROUP, capacity 3)
+  const groupRooms = result.roomAllocations.filter(r => r.travelerName === 'Arjun Singh' || r.travelerName === 'Vikram Singh');
+  assert.equal(groupRooms.length, 2);
+  assert.equal(groupRooms[0].roomNumber, 'Room 201');
+  assert.equal(groupRooms[1].roomNumber, 'Room 201');
+
+  // Solo boys should go into Room 101 or Room 102 (BOYS)
+  const boyRooms = result.roomAllocations.filter(r => r.travelerName === 'Karan Mehta' || r.travelerName === 'Rahul Deshmukh');
+  assert.equal(boyRooms.length, 2);
+  assert.ok(boyRooms.every(r => r.roomNumber === 'Room 101' || r.roomNumber === 'Room 102'));
+
+  // Solo girls should go into Room 103 (GIRLS)
+  const girlRooms = result.roomAllocations.filter(r => r.travelerName === 'Neha Gupta' || r.travelerName === 'Kavya Reddy');
+  assert.equal(girlRooms.length, 2);
+  assert.ok(girlRooms.every(r => r.roomNumber === 'Room 103'));
+
+  // WhatsApp text should reference actual room labels
+  assert.ok(result.whatsappRoomText.includes('Room 101'));
+  assert.ok(result.whatsappRoomText.includes('Room 201'));
+
+  // All 6 travelers should be allocated
+  assert.equal(result.roomAllocations.length, 6);
+});

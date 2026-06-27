@@ -9,7 +9,7 @@
  * @param {Array} fleet List of available transport fleet (tempos/cars)
  * @returns {Object} { vehicleAllocations, roomAllocations, flags, whatsappTempoText, whatsappRoomText }
  */
-function runAutoAllocation(bookings, fleet) {
+function runAutoAllocation(bookings, fleet, roomInventory) {
   const flags = [];
   const vehicleAllocations = [];
   const roomAllocations = [];
@@ -96,36 +96,7 @@ function runAutoAllocation(bookings, fleet) {
   });
 
   // ── ROOM ALLOCATION (Rules 4, 5, 6) ──
-  let roomCounter = 101;
-
-  // Rule 4: Multi-person groups get their own room
-  sortedGroupIds.forEach((gId) => {
-    const groupMembers = groupMap[gId];
-    if (groupMembers.length > 1) {
-      // Check if any member in group has UNKNOWN gender
-      groupMembers.forEach((t) => {
-        if (t.gender === 'UNKNOWN') {
-          flags.push(`🚨 TRAVELER_GENDER_MISSING: Traveler ${t.name} (${t.bookingId}) has unknown gender.`);
-        }
-      });
-
-      const roomNum = `Room ${roomCounter++}`;
-      const roomType = groupMembers.length === 2 ? 'TWIN' : groupMembers.length === 3 ? 'TRIPLE' : 'QUAD/FAMILY';
-      const genderGroup = 'GROUP';
-
-      groupMembers.forEach((t) => {
-        roomAllocations.push({
-          roomNumber: roomNum,
-          roomType,
-          genderGroup,
-          bookingId: t.bookingId,
-          travelerName: t.name
-        });
-      });
-    }
-  });
-
-  // Rule 5: Solo travelers clubbed by gender (UNKNOWN gender blocked from automatic room allocation)
+  // Separate travelers into groups vs solos
   const soloTravelers = travelers.filter((t) => t.groupSize === 1);
   const soloBoys = soloTravelers.filter((t) => t.gender === 'Male');
   const soloGirls = soloTravelers.filter((t) => t.gender === 'Female');
@@ -135,40 +106,167 @@ function runAutoAllocation(bookings, fleet) {
     flags.push(`🚨 TRAVELER_GENDER_MISSING: Traveler ${t.name} (${t.bookingId}) has unknown gender — automatic room allocation blocked.`);
   });
 
-  // Club Solo Boys into twin rooms
-  for (let i = 0; i < soloBoys.length; i += 2) {
-    const roomNum = `Room ${roomCounter++}`;
-    const pair = soloBoys.slice(i, i + 2);
-    if (pair.length === 1) {
-      flags.push(`⚠️ 1 solo male (${pair[0].name}) unallocated to twin room — needs manual room assignment.`);
-    }
-    pair.forEach((t) => {
-      roomAllocations.push({
-        roomNumber: roomNum,
-        roomType: pair.length === 1 ? 'SINGLE' : 'TWIN',
-        genderGroup: 'BOYS',
-        bookingId: t.bookingId,
-        travelerName: t.name
+  // Check unknown gender in groups
+  sortedGroupIds.forEach((gId) => {
+    const groupMembers = groupMap[gId];
+    if (groupMembers.length > 1) {
+      groupMembers.forEach((t) => {
+        if (t.gender === 'UNKNOWN') {
+          flags.push(`🚨 TRAVELER_GENDER_MISSING: Traveler ${t.name} (${t.bookingId}) has unknown gender.`);
+        }
       });
-    });
-  }
+    }
+  });
 
-  // Club Solo Girls into twin rooms
-  for (let i = 0; i < soloGirls.length; i += 2) {
-    const roomNum = `Room ${roomCounter++}`;
-    const pair = soloGirls.slice(i, i + 2);
-    if (pair.length === 1) {
-      flags.push(`⚠️ 1 solo female (${pair[0].name}) unallocated to twin room — needs manual room assignment.`);
-    }
-    pair.forEach((t) => {
-      roomAllocations.push({
-        roomNumber: roomNum,
-        roomType: pair.length === 1 ? 'SINGLE' : 'TWIN',
-        genderGroup: 'GIRLS',
-        bookingId: t.bookingId,
-        travelerName: t.name
+  // Collect multi-person groups
+  const multiGroups = sortedGroupIds
+    .map(gId => groupMap[gId])
+    .filter(g => g.length > 1);
+
+  if (Array.isArray(roomInventory) && roomInventory.length > 0) {
+    // ── INVENTORY-BASED ROOM ALLOCATION ──
+    // Build room slots from inventory
+    const roomSlots = roomInventory.map(r => ({
+      id: r.id,
+      roomLabel: r.roomLabel,
+      roomType: r.roomType,
+      genderGroup: (r.genderGroup || 'GROUP').toUpperCase(),
+      capacity: r.capacity || 2,
+      hotelName: r.hotelName,
+      remaining: r.capacity || 2,
+      assigned: []
+    }));
+
+    // Helper: find a room slot matching gender with enough remaining capacity
+    const findRoom = (genderGroup, count) => {
+      return roomSlots.find(r => r.genderGroup === genderGroup && r.remaining >= count);
+    };
+
+    // Step 1: Assign multi-person groups to GROUP rooms (or any room with capacity)
+    multiGroups.forEach(groupMembers => {
+      let room = findRoom('GROUP', groupMembers.length)
+                || findRoom('FAMILY', groupMembers.length)
+                || findRoom('COUPLE', groupMembers.length);
+      // If no GROUP/FAMILY room fits, try any room with enough capacity
+      if (!room) {
+        room = roomSlots.find(r => r.remaining >= groupMembers.length);
+      }
+      if (room) {
+        groupMembers.forEach(t => {
+          room.assigned.push(t);
+          room.remaining -= 1;
+          roomAllocations.push({
+            roomNumber: room.roomLabel,
+            roomType: room.roomType,
+            genderGroup: room.genderGroup,
+            bookingId: t.bookingId,
+            travelerName: t.name
+          });
+        });
+      } else {
+        flags.push(`⚠️ No room with ${groupMembers.length} capacity for group (${groupMembers[0].name} & ${groupMembers.length - 1} others) — needs manual assignment.`);
+      }
+    });
+
+    // Step 2: Assign solo boys to BOYS rooms
+    soloBoys.forEach(t => {
+      let room = findRoom('BOYS', 1);
+      if (!room) room = roomSlots.find(r => r.remaining >= 1 && r.genderGroup !== 'GIRLS');
+      if (room) {
+        room.assigned.push(t);
+        room.remaining -= 1;
+        roomAllocations.push({
+          roomNumber: room.roomLabel,
+          roomType: room.roomType,
+          genderGroup: room.genderGroup,
+          bookingId: t.bookingId,
+          travelerName: t.name
+        });
+      } else {
+        flags.push(`⚠️ No BOYS room capacity left for ${t.name} (${t.bookingId}) — needs manual assignment.`);
+      }
+    });
+
+    // Step 3: Assign solo girls to GIRLS rooms
+    soloGirls.forEach(t => {
+      let room = findRoom('GIRLS', 1);
+      if (!room) room = roomSlots.find(r => r.remaining >= 1 && r.genderGroup !== 'BOYS');
+      if (room) {
+        room.assigned.push(t);
+        room.remaining -= 1;
+        roomAllocations.push({
+          roomNumber: room.roomLabel,
+          roomType: room.roomType,
+          genderGroup: room.genderGroup,
+          bookingId: t.bookingId,
+          travelerName: t.name
+        });
+      } else {
+        flags.push(`⚠️ No GIRLS room capacity left for ${t.name} (${t.bookingId}) — needs manual assignment.`);
+      }
+    });
+
+    // Add summary of room utilization
+    roomSlots.forEach(r => {
+      if (r.assigned.length === 0 && r.capacity > 0) {
+        flags.push(`ℹ️ Room ${r.roomLabel} (${r.roomType} - ${r.genderGroup}) is empty — ${r.capacity} beds unused.`);
+      }
+    });
+
+  } else {
+    // ── FALLBACK: Auto-generate room numbers (original logic) ──
+    let roomCounter = 101;
+
+    // Rule 4: Multi-person groups get their own room
+    multiGroups.forEach(groupMembers => {
+      const roomNum = `Room ${roomCounter++}`;
+      const roomType = groupMembers.length === 2 ? 'TWIN' : groupMembers.length === 3 ? 'TRIPLE' : 'QUAD/FAMILY';
+      groupMembers.forEach((t) => {
+        roomAllocations.push({
+          roomNumber: roomNum,
+          roomType,
+          genderGroup: 'GROUP',
+          bookingId: t.bookingId,
+          travelerName: t.name
+        });
       });
     });
+
+    // Club Solo Boys into twin rooms
+    for (let i = 0; i < soloBoys.length; i += 2) {
+      const roomNum = `Room ${roomCounter++}`;
+      const pair = soloBoys.slice(i, i + 2);
+      if (pair.length === 1) {
+        flags.push(`⚠️ 1 solo male (${pair[0].name}) unallocated to twin room — needs manual room assignment.`);
+      }
+      pair.forEach((t) => {
+        roomAllocations.push({
+          roomNumber: roomNum,
+          roomType: pair.length === 1 ? 'SINGLE' : 'TWIN',
+          genderGroup: 'BOYS',
+          bookingId: t.bookingId,
+          travelerName: t.name
+        });
+      });
+    }
+
+    // Club Solo Girls into twin rooms
+    for (let i = 0; i < soloGirls.length; i += 2) {
+      const roomNum = `Room ${roomCounter++}`;
+      const pair = soloGirls.slice(i, i + 2);
+      if (pair.length === 1) {
+        flags.push(`⚠️ 1 solo female (${pair[0].name}) unallocated to twin room — needs manual room assignment.`);
+      }
+      pair.forEach((t) => {
+        roomAllocations.push({
+          roomNumber: roomNum,
+          roomType: pair.length === 1 ? 'SINGLE' : 'TWIN',
+          genderGroup: 'GIRLS',
+          bookingId: t.bookingId,
+          travelerName: t.name
+        });
+      });
+    }
   }
 
   // ── WHATSAPP TEXT FORMATTING ──
@@ -183,7 +281,7 @@ function runAutoAllocation(bookings, fleet) {
 
   Object.entries(roomMap).forEach(([roomNum, details]) => {
     whatsappRoomText += `*${roomNum} (${details.type} - ${details.gender})*\n`;
-    details.members.forEach((m, i) => {
+    details.members.forEach((m) => {
       whatsappRoomText += `• ${m}\n`;
     });
     whatsappRoomText += `\n`;

@@ -15,6 +15,9 @@ const {
   getTransportFleet,
   createTransportFleet,
   deleteTransportFleet,
+  getRoomInventory,
+  createRoomInventory,
+  deleteRoomInventory,
   getGuidePayments,
   createGuidePayment,
   getOpsAccountingSummary,
@@ -50,6 +53,9 @@ router.delete('/hotels/:id', requirePermission('ops.manage'), deleteHotelBooking
 router.get('/transport/:tripId', requirePermission('ops.view'), getTransportFleet);
 router.post('/transport/:tripId', requirePermission('ops.manage'), createTransportFleet);
 router.delete('/transport/:id', requirePermission('ops.manage'), deleteTransportFleet);
+router.get('/rooms/:tripId', requirePermission('ops.view'), getRoomInventory);
+router.post('/rooms/:tripId', requirePermission('ops.manage'), createRoomInventory);
+router.delete('/rooms/:id', requirePermission('ops.manage'), deleteRoomInventory);
 router.get('/guides/:tripId', requirePermission('ops.view'), getGuidePayments);
 router.post('/guides/:tripId', requirePermission('ops.manage'), createGuidePayment);
 

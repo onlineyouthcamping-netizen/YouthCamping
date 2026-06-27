@@ -615,6 +615,54 @@ exports.createIncident = async (req, res) => {
   }
 };
 
+// ── ROOM INVENTORY (Available rooms for allocation) ──
+exports.getRoomInventory = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+    const items = await prisma.opsRoomInventory.findMany({ where: ctx.where, orderBy: { roomLabel: 'asc' } });
+    return res.json({ success: true, data: items });
+  } catch (err) {
+    console.error('getRoomInventory error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch room inventory' });
+  }
+};
+
+exports.createRoomInventory = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+    const { roomLabel, roomType, genderGroup, capacity, hotelName, notes } = req.body;
+    const room = await prisma.opsRoomInventory.create({
+      data: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        roomLabel: roomLabel || `Room ${Date.now()}`,
+        roomType: roomType || 'TWIN',
+        genderGroup: genderGroup || 'BOYS',
+        capacity: parseInt(capacity) || 2,
+        hotelName,
+        notes
+      }
+    });
+    return res.status(201).json({ success: true, data: room });
+  } catch (err) {
+    console.error('createRoomInventory error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to create room' });
+  }
+};
+
+exports.deleteRoomInventory = async (req, res) => {
+  try {
+    await prisma.opsRoomInventory.delete({ where: { id: req.params.id } });
+    return res.json({ success: true, message: 'Room deleted' });
+  } catch (err) {
+    console.error('deleteRoomInventory error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete room' });
+  }
+};
+
 // ── AUTO ALLOCATION RUNS (DEPARTURE SCOPED) ──
 exports.generateAllocation = async (req, res) => {
   try {
@@ -623,12 +671,13 @@ exports.generateAllocation = async (req, res) => {
 
     const bookingWhere = ctx.bookingWhere;
 
-    const [bookings, fleet] = await Promise.all([
+    const [bookings, fleet, roomInventory] = await Promise.all([
       prisma.booking.findMany({ where: bookingWhere }),
-      prisma.opsTransportFleet.findMany({ where: ctx.where })
+      prisma.opsTransportFleet.findMany({ where: ctx.where }),
+      prisma.opsRoomInventory.findMany({ where: ctx.where, orderBy: { roomLabel: 'asc' } })
     ]);
 
-    const allocationResult = runAutoAllocation(bookings, fleet);
+    const allocationResult = runAutoAllocation(bookings, fleet, roomInventory);
 
     const existingCount = await prisma.opsAllocationRun.count({ where: ctx.where });
     const version = existingCount + 1;

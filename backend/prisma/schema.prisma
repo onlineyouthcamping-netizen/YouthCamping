@@ -266,6 +266,7 @@ model Trip {
   opsDayItineraries  OpsDayItinerary[]
   opsTripExpenses    OpsTripExpense[]
   opsAllocationRuns  OpsAllocationRun[]
+  opsRoomInventories OpsRoomInventory[]
 
   @@index([tenantId])
   @@index([category])
@@ -974,6 +975,27 @@ model OpsHotelBooking {
 
   trip          Trip             @relation(fields: [tripId], references: [id], onDelete: Restrict)
   vendor        OpsVendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tripId, departureDate])
+}
+
+// ── ROOM INVENTORY (Available rooms for allocation) ──
+model OpsRoomInventory {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  tripId        String
+  departureDate DateTime @db.Date
+  roomLabel     String
+  roomType      String   @default("TWIN")
+  genderGroup   String   @default("BOYS")
+  capacity      Int      @default(2)
+  hotelName     String?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([tripId, departureDate])
