@@ -1,0 +1,589 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      AdminRole @default(admin)
+  isActive  Boolean   @default(true)
+  tokenVersion Int     @default(0)
+  lastLoginAt  DateTime?
+  tenantId  String?   @default("default")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Booking-link ownership (used for sales filtering + analytics)
+  createdBookingLinks BookingLink[] @relation("CreatedBookingLinks")
+  salesBookings Booking[] @relation("SalesBookings")
+  salesInquiries Inquiry[] @relation("SalesInquiries")
+  salesQuotations Quotation[] @relation("SalesQuotations")
+  tripAssignments TripAssignment[]
+
+  // Verification & ticket relations
+  verifiedBookings      BookingVerification[]    @relation("VerifiedByAdmin")
+  verificationLogs      BookingVerificationLog[] @relation("VerificationLogAdmin")
+  trainTicketLogs       TrainTicketLog[]         @relation("TicketLogAdmin")
+
+  @@index([tenantId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Inquiry {
+  id         String   @id @default(cuid())
+  tenantId   String   @default("default")
+  name       String?
+  email      String?
+  phone      String
+  message    String?
+  tripId     String?
+  tripTitle  String?
+  date       String?
+  count      Int?
+  source     String?
+  status     String   @default("new")
+  adminNotes String?
+  salesAdminId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  salesAdmin   Admin?   @relation("SalesInquiries", fields: [salesAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Vendor {
+  id          String       @id @default(cuid())
+  tenantId    String       @default("default")
+  name        String
+  type        String
+  email       String?
+  phone       String?
+  location    String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assignments TripVendor[]
+
+  @@index([tenantId])
+}
+
+model TripVendor {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  tripId        String
+  vendorId      String
+  agreedCost    Float
+  paidAmount    Float    @default(0)
+  paymentStatus String   @default("pending")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([tenantId])
+  @@index([tripId])
+}
+
+model Blog {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  title     String
+  slug      String   @unique
+  content   String
+  image     String?
+  author      String?  @default("Expedition Team")
+  authorImage String?
+  status      String   @default("draft")
+  readTime    String?  @default("5 MIN READ")
+  hasVideo    Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  tenantId   String   @default("default")
+  userName   String
+  userHandle String?
+  instagram  String?
+  city       String?
+  tripName   String?
+  tripType   String?
+  userImage  String?
+  comment    String
+  rating     Int      @default(5)
+  isFeatured Boolean  @default(true)
+  photos     String[] @default([])
+  tripId     String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  bookingId     String
+  amount        Float
+  status        String   @default("pending")
+  transactionId String?
+  paymentMode   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Quotation {
+  id          String   @id @default(cuid())
+  tenantId    String   @default("default")
+  title       String
+  slug        String?  @unique
+  clientName  String
+  totalAmount Float
+  status      String   @default("draft")
+  data        Json?
+  salesAdminId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  salesAdmin   Admin?   @relation("SalesQuotations", fields: [salesAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([tenantId])
+}
+
+model Trip {
+  id              String       @id @default(cuid())
+  tenantId        String       @default("default")
+  title           String
+  shortName       String?
+  slug            String       @unique
+  location        String
+  price           Float
+  duration        String
+  description     String
+  category        String       @default("himalayan")
+  isActive        Boolean      @default(true)
+  status          String       @default("published")
+  heroImage       String?
+  images          String[]
+  itinerary       Json?
+  availableDates  Json?
+  variants        Json?
+  travelOptions   Json?
+  roomOptions     Json?
+  seo             Json?
+  highlights      Json?
+  inclusions      Json?
+  exclusions      Json?
+  faqs            Json?
+  addons          Json?
+  maxGroupSize    Int?
+  difficulty      String?
+  departureCity   String?
+  pickupCities    Json?
+
+  ageLimit        String?
+  bookingUrl      String?
+  customSections  Json?
+  attractions     Json?
+  activities      Json?
+  accommodations  Json?
+  popupDetails    Json?
+  route           Json?
+  ageGroup        String?
+  maxAltitude     String?
+  tripType        String?
+  startEnd        String?
+  pickupMode      String?
+  stickyCardPrice Float?
+  stickyCardLabel String?
+  reels           Json?
+  tripReviews     Json?
+
+  order           Int          @default(999)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  bookings        Booking[]
+  assignments     TripVendor[]
+  guideAssignments TripAssignment[]
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([status])
+  @@index([order])
+}
+
+model Booking {
+  id              String            @id @default(cuid())
+  tenantId        String            @default("default")
+  bookingId       String            @unique
+  tripId          String
+  tripName        String?
+  status          String            @default("pending")
+  name            String
+  fullName        String?
+  phone           String
+  mobile          String?
+  email           String?
+  age             Int?
+  gender          String?
+  numberOfTravelers Int?
+  baseAmount      Float?
+  gstAmount       Float?
+  totalAmount     Float             @default(0)
+  amount          Float
+  advancePaid     Float             @default(0)
+  remainingAmount Float             @default(0)
+  paymentMode     String?
+  paymentStatus   String            @default("Pending")
+  payment_status  String            @default("pending")
+  payment_method  String            @default("upi")
+  upi_reference   String?
+  notes           String?
+  adminNotes      String?
+  sourceBookingLinkId String?
+  salesAdminId        String?
+  sourceMeta          Json?
+  departureDate   DateTime?
+  pickupCity      String?
+  skipDays        Int?              @default(0)
+  adjustedPrice   Float?
+  joiningDate     DateTime?
+  reminderSent    Boolean           @default(false)
+  passengers      Json?
+  trainTicketRequired Boolean       @default(false)
+  trainTicketStatus   String        @default("NOT_REQUIRED")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  tripRef         Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  emailLogs       BookingEmailLog[]
+  sourceBookingLink BookingLink?   @relation(fields: [sourceBookingLinkId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  salesAdmin        Admin?         @relation("SalesBookings", fields: [salesAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  // Verification & ticket relations
+  verification    BookingVerification?
+  trainTicket     TrainTicketRequest?
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([sourceBookingLinkId])
+  @@index([salesAdminId])
+}
+
+model BookingEmailLog {
+  id        String   @id @default(cuid())
+  bookingId String
+  type      String
+  recipient String
+  subject   String
+  status    String
+  error     String?
+  sentAt    DateTime @default(now())
+  metadata  Json?
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([bookingId])
+}
+
+model BookingLink {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+
+  createdByAdminId String?
+  createdByAdmin   Admin?  @relation("CreatedBookingLinks", fields: [createdByAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  tripId     String
+  tripName   String?
+  departureDate DateTime?
+  pickupCity String?
+  paymentMode String?
+  customAmount Float?
+  customTime   String?
+  headerTitle  String?
+  headerSubtitle String?
+
+  expiresAt DateTime?
+  status    String   @default("active") // active|revoked|expired
+
+  tokenHash   String @unique
+  tokenPrefix String  @default("")
+  // Admin needs to copy the exact share URL later; storing the URL keeps the token server-side.
+  // Customers only see the URL they were already shared.
+  shareUrl    String?
+
+  openedCount Int     @default(0)
+  firstOpenedAt DateTime?
+  lastOpenedAt  DateTime?
+  completedCount Int   @default(0)
+  lastCompletedAt DateTime?
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events   BookingLinkEvent[]
+  bookings Booking[]
+
+  @@index([tenantId])
+  @@index([createdByAdminId])
+  @@index([tripId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model BookingLinkEvent {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  bookingLinkId String
+  type          String
+  ipHash        String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  bookingLink BookingLink @relation(fields: [bookingLinkId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([tenantId])
+  @@index([bookingLinkId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model PageBuilder {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  name      String   @unique
+  sections  Json?    @default("[]")
+  draft     Json?    @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([key])
+}
+model Theme {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("default")
+  name      String   @unique @default("primary")
+  config    Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+model Attraction {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  name          String
+  slug          String   @unique
+  image         String?
+  description   String?
+  location      String?
+  altitude      String?
+  bestTime      String?
+  category      String   @default("nature")
+  visitingHours String?
+  entryFee      String?
+  etiquette     Json?
+  faqs          Json?
+  isFeatured    Boolean  @default(false)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([slug])
+}
+
+
+// ==========================================
+// ACCESS CONTROL / RBAC / AUDIT LOG MODELS
+// ==========================================
+
+enum AdminRole {
+  superadmin
+  admin
+  sales
+  operations
+  finance
+  guide
+  viewer
+  BOOKING_VERIFIER
+}
+
+model TripAssignment {
+  id        String   @id @default(cuid())
+  tenantId  String?  @default("default")
+  tripId    String
+  guideId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip  Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  guide Admin @relation(fields: [guideId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tripId, guideId])
+  @@index([guideId])
+  @@index([tripId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String?  @default("default")
+  actorUserId String?
+  action      String
+  entityType  String?
+  entityId    String?
+  beforeData  Json?
+  afterData   Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId])
+}
+
+
+// ==========================================
+// BOOKING VERIFICATION & TRAIN TICKET MODELS
+// ==========================================
+
+model BookingVerification {
+  id                String                   @id @default(cuid())
+  tenantId          String                   @default("default")
+  bookingId         String                   @unique
+  status            String                   @default("DRAFT") // DRAFT, PENDING_VERIFICATION, CHANGES_REQUESTED, VERIFIED, REJECTED
+  checklist         Json?
+  notes             String?                  @db.Text
+  submittedAt       DateTime?
+  verifiedAt        DateTime?
+  verifiedByAdminId String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  booking           Booking                  @relation(fields: [bookingId], references: [bookingId], onDelete: Cascade)
+  verifiedBy        Admin?                   @relation("VerifiedByAdmin", fields: [verifiedByAdminId], references: [id])
+  logs              BookingVerificationLog[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("booking_verifications")
+}
+
+model BookingVerificationLog {
+  id                    String              @id @default(cuid())
+  bookingVerificationId String
+  action                String              // SUBMIT, VERIFY, REQUEST_CHANGES, REJECT
+  notes                 String?             @db.Text
+  snapshot              Json?
+  adminId               String?
+  createdAt             DateTime            @default(now())
+
+  verification          BookingVerification @relation(fields: [bookingVerificationId], references: [id], onDelete: Cascade)
+  admin                 Admin?              @relation("VerificationLogAdmin", fields: [adminId], references: [id])
+
+  @@index([bookingVerificationId])
+  @@map("booking_verification_logs")
+}
+
+model TrainTicketRequest {
+  id              String                 @id @default(cuid())
+  tenantId        String                 @default("default")
+  bookingId       String                 @unique
+  status          String                 @default("DRAFT") // DRAFT, PENDING_VERIFICATION, CHANGES_REQUESTED, APPROVED, REJECTED, ISSUED
+  journeyDate     DateTime?
+  fromStation     String?
+  toStation       String?
+  preferredTrain  String?
+  preferredClass  String?
+  seatPreference  String?
+  estimatedAmount Float?                 @default(0)
+  specialNotes    String?                @db.Text
+  pnr             String?
+  ticketDetails   String?                @db.Text
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  booking         Booking                @relation(fields: [bookingId], references: [bookingId], onDelete: Cascade)
+  travellers      TrainTicketTraveller[]
+  logs            TrainTicketLog[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("train_ticket_requests")
+}
+
+model TrainTicketTraveller {
+  id                   String             @id @default(cuid())
+  trainTicketRequestId String
+  name                 String
+  age                  Int?
+  gender               String?
+  phone                String?
+  createdAt            DateTime           @default(now())
+
+  request              TrainTicketRequest @relation(fields: [trainTicketRequestId], references: [id], onDelete: Cascade)
+
+  @@index([trainTicketRequestId])
+  @@map("train_ticket_travellers")
+}
+
+model TrainTicketLog {
+  id                   String             @id @default(cuid())
+  trainTicketRequestId String
+  action               String             // CREATE, SAVE_DRAFT, SUBMIT, APPROVE, REJECT, REQUEST_CHANGES, MARK_ISSUED
+  notes                String?            @db.Text
+  snapshot             Json?
+  adminId              String?
+  createdAt            DateTime           @default(now())
+
+  request              TrainTicketRequest @relation(fields: [trainTicketRequestId], references: [id], onDelete: Cascade)
+  admin                Admin?             @relation("TicketLogAdmin", fields: [adminId], references: [id])
+
+  @@index([trainTicketRequestId])
+  @@map("train_ticket_logs")
+}
+
