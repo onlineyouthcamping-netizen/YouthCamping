@@ -87,6 +87,12 @@ function BookingForm() {
       const payMode = searchParams.get('payMode');
       const bookAmt = searchParams.get('bookAmt');
       const sourceBookingLinkId = searchParams.get('sourceBookingLinkId');
+      const sourceBookingLinkPayload = searchParams.get('sourceBookingLinkPayload');
+      const sourceBookingLinkSignature = searchParams.get('sourceBookingLinkSignature');
+      const customerName = searchParams.get('customerName');
+      const customerPhone = searchParams.get('customerPhone');
+      const customerEmail = searchParams.get('customerEmail');
+      const travelerCount = searchParams.get('travelerCount');
       const customTime = searchParams.get('customTime');
       const headerTitle = searchParams.get('headerTitle');
       const headerSubtitle = searchParams.get('headerSubtitle');
@@ -103,6 +109,12 @@ function BookingForm() {
         payMode: sanitize(payMode),
         bookAmt: bookAmt ? (Number.isFinite(parseFloat(bookAmt)) ? parseFloat(bookAmt) : null) : null,
         sourceBookingLinkId: sanitize(sourceBookingLinkId),
+        sourceBookingLinkPayload: sanitize(sourceBookingLinkPayload),
+        sourceBookingLinkSignature: sanitize(sourceBookingLinkSignature),
+        customerName: sanitize(customerName),
+        customerPhone: sanitize(customerPhone),
+        customerEmail: sanitize(customerEmail),
+        travelerCount: travelerCount ? parseInt(travelerCount, 10) : null,
         customTime: sanitize(customTime),
         headerTitle: sanitize(headerTitle),
         headerSubtitle: sanitize(headerSubtitle),
@@ -119,6 +131,12 @@ function BookingForm() {
         payMode: '',
         bookAmt: null,
         sourceBookingLinkId: '',
+        sourceBookingLinkPayload: '',
+        sourceBookingLinkSignature: '',
+        customerName: '',
+        customerPhone: '',
+        customerEmail: '',
+        travelerCount: null,
         customTime: '',
         headerTitle: '',
         headerSubtitle: '',
@@ -502,6 +520,8 @@ function BookingForm() {
         tripName: initialParams.tripName || tripData?.title || 'Expedition',
         departureDate: initialParams.date ? new Date(initialParams.date) : null,
                 sourceBookingLinkId: initialParams.sourceBookingLinkId || null,
+        sourceBookingLinkPayload: initialParams.sourceBookingLinkPayload || null,
+        sourceBookingLinkSignature: initialParams.sourceBookingLinkSignature || null,
         pickupCity: selectedCity.cityName,
         skipDays: selectedCity.skipDays,
         adjustedPrice: selectedCity?.price ?? (pricing.originalTotalBase / formData.participants),
@@ -917,6 +937,7 @@ function BookingForm() {
                               onChange={(e) => handleParticipantChange(index, 'age', e.target.value)}
                             />
                             <select
+                              aria-label={`Gender for traveler ${index + 1}`}
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 outline-none"
                               value={traveler.gender}
                               onChange={(e) => handleParticipantChange(index, 'gender', e.target.value)}

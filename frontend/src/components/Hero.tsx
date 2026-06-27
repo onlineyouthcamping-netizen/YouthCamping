@@ -130,6 +130,17 @@ export default function Hero({
     return () => clearTimeout(preloadTimer);
   }, [currentSlide, activeSlides.length]);
 
+  useEffect(() => {
+    if (activeSlides.length <= 1) return;
+    const cleanupTimer = setTimeout(() => {
+      setLoadedSlides((current) => {
+        if (current.size === 1 && current.has(currentSlide)) return current;
+        return new Set([currentSlide]);
+      });
+    }, 900);
+    return () => clearTimeout(cleanupTimer);
+  }, [currentSlide, activeSlides.length]);
+
   const normalizedBg = normalizeImageUrl(backgroundImage);
   
   // Theme-driven animated texts with hardcoded fallback
@@ -189,6 +200,7 @@ export default function Hero({
             src={normalizedBg} 
             priority={true}
             cloudinaryWidth={1920}
+            sizes="100vw"
             className="w-full h-full object-cover" 
             alt="Hero Background"
             style={{ objectFit: 'cover', objectPosition: 'center' }}
@@ -219,6 +231,7 @@ export default function Hero({
                       src={slide.url}
                       priority={index === 0}
                       cloudinaryWidth={1920}
+                      sizes="100vw"
                       className="w-full h-full object-cover"
                       alt={slide.alt}
                       style={{ objectFit: 'cover', objectPosition: 'center' }}

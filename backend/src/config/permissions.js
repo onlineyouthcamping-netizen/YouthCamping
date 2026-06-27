@@ -43,8 +43,14 @@ const PERMISSIONS = [
   'settings.edit',
   'bookings.verify',
   'tickets.view',
-  'tickets.manage',
-  'tickets.issue'
+  'tickets.create',
+  'tickets.edit',
+  'tickets.submit',
+  'tickets.approve',
+  'tickets.reopen',
+  'tickets.bulk',
+  'tickets.templates.manage',
+  'tickets.alerts.view'
 ];
 
 const ROLE_PERMISSIONS = {
@@ -80,8 +86,14 @@ const ROLE_PERMISSIONS = {
     'settings.view',
     'bookings.verify',
     'tickets.view',
-    'tickets.manage',
-    'tickets.issue'
+    'tickets.create',
+    'tickets.edit',
+    'tickets.submit',
+    'tickets.approve',
+    'tickets.reopen',
+    'tickets.bulk',
+    'tickets.templates.manage',
+    'tickets.alerts.view'
   ],
 
   sales: [
@@ -97,7 +109,13 @@ const ROLE_PERMISSIONS = {
     'inquiries.edit',
     'quotations.view',
     'quotations.create',
-    'quotations.edit'
+    'quotations.edit',
+    'tickets.view',
+    'tickets.create',
+    'tickets.edit',
+    'tickets.submit',
+    'tickets.bulk',
+    'tickets.alerts.view'
   ],
 
   operations: [
@@ -107,7 +125,16 @@ const ROLE_PERMISSIONS = {
     'bookings.edit',
     'operations.view',
     'operations.edit',
-    'guides.view'
+    'guides.view',
+    'tickets.view',
+    'tickets.create',
+    'tickets.edit',
+    'tickets.submit',
+    'tickets.approve',
+    'tickets.reopen',
+    'tickets.bulk',
+    'tickets.templates.manage',
+    'tickets.alerts.view'
   ],
 
   finance: [
@@ -140,8 +167,14 @@ const ROLE_PERMISSIONS = {
     'bookings.view',
     'bookings.verify',
     'tickets.view',
-    'tickets.manage',
-    'tickets.issue'
+    'tickets.create',
+    'tickets.edit',
+    'tickets.submit',
+    'tickets.approve',
+    'tickets.reopen',
+    'tickets.bulk',
+    'tickets.templates.manage',
+    'tickets.alerts.view'
   ]
 };
 

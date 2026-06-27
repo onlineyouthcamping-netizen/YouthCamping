@@ -2,7 +2,6 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import dynamic from "next/dynamic";
-import { headers } from "next/headers";
 import { Metadata } from "next";
 
 const Footer = dynamic(() => import("@/components/Footer"), {
@@ -34,20 +33,19 @@ const montserrat = Montserrat({
   variable: "--font-montserrat",
 });
 
-export const revalidate = 30;
+export const revalidate = 600;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const headersList = await headers();
-  const host = headersList.get("host") || "";
-  const pathname = headersList.get("x-pathname") || "/";
-  const isStaging = host.includes("youthcamping.online");
-
-  const canonicalUrl = `https://youthcamping.in${pathname}`;
+  const canonicalUrl = "./";
+  const isStaging = false;
 
   return {
     title: "YouthCamping — Adventure Tours for Young India",
     description: "Book Himachal Pradesh, Ladakh, Kashmir, Kerala group tours. Best adventure trips for young adults from Gujarat.",
     metadataBase: new URL("https://youthcamping.in"),
+    verification: {
+      google: "Hy949F--o_wnmU-WH5arwK1zE038hpIyxYIauQQv-FA",
+    },
     alternates: {
       canonical: canonicalUrl,
     },
@@ -100,16 +98,8 @@ export default async function RootLayout({
   if (siteConfigResults[1].status === 'fulfilled') theme = siteConfigResults[1].value;
   else console.error("Layout theme fetch error:", siteConfigResults[1].reason);
 
-  const headersList = await headers();
-  const host = headersList.get("host") || "";
-  const isStaging = host.includes("youthcamping.online");
-  
   return (
     <html lang="en" className={`${montserrat.variable} h-full antialiased`}>
-      <head>
-        {isStaging && <meta name="robots" content="noindex,nofollow" />}
-        {isStaging && <meta name="google-site-verification" content="Hy949F--o_wnmU-WH5arwK1zE038hpIyxYIauQQv-FA" />}
-      </head>
       <body className="min-h-full flex flex-col font-montserrat relative">
         <DynamicThemeProvider initialTheme={theme} initialSettings={settings}>
           <Navbar 

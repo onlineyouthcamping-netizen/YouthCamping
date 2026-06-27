@@ -103,6 +103,7 @@ export default function CTASlider({
                 src={posterSrc}
                 alt={title || "Cinematic Travel Video"}
                 cloudinaryWidth={1200}
+                sizes="(max-width: 1440px) calc(100vw - 64px), 1248px"
                 className="w-full h-full object-cover object-center"
               />
             )

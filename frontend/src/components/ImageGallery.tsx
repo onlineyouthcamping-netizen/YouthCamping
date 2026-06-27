@@ -47,6 +47,9 @@ export default function ImageGallery({
               <OptimizedImage 
                 src={normalizeImageUrl(image.url) || ""} 
                 alt={image.alt} 
+                cloudinaryWidth={800}
+                bunnyVariant="x540gt"
+                sizes="(max-width: 768px) calc(100vw - 48px), 33vw"
                 className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
               />
               {image.alt && (

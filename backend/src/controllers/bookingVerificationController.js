@@ -1,4 +1,11 @@
 const { prisma } = require('../lib/prisma');
+const {
+  getTicketActionConfig,
+  appendTicketHistory,
+  buildTicketAlertSummary,
+  getDefaultEmailTemplates,
+  getDefaultTrainTicketTemplates,
+} = require('../utils/trainTicketWorkflow');
 
 // ────────────────────────────────────────────
 // BOOKING VERIFICATION CONTROLLER
@@ -431,14 +438,106 @@ exports.getTrainTicketDraft = async (req, res) => {
  * POST /api/booking-verifications/:bookingId/train-ticket/action
  * Perform a ticket action (APPROVE, REJECT, REQUEST_CHANGES, MARK_ISSUED).
  */
+exports.getTicketTemplates = async (req, res) => {
+  try {
+    return res.json({
+      success: true,
+      data: {
+        trainTemplates: getDefaultTrainTicketTemplates(),
+        emailTemplates: getDefaultEmailTemplates(),
+      }
+    });
+  } catch (err) {
+    console.error('getTicketTemplates error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch ticket templates' });
+  }
+};
+
+exports.bulkUpdateTickets = async (req, res) => {
+  try {
+    const { bookingIds = [], action, notes, pnr, ticketDetails } = req.body;
+
+    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'bookingIds is required' });
+    }
+
+    const actionConfig = getTicketActionConfig(action);
+    if (!actionConfig) {
+      return res.status(400).json({ success: false, message: 'Invalid action' });
+    }
+
+    const updates = await Promise.all(bookingIds.map(async (bookingId) => {
+      const ticket = await prisma.trainTicketRequest.findFirst({
+        where: { bookingId, booking: { tenantId: req.user.tenantId } }
+      });
+
+      if (!ticket) return null;
+
+      const updated = await prisma.trainTicketRequest.update({
+        where: { id: ticket.id },
+        data: {
+          status: actionConfig.status,
+          ...(pnr ? { pnr } : {}),
+          ...(ticketDetails ? { ticketDetails } : {}),
+        }
+      });
+
+      await prisma.trainTicketLog.create({
+        data: {
+          trainTicketRequestId: ticket.id,
+          action: actionConfig.logAction,
+          notes: notes || null,
+          adminId: req.user.id,
+          snapshot: { bulkAction: action }
+        }
+      });
+
+      await prisma.booking.update({ where: { bookingId }, data: { trainTicketStatus: actionConfig.status } });
+      return updated;
+    }));
+
+    return res.json({
+      success: true,
+      data: {
+        updatedCount: updates.filter(Boolean).length,
+        templates: getDefaultTrainTicketTemplates(),
+        emailTemplates: getDefaultEmailTemplates(),
+      },
+      message: 'Bulk ticket update completed successfully'
+    });
+  } catch (err) {
+    console.error('bulkUpdateTickets error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to bulk update tickets' });
+  }
+};
+
+exports.triggerTicketAlerts = async (req, res) => {
+  try {
+    const { bookingIds = [] } = req.body;
+    const summary = buildTicketAlertSummary(bookingIds.map((bookingId) => ({ bookingId, status: 'PENDING' })), {
+      triggeredBy: req.user.id,
+      scope: bookingIds.length > 0 ? 'selected' : 'all',
+    });
+
+    return res.json({
+      success: true,
+      data: summary,
+      message: 'Ticket alerts triggered successfully'
+    });
+  } catch (err) {
+    console.error('triggerTicketAlerts error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to trigger ticket alerts' });
+  }
+};
+
 exports.performTicketAction = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { action, notes, pnr, ticketDetails } = req.body;
     const userId = req.user.id;
 
-    if (!action || !['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'MARK_ISSUED'].includes(action)) {
-      return res.status(400).json({ success: false, message: 'Invalid action. Must be APPROVE, REJECT, REQUEST_CHANGES, or MARK_ISSUED' });
+    if (!action || !['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'MARK_ISSUED', 'CANCEL_TICKET', 'REBOOK'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid action. Must be APPROVE, REJECT, REQUEST_CHANGES, MARK_ISSUED, CANCEL_TICKET, or REBOOK' });
     }
 
     const ticket = await prisma.trainTicketRequest.findFirst({
@@ -452,15 +551,12 @@ exports.performTicketAction = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Train ticket request not found' });
     }
 
-    // Map action to ticket status
-    const statusMap = {
-      'APPROVE': 'APPROVED',
-      'REJECT': 'REJECTED',
-      'REQUEST_CHANGES': 'CHANGES_REQUESTED',
-      'MARK_ISSUED': 'ISSUED'
-    };
+    const actionConfig = getTicketActionConfig(action);
+    if (!actionConfig) {
+      return res.status(400).json({ success: false, message: 'Invalid action. Must be APPROVE, REJECT, REQUEST_CHANGES, MARK_ISSUED, CANCEL_TICKET, or REBOOK' });
+    }
 
-    const updateData = { status: statusMap[action] };
+    const updateData = { status: actionConfig.status };
     if (pnr) updateData.pnr = pnr;
     if (ticketDetails) updateData.ticketDetails = ticketDetails;
 
@@ -469,25 +565,48 @@ exports.performTicketAction = async (req, res) => {
       data: updateData
     });
 
-    // Create ticket log
+    const historyEntry = {
+      action: actionConfig.logAction,
+      notes: notes || null,
+      adminId: userId,
+      timestamp: new Date().toISOString(),
+      label: actionConfig.label,
+    };
+
+    const history = appendTicketHistory(ticket.history || null, historyEntry);
+
     await prisma.trainTicketLog.create({
       data: {
         trainTicketRequestId: ticket.id,
-        action,
+        action: actionConfig.logAction,
         notes: notes || null,
-        adminId: userId
+        adminId: userId,
+        snapshot: { history }
       }
     });
 
-    // Update booking's trainTicketStatus
+    await prisma.trainTicketRequest.update({
+      where: { id: ticket.id },
+      data: {
+        history,
+        status: actionConfig.status,
+      }
+    });
+
     await prisma.booking.update({
       where: { bookingId },
-      data: { trainTicketStatus: statusMap[action] }
+      data: { trainTicketStatus: actionConfig.status }
     });
 
     return res.json({
       success: true,
-      data: updated,
+      data: {
+        ...updated,
+        history,
+        alertSummary: buildTicketAlertSummary([updated], { bookingId, action }),
+        templates: getDefaultTrainTicketTemplates(),
+        emailTemplates: getDefaultEmailTemplates(),
+      },
       message: `Ticket action '${action}' performed successfully`
     });
   } catch (err) {

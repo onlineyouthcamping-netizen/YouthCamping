@@ -144,7 +144,7 @@ exports.getPublicTripCards = async (req, res, next) => {
       route: toPublicRouteSummary(trip.route),
     }));
 
-    setPublicCache(res, 60);
+    setPublicCache(res, 180);
     res.json({ success: true, count: data.length, data });
   } catch (error) {
     next(error);

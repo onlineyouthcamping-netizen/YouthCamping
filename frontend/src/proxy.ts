@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function proxy(request: NextRequest) {
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-pathname', request.nextUrl.pathname)
+  const response = NextResponse.next()
+  const host = request.headers.get('host') || ''
 
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
+  // Preserve staging noindex behavior without making the full public route tree dynamic.
+  if (host.includes('youthcamping.online')) {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive')
+  }
+
+  return response
 }
 
 export const config = {

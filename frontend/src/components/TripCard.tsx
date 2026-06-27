@@ -104,6 +104,7 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
       {/* Invisible Link Overlay - Ensures 100% clickability */}
       <Link 
         href={`/trips/${trip.slug}`} 
+        prefetch={false}
         className="absolute inset-0 z-30 cursor-pointer"
         aria-label={`View ${trip.title}`}
         onClick={onClick}
@@ -117,6 +118,8 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
           width={400}
           height={250}
           cloudinaryWidth={800}
+          bunnyVariant="x540gt"
+          sizes="(max-width: 768px) 280px, 400px"
           className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           style={{
             filter: "contrast(1.08) saturate(1.1)"

@@ -60,15 +60,15 @@ export async function fetchTrips(init?: RequestInit): Promise<Trip[]> {
 }
 
 export async function fetchPublicTrips(init?: PublicRequestInit): Promise<Trip[]> {
-  const res = await fetch(`${API_BASE_URL}/trips/public/cards`, init ?? publicRevalidate(60));
+  const res = await fetch(`${API_BASE_URL}/trips/public/cards`, init ?? publicRevalidate(180));
   if (!res.ok) throw new Error("Failed to fetch public trips");
   const json = await res.json();
   return json.data || [];
 }
 
 export async function fetchHomepageTrips(limit = 12): Promise<Trip[]> {
-  const safeLimit = Math.max(1, Math.min(24, Math.trunc(limit)));
-  const res = await fetch(`${API_BASE_URL}/trips/public/cards?limit=${safeLimit}`, publicRevalidate(60));
+  const safeLimit = Math.max(1, Math.min(12, Math.trunc(limit)));
+  const res = await fetch(`${API_BASE_URL}/trips/public/cards?limit=${safeLimit}`, publicRevalidate(180));
   if (!res.ok) throw new Error("Failed to fetch homepage trips");
   const json = await res.json();
   return json.data || [];
@@ -153,21 +153,26 @@ export async function fetchBlogBySlug(slug: string, init?: PublicRequestInit): P
 }
 
 export async function fetchPageBySlug(slug: string, init?: PublicRequestInit): Promise<any | null> {
-  const res = await fetch(`${API_BASE_URL}/page-builder/public/${slug}`, init ?? publicRevalidate(60));
-  if (!res.ok) return null;
-  const json = await res.json();
+  try {
+    const res = await fetch(`${API_BASE_URL}/page-builder/public/${slug}`, init ?? publicRevalidate(60));
+    if (!res.ok) return null;
+    const json = await res.json();
 
-  if (json.success && json.data) {
-    return {
-      ...json.data,
-      sections: (json.data.sections || []).map((s: any) => ({
-        ...s,
-        data: s.draft || s.content || s.data || s
-      }))
-    };
+    if (json.success && json.data) {
+      return {
+        ...json.data,
+        sections: (json.data.sections || []).map((s: any) => ({
+          ...s,
+          data: s.draft || s.content || s.data || s
+        }))
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Public page fetch failed for ${slug}:`, error);
+    return null;
   }
-
-  return null;
 }
 
 export async function fetchDraftPageBySlug(slug: string): Promise<any | null> {

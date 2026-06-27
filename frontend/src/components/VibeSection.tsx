@@ -53,7 +53,7 @@ export default function VibeSection({
               viewport={{ once: true }}
               className="relative min-w-[280px] h-[500px] rounded-[30px] overflow-hidden group snap-center shadow-2xl cursor-pointer"
             >
-              <OptimizedImage src={reel.img} alt="Reel" className="object-cover transition-transform duration-1000 group-hover:scale-110" />
+              <OptimizedImage src={reel.img} alt="Reel" cloudinaryWidth={480} sizes="280px" className="object-cover transition-transform duration-1000 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-8 flex flex-col justify-between">
                 <div className="flex justify-end">
                   <div className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20">

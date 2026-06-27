@@ -119,6 +119,7 @@ export default function Navbar({
                 <Link
                   key={link.name}
                   href={link.href}
+                  prefetch={link.href === '/contact' ? false : undefined}
                   className={cn(
                     "nav-link transition-colors",
                     isActive ? "text-primary-orange" : textColorClass
@@ -139,6 +140,7 @@ export default function Navbar({
             })}
             <Link 
               href="/contact" 
+              prefetch={false}
               className={cn("nav-link transition-colors hover:text-primary-orange", textColorClass)}
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--navbar-hover-color)'}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -171,6 +173,7 @@ export default function Navbar({
           <Link
             key={link.name}
             href={link.href}
+            prefetch={link.href === '/contact' ? false : undefined}
             onClick={() => setIsMenuOpen(false)}
             className="text-2xl font-medium text-navy capitalize tracking-tighter"
           >
@@ -179,6 +182,7 @@ export default function Navbar({
         ))}
         <Link 
           href="/contact" 
+          prefetch={false}
           onClick={() => setIsMenuOpen(false)}
           className="text-2xl font-medium text-navy capitalize tracking-tighter"
         >

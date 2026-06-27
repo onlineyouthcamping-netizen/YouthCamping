@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { generateBookingId } = require('../utils/bookingIdGenerator');
 const { logAction } = require('../utils/auditLogger');
+const { verifySignedPayload } = require('./bookingLinkController');
 
 // Helper to safely parse dates and avoid crashes with "Invalid Date"
 const safeParseDate = (dateVal) => {
@@ -586,7 +587,7 @@ exports.createBooking = async (req, res, next) => {
     const {
       name, fullName, phone, mobile, tripId: inputTripId, status, paymentMode, notes, email, departureDate,
       pickupCity, skipDays, adjustedPrice, joiningDate,
-      sourceBookingLinkId, sourceBookingLinkToken
+      sourceBookingLinkId, sourceBookingLinkToken, sourceBookingLinkPayload, sourceBookingLinkSignature
     } = req.body;
     const targetName = name || fullName;
     const targetPhone = phone || mobile;
@@ -625,16 +626,21 @@ exports.createBooking = async (req, res, next) => {
 
     // Optional link attribution + expiry enforcement
     let sourceLink = null;
-    if (sourceBookingLinkId || sourceBookingLinkToken) {
+    let linkMetadata = null;
+    if (sourceBookingLinkId || sourceBookingLinkToken || sourceBookingLinkPayload) {
       if (sourceBookingLinkToken) {
         const tokenHash = sha256(String(sourceBookingLinkToken));
         sourceLink = await prisma.bookingLink.findFirst({
           where: { tokenHash, tenantId },
         });
-      } else {
+      } else if (sourceBookingLinkId) {
         sourceLink = await prisma.bookingLink.findFirst({
           where: { id: sourceBookingLinkId, tenantId },
         });
+      }
+
+      if (sourceBookingLinkPayload && sourceBookingLinkSignature) {
+        linkMetadata = verifySignedPayload(sourceBookingLinkPayload, sourceBookingLinkSignature);
       }
 
       if (!sourceLink) {
@@ -642,6 +648,14 @@ exports.createBooking = async (req, res, next) => {
       }
 
       const now = Date.now();
+      if (sourceLink.status === 'used' || sourceLink.completedCount > 0) {
+        return res.status(410).json({ success: false, message: 'This booking link has already been used' });
+      }
+
+      if (sourceLink.status === 'deactivated' || sourceLink.status === 'revoked') {
+        return res.status(410).json({ success: false, message: 'This booking link has been deactivated' });
+      }
+
       if (sourceLink.status !== 'active' || (sourceLink.expiresAt && sourceLink.expiresAt.getTime() < now)) {
         await prisma.bookingLink.update({
           where: { id: sourceLink.id },
@@ -689,23 +703,28 @@ exports.createBooking = async (req, res, next) => {
           // Recompute and check capacity inside transaction context
           const calculations = await verifyAndCalculateBooking(targetTrip, req.body, isAdmin, tx);
 
+          const linkedName = linkMetadata?.customerName || targetName;
+          const linkedPhone = linkMetadata?.customerPhone || targetPhone;
+          const linkedEmail = linkMetadata?.customerEmail || email || null;
+          const linkedTravelerCount = linkMetadata?.travelerCount || req.body.passengers?.length || 1;
+
           const created = await tx.booking.create({
             data: {
               tenantId,
               bookingId: currentBookingId,
-              name: targetName, fullName: targetName,
-              phone: targetPhone, mobile: targetPhone,
+              name: linkedName, fullName: linkedName,
+              phone: linkedPhone, mobile: linkedPhone,
               tripId,
               tripName: targetTrip ? targetTrip.title : 'Manual Booking',
               amount: calculations.amount,
               totalAmount: calculations.totalAmount,
               advancePaid: calculations.advancePaid,
               remainingAmount: calculations.remainingAmount,
-              status: status || 'pending',
-              paymentStatus: calculations.paymentStatus,
+              status: 'pending',
+              paymentStatus: 'Pending / Manual Verification',
               paymentMode: paymentMode || 'UPI',
               notes: notes || '',
-              email,
+              email: linkedEmail,
               departureDate: departureDate ? new Date(departureDate) : null,
               pickupCity: calculations.pickupCity || null,
               skipDays: calculations.skipDays,
@@ -746,6 +765,7 @@ exports.createBooking = async (req, res, next) => {
             await tx.bookingLink.update({
               where: { id: sourceLink.id },
               data: {
+                status: 'used',
                 completedCount: { increment: 1 },
                 lastCompletedAt: new Date(),
               },

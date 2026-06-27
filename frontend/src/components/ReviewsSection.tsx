@@ -1,16 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import { Star, ChevronRight, Quote, Camera } from "lucide-react";
 import Link from "next/link";
 import { Review } from "@/types";
 import { normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
-import ReviewModal from "./ReviewModal";
 import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
 import { useIsMobile } from "@/hooks/useIsMobile";
+
+const ReviewModal = dynamic(() => import("./ReviewModal"), { ssr: false });
 
 interface ReviewsSectionProps {
   reviews: Review[];
@@ -130,6 +132,9 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
         <OptimizedImage 
           src={normalizeImageUrl(coverPhoto) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470"} 
           alt="Review cover" 
+          cloudinaryWidth={480}
+          bunnyVariant="x540gt"
+          sizes="280px"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
       </div>
@@ -167,6 +172,8 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
               <OptimizedImage 
                 src={defaultAvatar} 
                 alt={rev.userName} 
+                cloudinaryWidth={80}
+                sizes="36px"
                 className="w-full h-full object-cover"
               />
             ) : (

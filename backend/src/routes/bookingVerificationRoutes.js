@@ -7,7 +7,10 @@ const {
   performVerificationAction,
   saveTrainTicketDraft,
   getTrainTicketDraft,
-  performTicketAction
+  performTicketAction,
+  getTicketTemplates,
+  bulkUpdateTickets,
+  triggerTicketAlerts
 } = require('../controllers/bookingVerificationController');
 const {
   authenticate,
@@ -16,6 +19,11 @@ const {
 
 // ── Verification Queue ──
 router.get('/queue', authenticate, requirePermission('bookings.view'), getVerificationQueue);
+
+// ── Ticket Templates & Alerts ──
+router.get('/templates', authenticate, requirePermission('tickets.view'), getTicketTemplates);
+router.post('/bulk-update', authenticate, requirePermission('tickets.manage'), bulkUpdateTickets);
+router.post('/alerts', authenticate, requirePermission('tickets.manage'), triggerTicketAlerts);
 
 // ── Verification Status ──
 router.get('/:bookingId/status', authenticate, requirePermission('bookings.view'), getVerificationStatus);

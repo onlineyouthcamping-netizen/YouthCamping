@@ -1,5 +1,3 @@
-"use client";
-
 import dynamic from "next/dynamic";
 import { Trip, Review, Blog } from "@/types";
 
@@ -174,7 +172,11 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
         };
 
         return (
-          <div key={index} className={`page-section-wrapper ${getBackgroundClass(index)} transition-colors duration-500`}>
+          <div
+            key={index}
+            className={`page-section-wrapper ${getBackgroundClass(index)} transition-colors duration-500`}
+            style={index > 1 ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 600px' } : undefined}
+          >
             {renderSection()}
           </div>
         );

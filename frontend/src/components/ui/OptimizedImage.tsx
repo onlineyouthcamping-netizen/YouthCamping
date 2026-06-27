@@ -10,6 +10,37 @@ interface OptimizedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElem
   priority?: boolean;
   /** Cloudinary width transform — default 1200. Use 800 for cards, 400 for thumbnails. */
   cloudinaryWidth?: number;
+  /** Optional Bunny CDN derivative used without changing the stored source URL. */
+  bunnyVariant?: string;
+}
+
+const RESPONSIVE_WIDTHS = [320, 480, 640, 800, 960, 1200, 1280, 1600, 1920];
+
+function getResponsiveWidths(maxWidth: number) {
+  const widths = RESPONSIVE_WIDTHS.filter((width) => width <= maxWidth);
+  if (!widths.includes(maxWidth)) widths.push(maxWidth);
+  return widths.sort((a, b) => a - b);
+}
+
+function withCloudinaryWidth(url: string, width: number) {
+  const uploadMarker = '/upload/';
+  const uploadIndex = url.indexOf(uploadMarker);
+  if (uploadIndex === -1) return url;
+
+  const before = url.slice(0, uploadIndex + uploadMarker.length);
+  const segments = url.slice(uploadIndex + uploadMarker.length).split('/');
+  const firstSegment = segments[0] || '';
+  const hasTransform = firstSegment.length > 0 && !/^v\d+$/.test(firstSegment);
+  const sourceTransforms = hasTransform ? firstSegment.split(',').filter(Boolean) : [];
+  const transforms = sourceTransforms.filter((part) => !/^w_\d+$/.test(part));
+
+  if (!transforms.some((part) => part.startsWith('f_'))) transforms.unshift('f_auto');
+  if (!transforms.some((part) => part.startsWith('q_'))) transforms.push('q_auto');
+  transforms.push(`w_${width}`);
+  if (!transforms.some((part) => part.startsWith('c_'))) transforms.push('c_limit');
+
+  const assetSegments = hasTransform ? segments.slice(1) : segments;
+  return `${before}${transforms.join(',')}/${assetSegments.join('/')}`;
 }
 
 export function OptimizedImage({ 
@@ -19,8 +50,10 @@ export function OptimizedImage({
   className = '', 
   priority,
   cloudinaryWidth,
+  bunnyVariant,
   ...props 
 }: OptimizedImageProps) {
+  const { onLoad, onError, ...imageProps } = props;
   const [isLoaded, setIsLoaded] = useState(priority ? true : false);
   const [errorObj, setErrorObj] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -48,7 +81,9 @@ export function OptimizedImage({
 
   const isCloudinary = finalSrc && finalSrc.includes('res.cloudinary.com');
   const isUnsplash = finalSrc && finalSrc.includes('images.unsplash.com');
+  const isBunny = finalSrc && finalSrc.includes('vl-prod-static.b-cdn.net');
   const resolvedWidth = cloudinaryWidth || 1200;
+  const widths = getResponsiveWidths(resolvedWidth);
   let srcSet: string | undefined = undefined;
 
   if (isUnsplash) {
@@ -62,27 +97,19 @@ export function OptimizedImage({
     params.set('w', resolvedWidth.toString());
     finalSrc = `${cleanUrl}?${params.toString()}`;
     
-    const widths = [320, 480, 640, 800, 1200];
     srcSet = widths
       .map(w => {
         params.set('w', w.toString());
         return `${cleanUrl}?${params.toString()} ${w}w`;
       })
       .join(', ');
-  } else if (isCloudinary && !finalSrc.includes('w_')) {
-    const uploadIndex = finalSrc.indexOf('/upload/');
-    if (uploadIndex !== -1) {
-      const before = finalSrc.substring(0, uploadIndex + 8);
-      const after = finalSrc.substring(uploadIndex + 8);
-      const template = `${before}f_auto,q_auto,w_1200,c_limit/${after}`.replace(/([^:]\/)\/+/g, "$1");
-      
-      finalSrc = template.replace(/w_\d+/, `w_${resolvedWidth}`);
-      
-      const widths = [320, 480, 640, 800, 1200];
-      srcSet = widths
-        .map(w => `${template.replace(/w_\d+/, `w_${w}`)} ${w}w`)
-        .join(', ');
-    }
+  } else if (isCloudinary) {
+    finalSrc = withCloudinaryWidth(finalSrc, resolvedWidth);
+    srcSet = widths
+      .map((width) => `${withCloudinaryWidth(finalSrc as string, width)} ${width}w`)
+      .join(', ');
+  } else if (isBunny && bunnyVariant && finalSrc.includes('/original/')) {
+    finalSrc = finalSrc.replace('/original/', `/${bunnyVariant}/`);
   }
 
   const currentSrc = errorObj ? fallbackSrc : finalSrc;
@@ -92,7 +119,7 @@ export function OptimizedImage({
       ref={imgRef}
       src={currentSrc}
       srcSet={srcSet}
-      sizes={props.sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
+      sizes={imageProps.sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}
@@ -102,9 +129,16 @@ export function OptimizedImage({
         isLoaded ? 'opacity-100' : 'opacity-0',
         className
       )}
-      onLoad={() => setIsLoaded(true)}
-      onError={() => { setErrorObj(true); setIsLoaded(true); }}
-      {...props}
+      onLoad={(event) => {
+        setIsLoaded(true);
+        onLoad?.(event);
+      }}
+      onError={(event) => {
+        setErrorObj(true);
+        setIsLoaded(true);
+        onError?.(event);
+      }}
+      {...imageProps}
     />
   );
 }

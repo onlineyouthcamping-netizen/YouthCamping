@@ -43,6 +43,8 @@ export default function CTABanner({
             <OptimizedImage 
               src={normalizeImageUrl(backgroundImage)} 
               alt={title} 
+              cloudinaryWidth={1600}
+              sizes="(max-width: 768px) calc(100vw - 32px), (max-width: 1440px) calc(100vw - 96px), 1280px"
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
@@ -98,7 +100,7 @@ export default function CTABanner({
           </div>
 
           {/* Link Overlay for entire banner */}
-          <Link href={ctaLink} className="absolute inset-0 z-20 cursor-pointer">
+          <Link href={ctaLink} prefetch={false} className="absolute inset-0 z-20 cursor-pointer">
             <span className="sr-only">View {title}</span>
           </Link>
         </div>

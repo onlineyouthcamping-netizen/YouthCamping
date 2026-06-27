@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { normalizeImageUrl } from "@/lib/api";
-import DestinationInquiryModal from "./DestinationInquiryModal";
+import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
 import { WavyEdges } from "./ui/WavyEdges";
 import { useIsMobile } from "@/hooks/useIsMobile";
+
+const DestinationInquiryModal = dynamic(() => import("./DestinationInquiryModal"), { ssr: false });
 
 interface Destination {
   name: string;
@@ -92,11 +95,14 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
       {!imgLoaded && (
         <div className="absolute inset-0 bg-gradient-to-b from-[#D4DFD8] to-[#C4DAD2] animate-pulse" />
       )}
-      <img
+      <OptimizedImage
         src={imgSrc}
         alt={dest.name}
-        loading="lazy"
-        decoding="async"
+        width={680}
+        height={952}
+        cloudinaryWidth={640}
+        bunnyVariant="x540gt"
+        sizes="(max-width: 768px) 280px, 340px"
         onLoad={() => setImgLoaded(true)}
         onError={() => { setImgError(true); setImgLoaded(true); }}
         className={cn(

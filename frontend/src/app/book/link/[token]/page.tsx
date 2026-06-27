@@ -1,22 +1,28 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { API_BASE_URL } from '@/lib/api';
 
 export default function BookingLinkResolvePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const run = async () => {
       setError('');
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/booking-links/resolve?token=${encodeURIComponent(token)}&_t=${Date.now()}`,
-          { cache: 'no-store' }
-        );
+        const payload = searchParams.get('p') || '';
+        const signature = searchParams.get('s') || '';
+        const resolveUrl = new URL(`${API_BASE_URL}/booking-links/resolve`);
+        resolveUrl.searchParams.set('token', token);
+        resolveUrl.searchParams.set('_t', String(Date.now()));
+        if (payload) resolveUrl.searchParams.set('p', payload);
+        if (signature) resolveUrl.searchParams.set('s', signature);
+
+        const res = await fetch(resolveUrl.toString(), { cache: 'no-store' });
         const json = await res.json();
         if (!res.ok || !json?.success) {
           setError(json?.message || 'Invalid or expired booking link');
@@ -41,6 +47,12 @@ export default function BookingLinkResolvePage({ params }: { params: Promise<{ t
         if (data.headerTitle) qs.set('headerTitle', String(data.headerTitle));
         if (data.headerSubtitle) qs.set('headerSubtitle', String(data.headerSubtitle));
         if (data.bookingLinkId) qs.set('sourceBookingLinkId', String(data.bookingLinkId));
+        if (payload) qs.set('sourceBookingLinkPayload', payload);
+        if (signature) qs.set('sourceBookingLinkSignature', signature);
+        if (data.customerName) qs.set('customerName', String(data.customerName));
+        if (data.customerPhone) qs.set('customerPhone', String(data.customerPhone));
+        if (data.customerEmail) qs.set('customerEmail', String(data.customerEmail));
+        if (data.travelerCount) qs.set('travelerCount', String(data.travelerCount));
 
         router.replace(`/book?${qs.toString()}`);
       } catch {
@@ -49,7 +61,7 @@ export default function BookingLinkResolvePage({ params }: { params: Promise<{ t
     };
 
     run();
-  }, [token, router]);
+  }, [token, router, searchParams]);
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">

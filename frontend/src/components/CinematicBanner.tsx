@@ -88,6 +88,8 @@ export default function CinematicBanner({
               <OptimizedImage 
                 src={normalizeImageUrl(current.image)} 
                 alt={current.title || "Cinematic View"} 
+                cloudinaryWidth={1600}
+                sizes="100vw"
                 className="w-full h-full object-cover" // Image fills without distortion
               />
               

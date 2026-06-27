@@ -51,10 +51,13 @@ export default function PhotoSlider({
               viewport={{ once: true }}
               className="flex-none w-[260px] md:w-[280px] h-[160px] md:h-[180px] snap-start bg-white rounded-[24px] overflow-hidden shadow-md hover:shadow-xl transition-all group"
             >
-              <Link href={slide.link || "/trips"} className="block w-full h-full">
+              <Link href={slide.link || "/trips"} prefetch={false} className="block w-full h-full">
                 <OptimizedImage 
                   src={normalizeImageUrl(slide.image)} 
                   alt={`Slide ${i + 1}`} 
+                  cloudinaryWidth={480}
+                  bunnyVariant="x540gt"
+                  sizes="280px"
                   className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 />
               </Link>

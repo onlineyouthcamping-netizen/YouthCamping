@@ -141,7 +141,7 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
       className="flex-none snap-start bg-white border border-zinc-50 rounded-[32px] shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col overflow-hidden group/card"
       style={{ width: '380px', height: '450px', minWidth: '380px', minHeight: '450px' }}
     >
-      <Link href={linkPath} className="flex flex-col h-full w-full text-left">
+      <Link href={linkPath} prefetch={false} className="flex flex-col h-full w-full text-left">
         {/* Top Image Area */}
         <div 
           className="relative w-full bg-zinc-100 overflow-hidden group"
@@ -151,6 +151,8 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
             src={normalizeImageUrl(art.image) || "https://images.unsplash.com/photo-1597037750734-450f6f406560"} 
             alt={art.title} 
             cloudinaryWidth={600}
+            bunnyVariant="x540gt"
+            sizes="380px"
             width={600}
             height={340}
             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 

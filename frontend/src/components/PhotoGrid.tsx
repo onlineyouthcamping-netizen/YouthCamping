@@ -60,6 +60,9 @@ export default function PhotoGrid({
               <OptimizedImage 
                 src={normalizeImageUrl(image.url) || ""} 
                 alt={image.alt} 
+                cloudinaryWidth={800}
+                bunnyVariant="x540gt"
+                sizes="(max-width: 768px) calc(100vw - 48px), 33vw"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
               {image.alt && (

@@ -109,6 +109,9 @@ export default function RealitySection({
                 <OptimizedImage 
                   src={normalizeImageUrl(vid.img) || "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=2070"} 
                   alt={vid.title} 
+                  cloudinaryWidth={800}
+                  bunnyVariant="x540gt"
+                  sizes="(max-width: 768px) 85vw, 500px"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                 />
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all flex flex-col items-center justify-center text-center p-6">

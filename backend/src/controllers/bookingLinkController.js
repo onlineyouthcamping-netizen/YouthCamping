@@ -14,6 +14,31 @@ const getBaseUrl = () => {
   return url.replace(/\/$/, '');
 };
 
+const getSigningSecret = () => process.env.BOOKING_LINK_SECRET || process.env.JWT_SECRET || 'dev-booking-link-secret';
+
+const createSignedPayload = (payload) => {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', getSigningSecret()).update(encoded).digest('hex');
+  return { payload: encoded, signature };
+};
+
+const verifySignedPayload = (encodedPayload, signature) => {
+  if (!encodedPayload || !signature) return null;
+  const expected = crypto.createHmac('sha256', getSigningSecret()).update(String(encodedPayload)).digest('hex');
+  const actual = Buffer.from(String(signature));
+  const expectedBuffer = Buffer.from(expected);
+  if (actual.length !== expectedBuffer.length) return null;
+  try {
+    if (crypto.timingSafeEqual(actual, expectedBuffer)) {
+      const decoded = Buffer.from(String(encodedPayload), 'base64url').toString('utf8');
+      return JSON.parse(decoded);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 const getIpHash = (req) => {
   const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.ip || '';
   return ip ? sha256(ip) : null;
@@ -24,7 +49,24 @@ const getIpHash = (req) => {
 // ────────────────────────────────────────────
 exports.createBookingLink = async (req, res, next) => {
   try {
-    const { tripId, departureDate, paymentMode, customAmount, pickupCity, expiresAt, customTime, headerTitle, headerSubtitle } = req.body;
+    const {
+      tripId,
+      departureDate,
+      paymentMode,
+      customAmount,
+      pickupCity,
+      expiresAt,
+      customTime,
+      headerTitle,
+      headerSubtitle,
+      customerName,
+      customerPhone,
+      customerEmail,
+      travelerCount,
+      internalNote,
+      salesAdminId,
+    } = req.body;
+
     if (!tripId || !departureDate || !paymentMode || pickupCity === undefined || pickupCity === null) {
       return res.status(400).json({
         success: false,
@@ -48,9 +90,10 @@ exports.createBookingLink = async (req, res, next) => {
     }
 
     const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
-    const finalExpiresAt = parsedExpiresAt && !isNaN(parsedExpiresAt.getTime()) ? parsedExpiresAt : null;
+    const finalExpiresAt = parsedExpiresAt && !isNaN(parsedExpiresAt.getTime())
+      ? parsedExpiresAt
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Verify if the admin actually exists in the database to prevent foreign key violations (e.g. stale JWT tokens)
     let finalAdminId = null;
     if (req.user?.id) {
       const adminExists = await prisma.admin.findUnique({
@@ -60,6 +103,33 @@ exports.createBookingLink = async (req, res, next) => {
         finalAdminId = req.user.id;
       }
     }
+
+    if (req.user?.role && ['admin', 'superadmin'].includes(req.user.role) && salesAdminId) {
+      const selectedSalesAdmin = await prisma.admin.findUnique({ where: { id: salesAdminId } });
+      if (selectedSalesAdmin) {
+        finalAdminId = selectedSalesAdmin.id;
+      }
+    }
+
+    const signedMetadata = createSignedPayload({
+      tenantId,
+      tripId,
+      tripName: trip ? trip.title : null,
+      departureDate: parsedDepartureDate.toISOString(),
+      pickupCity: String(pickupCity),
+      paymentMode: String(paymentMode),
+      customAmount: customAmount !== undefined && customAmount !== null ? Number(customAmount) : null,
+      customTime: customTime || null,
+      headerTitle: headerTitle || null,
+      headerSubtitle: headerSubtitle || null,
+      customerName: customerName || null,
+      customerPhone: customerPhone || null,
+      customerEmail: customerEmail || null,
+      travelerCount: travelerCount !== undefined && travelerCount !== null ? Number(travelerCount) : null,
+      internalNote: internalNote || null,
+      salesAdminId: finalAdminId,
+      expiresAt: finalExpiresAt.toISOString(),
+    });
 
     const link = await prisma.bookingLink.create({
       data: {
@@ -78,7 +148,7 @@ exports.createBookingLink = async (req, res, next) => {
         status: 'active',
         tokenHash,
         tokenPrefix,
-        shareUrl: `${getBaseUrl()}/book/link/${token}`,
+        shareUrl: `${getBaseUrl()}/book/link/${token}?p=${encodeURIComponent(signedMetadata.payload)}&s=${encodeURIComponent(signedMetadata.signature)}`,
       },
     });
 
@@ -158,6 +228,14 @@ exports.getBookingLinks = async (req, res, next) => {
         lastCompletedAt: true,
         revokedAt: true,
         createdAt: true,
+        createdByAdmin: {
+          select: { id: true, name: true, email: true },
+        },
+        bookings: {
+          select: { id: true, bookingId: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
@@ -214,6 +292,8 @@ exports.resolveBookingLink = async (req, res, next) => {
     }
 
     const now = new Date();
+    const signedMetadata = verifySignedPayload(req.query.p, req.query.s);
+
     if (link.status === 'revoked') {
       await prisma.bookingLinkEvent.create({
         data: {
@@ -224,11 +304,14 @@ exports.resolveBookingLink = async (req, res, next) => {
           userAgent: req.headers['user-agent']?.toString(),
         },
       });
-      return res.status(410).json({ success: false, message: 'This booking link was revoked' });
+      return res.status(410).json({ success: false, message: 'This booking link has been deactivated' });
+    }
+
+    if (link.status === 'used') {
+      return res.status(410).json({ success: false, message: 'This booking link has already been used' });
     }
 
     if (link.expiresAt && link.expiresAt.getTime() < now.getTime()) {
-      // Mark expired once we detect expiration
       await prisma.bookingLink.update({
         where: { id: link.id },
         data: { status: 'expired' },
@@ -294,6 +377,12 @@ exports.resolveBookingLink = async (req, res, next) => {
         headerTitle: link.headerTitle,
         headerSubtitle: link.headerSubtitle,
         expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
+        customerName: signedMetadata?.customerName || null,
+        customerPhone: signedMetadata?.customerPhone || null,
+        customerEmail: signedMetadata?.customerEmail || null,
+        travelerCount: signedMetadata?.travelerCount || null,
+        internalNote: signedMetadata?.internalNote || null,
+        status: link.status,
       },
     });
   } catch (error) {
@@ -304,6 +393,8 @@ exports.resolveBookingLink = async (req, res, next) => {
 // ────────────────────────────────────────────
 // ADMIN: Booking link analytics (basic)
 // ────────────────────────────────────────────
+exports.verifySignedPayload = verifySignedPayload;
+
 exports.getBookingLinksAnalytics = async (req, res, next) => {
   try {
     const tenantId = req.user?.tenantId || 'default';
