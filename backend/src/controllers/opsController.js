@@ -22,8 +22,8 @@ function normalizeDepartureDateIndia(dateInput) {
 }
 
 // Helper to construct departure filter
-function parseDepartureFilter(req, res, requireDepartureDate = true) {
-  const { tripId } = req.params;
+async function parseDepartureFilter(req, res, requireDepartureDate = true) {
+  const { tripId: rawTripId } = req.params;
   const rawDate = req.query.departureDate || req.body.departureDate;
 
   if (requireDepartureDate && !rawDate) {
@@ -37,7 +37,24 @@ function parseDepartureFilter(req, res, requireDepartureDate = true) {
     return null;
   }
 
-  const tenantId = req.user.tenantId || 'default';
+  const tenantId = req.user?.tenantId || 'default';
+
+  let tripId = rawTripId;
+  if (rawTripId) {
+    const trip = await prisma.trip.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          { id: rawTripId },
+          { slug: rawTripId },
+          { shortName: rawTripId }
+        ]
+      },
+      select: { id: true }
+    });
+    if (trip) tripId = trip.id;
+  }
+
   const where = { tenantId, tripId };
   if (departureDate) where.departureDate = departureDate;
 
@@ -94,7 +111,7 @@ exports.createVendor = async (req, res) => {
 // ── DAY ITINERARY GRID ──
 exports.getDayItinerary = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const items = await prisma.opsDayItinerary.findMany({ where: ctx.where, orderBy: { date: 'asc' } });
     return res.json({ success: true, data: items });
@@ -106,7 +123,7 @@ exports.getDayItinerary = async (req, res) => {
 
 exports.upsertDayItinerary = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { id, date, dayTitle, paxCount, hotelName, hotelVerified, vehicleType, vehicleVerified, remarks, guideDriverDetails, guideVerified, checkInDone } = req.body;
 
@@ -146,7 +163,7 @@ exports.upsertDayItinerary = async (req, res) => {
 // ── TRIP EXPENSE GRID ──
 exports.getTripExpenses = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const expenses = await prisma.opsTripExpense.findMany({ where: ctx.where, orderBy: { serviceDate: 'asc' } });
     return res.json({ success: true, data: expenses });
@@ -158,7 +175,7 @@ exports.getTripExpenses = async (req, res) => {
 
 exports.upsertTripExpense = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { id, serviceDate, activity, paymentDate, totalAmount, amountPaid, remarks } = req.body;
 
@@ -222,7 +239,7 @@ exports.deleteTripExpense = async (req, res) => {
 // ── HOTEL BOOKINGS TRACKER ──
 exports.getHotelBookings = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const bookings = await prisma.opsHotelBooking.findMany({ where: ctx.where, include: { vendor: true } });
     return res.json({ success: true, data: bookings });
@@ -234,7 +251,7 @@ exports.getHotelBookings = async (req, res) => {
 
 exports.createHotelBooking = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { hotelName, vendorId, location, checkIn, checkOut, roomType, numberOfRooms, confirmed, totalAmount, advancePaid, contactPerson, contactPhone, notes } = req.body;
 
@@ -283,7 +300,7 @@ exports.deleteHotelBooking = async (req, res) => {
 // ── TRANSPORT FLEET TRACKER ──
 exports.getTransportFleet = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const fleet = await prisma.opsTransportFleet.findMany({ where: ctx.where, include: { vendor: true } });
     return res.json({ success: true, data: fleet });
@@ -295,7 +312,7 @@ exports.getTransportFleet = async (req, res) => {
 
 exports.createTransportFleet = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { vehicleType, vendorId, capacity, route, pickupPoints, dropPoints, totalAmount, advancePaid, driverName, driverPhone, notes } = req.body;
 
@@ -342,7 +359,7 @@ exports.deleteTransportFleet = async (req, res) => {
 // ── GUIDE PAYMENTS TRACKER ──
 exports.getGuidePayments = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const payments = await prisma.opsGuidePayment.findMany({
       where: ctx.where,
@@ -357,7 +374,7 @@ exports.getGuidePayments = async (req, res) => {
 
 exports.createGuidePayment = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { guideName, guideAdminId, vendorId, daysWorked, agreedAmount, advancePaid } = req.body;
 
@@ -388,7 +405,7 @@ exports.createGuidePayment = async (req, res) => {
 // ── OPERATIONAL ACCOUNTING SUMMARY (DEPARTURE SCOPED) ──
 exports.getOpsAccountingSummary = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
     const bookingWhere = ctx.bookingWhere;
@@ -473,7 +490,7 @@ exports.getOpsAccountingSummary = async (req, res) => {
 // ── SEAT MANAGEMENT (DEPARTURE SCOPED) ──
 exports.getSeatConfig = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
     let config = await prisma.opsSeatConfig.findFirst({
@@ -510,7 +527,7 @@ exports.getSeatConfig = async (req, res) => {
 // ── TRIP CHECKLIST & INCIDENTS ──
 exports.getChecklist = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const items = await prisma.opsTripChecklist.findMany({ where: ctx.where, include: { completedBy: { select: { id: true, name: true } } } });
     return res.json({ success: true, data: items });
@@ -543,7 +560,7 @@ exports.toggleChecklistItem = async (req, res) => {
 
 exports.getIncidents = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const incidents = await prisma.opsIncidentLog.findMany({
       where: ctx.where,
@@ -559,7 +576,7 @@ exports.getIncidents = async (req, res) => {
 
 exports.createIncident = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { title, severity, description, resolution } = req.body;
     const incident = await prisma.opsIncidentLog.create({
@@ -584,7 +601,7 @@ exports.createIncident = async (req, res) => {
 // ── AUTO ALLOCATION RUNS (DEPARTURE SCOPED) ──
 exports.generateAllocation = async (req, res) => {
   try {
-    const ctx = parseDepartureFilter(req, res, true);
+    const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
     const bookingWhere = ctx.bookingWhere;
