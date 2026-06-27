@@ -23,12 +23,26 @@ const {
   getOpsAccountingSummary,
   getSeatConfig,
   getChecklist,
-  toggleChecklistItem,
+  initializeChecklist,
+  completeChecklistItem,
+  reopenChecklistItem,
   getIncidents,
   createIncident,
+  resolveIncident,
+  reopenIncident,
   generateAllocation,
   confirmAllocation,
-  overrideAllocation
+  overrideAllocation,
+  getSopLibrary,
+  createSopLibrary,
+  updateSopLibrary,
+  archiveSopLibrary,
+  restoreSopLibrary,
+  getTripLeader,
+  assignTripLeader,
+  patchTripLeader,
+  archiveTripLeader,
+  restoreTripLeader
 } = require('../controllers/opsController');
 const { authenticate, requirePermission } = require('../middleware/auth');
 
@@ -65,9 +79,25 @@ router.get('/seats/:tripId', requirePermission('ops.view'), getSeatConfig);
 
 // SOP & Checklists & Incidents
 router.get('/checklists/:tripId', requirePermission('ops.view'), getChecklist);
-router.post('/checklists/toggle', requirePermission('ops.checklist'), toggleChecklistItem);
+router.post('/checklists/:tripId/initialize', requirePermission('ops.checklist'), initializeChecklist);
+router.post('/checklists/complete', requirePermission('ops.checklist'), completeChecklistItem);
+router.post('/checklists/reopen', requirePermission('ops.checklist'), reopenChecklistItem);
 router.get('/incidents/:tripId', requirePermission('ops.view'), getIncidents);
 router.post('/incidents', requirePermission('ops.checklist'), createIncident);
+router.post('/incidents/:id/resolve', requirePermission('ops.checklist'), resolveIncident);
+router.post('/incidents/:id/reopen', requirePermission('ops.checklist'), reopenIncident);
+
+// SOP Library & Trip Leader Assignments
+router.get('/sop-library', requirePermission('ops.view'), getSopLibrary);
+router.post('/sop-library', requirePermission('ops.manage'), createSopLibrary);
+router.patch('/sop-library/:id', requirePermission('ops.manage'), updateSopLibrary);
+router.post('/sop-library/:id/archive', requirePermission('ops.manage'), archiveSopLibrary);
+router.post('/sop-library/:id/restore', requirePermission('ops.manage'), restoreSopLibrary);
+router.get('/leaders/:tripId', requirePermission('ops.view'), getTripLeader);
+router.post('/leaders/:tripId', requirePermission('ops.manage'), assignTripLeader);
+router.patch('/leaders/:tripId', requirePermission('ops.manage'), patchTripLeader);
+router.post('/leaders/:tripId/archive', requirePermission('ops.manage'), archiveTripLeader);
+router.post('/leaders/:tripId/restore', requirePermission('ops.manage'), restoreTripLeader);
 
 // Auto Allocation Engine (Draft, Confirm, Override)
 router.get('/auto-allocate/:tripId', requirePermission('ops.allocate'), generateAllocation);

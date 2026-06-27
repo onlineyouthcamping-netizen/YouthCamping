@@ -50,6 +50,24 @@ model Admin {
   opsAllocationRuns        OpsAllocationRun[]
   opsAllocationOverrides   OpsAllocationOverride[]
 
+  // Ops SOP Library Relations
+  createdSops              OpsSopLibrary[]          @relation("SopCreatedByAdmin")
+  updatedSops              OpsSopLibrary[]          @relation("SopUpdatedByAdmin")
+  archivedSops             OpsSopLibrary[]          @relation("SopArchivedByAdmin")
+
+  // Ops Trip Leader Relations
+  assignedLeaders          OpsTripLeader[]          @relation("LeaderAssignedByAdmin")
+  updatedLeaders           OpsTripLeader[]          @relation("LeaderUpdatedByAdmin")
+  archivedLeaders          OpsTripLeader[]          @relation("LeaderArchivedByAdmin")
+
+  // Checklist Activity Relations
+  checklistActivities      OpsChecklistActivity[]
+
+  // Incident Log Relations
+  resolvedIncidents        OpsIncidentLog[]         @relation("IncidentResolvedByAdmin")
+  incidentActivities       OpsIncidentActivity[]
+  leaderActivities         OpsTripLeaderActivity[]
+
   @@index([tenantId])
 }
 
@@ -267,6 +285,7 @@ model Trip {
   opsTripExpenses    OpsTripExpense[]
   opsAllocationRuns  OpsAllocationRun[]
   opsRoomInventories OpsRoomInventory[]
+  opsTripLeaders     OpsTripLeader[]
 
   @@index([tenantId])
   @@index([category])
@@ -1118,29 +1137,72 @@ model OpsTripChecklist {
   notes         String?
 
   trip          Trip        @relation(fields: [tripId], references: [id], onDelete: Restrict)
-  completedBy   Admin?      @relation("ChecklistCompletedByAdmin", fields: [completedById], references: [id])
+  completedBy   Admin?      @relation("ChecklistCompletedByAdmin", fields: [completedById], references: [id], onDelete: Restrict)
+  activities    OpsChecklistActivity[]
 
   @@index([tripId, departureDate, stage])
 }
 
+// ── CHECKLIST ITEM ACTIVITY LOG ──
+model OpsChecklistActivity {
+  id               String             @id @default(cuid())
+  tenantId         String             @default("default")
+  checklistItemId  String
+  action           OpsChecklistAction
+  previousStatus   Boolean
+  nextStatus       Boolean
+  notes            String?            @db.Text
+  actorId          String
+  createdAt        DateTime           @default(now())
+
+  checklist        OpsTripChecklist   @relation(fields: [checklistItemId], references: [id], onDelete: Restrict)
+  actor            Admin              @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([checklistItemId])
+}
+
 // ── INCIDENT / ISSUE LOG ──
 model OpsIncidentLog {
-  id            String           @id @default(cuid())
-  tenantId      String           @default("default")
+  id            String            @id @default(cuid())
+  tenantId      String            @default("default")
   tripId        String
-  departureDate DateTime         @db.Date
+  departureDate DateTime          @db.Date
   title         String
-  severity      IncidentSeverity @default(MEDIUM)
-  description   String           @db.Text
-  resolution    String?          @db.Text
+  severity      IncidentSeverity  @default(MEDIUM)
+  description   String            @db.Text
+  resolution    String?           @db.Text
   reportedById  String
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  incidentType  OpsIncidentType   @default(OTHER)
+  status        OpsIncidentStatus @default(OPEN)
+  resolvedById  String?
+  resolvedAt    DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
-  trip          Trip             @relation(fields: [tripId], references: [id], onDelete: Restrict)
-  reportedBy    Admin            @relation("IncidentReportedByAdmin", fields: [reportedById], references: [id])
+  trip          Trip                  @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  reportedBy    Admin                 @relation("IncidentReportedByAdmin", fields: [reportedById], references: [id], onDelete: Restrict)
+  resolvedBy    Admin?                @relation("IncidentResolvedByAdmin", fields: [resolvedById], references: [id], onDelete: Restrict)
+  activities    OpsIncidentActivity[]
 
   @@index([tripId, departureDate])
+}
+
+// ── INCIDENT ACTIVITY LOG ──
+model OpsIncidentActivity {
+  id           String                    @id @default(cuid())
+  tenantId     String                    @default("default")
+  incidentId   String
+  action       OpsIncidentActivityAction
+  notes        String?                   @db.Text
+  actorId      String
+  createdAt    DateTime                  @default(now())
+
+  incident     OpsIncidentLog            @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+  actor        Admin                     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([incidentId])
 }
 
 // ── AUTO ALLOCATION RUN & OVERRIDE MODELS ──
@@ -1261,4 +1323,119 @@ model OpsTripExpense {
   trip          Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
 
   @@index([tripId, departureDate])
+}
+
+// ── SOP LIBRARY (Destination operating instructions only) ──
+model OpsSopLibrary {
+  id            String   @id @default(cuid())
+  tenantId      String   @default("default")
+  destination   String
+  title         String
+  content       String   @db.Text
+  isActive      Boolean  @default(true)
+  createdById   String?
+  updatedById   String?
+  archivedAt    DateTime?
+  archivedById  String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdBy     Admin?   @relation("SopCreatedByAdmin", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy     Admin?   @relation("SopUpdatedByAdmin", fields: [updatedById], references: [id], onDelete: Restrict)
+  archivedBy    Admin?   @relation("SopArchivedByAdmin", fields: [archivedById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([destination])
+}
+
+// ── TRIP LEADER ASSIGNMENT (Departure scoped) ──
+model OpsTripLeader {
+  id            String                 @id @default(cuid())
+  tenantId      String                 @default("default")
+  tripId        String
+  departureDate DateTime               @db.Date
+
+  leaderName    String
+  leaderPhone   String
+  leaderType    OpsLeaderType          @default(INTERNAL)
+  isPrimary     Boolean                @default(false)
+  notes         String?                @db.Text
+
+  assignedById  String?
+  updatedById   String?
+  archivedAt    DateTime?
+  archivedById  String?
+
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  trip          Trip                   @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  assignedBy    Admin?                 @relation("LeaderAssignedByAdmin", fields: [assignedById], references: [id], onDelete: Restrict)
+  updatedBy     Admin?                 @relation("LeaderUpdatedByAdmin", fields: [updatedById], references: [id], onDelete: Restrict)
+  archivedBy    Admin?                 @relation("LeaderArchivedByAdmin", fields: [archivedById], references: [id], onDelete: Restrict)
+  activities    OpsTripLeaderActivity[]
+
+  @@unique([tenantId, tripId, departureDate, leaderPhone])
+  @@index([tenantId, tripId, departureDate])
+}
+
+// ── TRIP LEADER ACTIVITY LOG ──
+model OpsTripLeaderActivity {
+  id                 String                  @id @default(cuid())
+  tenantId           String                  @default("default")
+  leaderAssignmentId String
+  action             OpsLeaderActivityAction
+  beforeValue        Json?
+  afterValue         Json?
+  notes              String?                 @db.Text
+  actorId            String
+  createdAt          DateTime                @default(now())
+
+  leader             OpsTripLeader           @relation(fields: [leaderAssignmentId], references: [id], onDelete: Restrict)
+  actor              Admin                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([leaderAssignmentId])
+}
+
+// ── ENUMS ──
+enum OpsLeaderType {
+  INTERNAL
+  FREELANCE
+}
+
+enum OpsIncidentType {
+  MEDICAL
+  LOST_LUGGAGE
+  HOTEL_ISSUE
+  TRANSPORT_ISSUE
+  GUEST_CONFLICT
+  DOCUMENT_ISSUE
+  OTHER
+}
+
+enum OpsIncidentStatus {
+  OPEN
+  RESOLVED
+}
+
+enum OpsChecklistAction {
+  COMPLETE
+  REOPEN
+}
+
+enum OpsLeaderActivityAction {
+  ASSIGN
+  UPDATE
+  ARCHIVE
+  RESTORE
+}
+
+enum OpsIncidentActivityAction {
+  CREATE
+  UPDATE
+  RESOLVE
+  REOPEN
+  COMMENT
 }

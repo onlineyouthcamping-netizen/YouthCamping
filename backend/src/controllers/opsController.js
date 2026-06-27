@@ -546,7 +546,23 @@ exports.getChecklist = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
-    const items = await prisma.opsTripChecklist.findMany({ where: ctx.where, include: { completedBy: { select: { id: true, name: true } } } });
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to checklist logs' });
+    }
+
+    const items = await prisma.opsTripChecklist.findMany({ 
+      where: ctx.where, 
+      include: { 
+        completedBy: { select: { id: true, name: true } },
+        activities: {
+          include: { actor: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { taskName: 'asc' }
+    });
+
     return res.json({ success: true, data: items });
   } catch (err) {
     console.error('getChecklist error:', err);
@@ -554,24 +570,186 @@ exports.getChecklist = async (req, res) => {
   }
 };
 
-exports.toggleChecklistItem = async (req, res) => {
+exports.initializeChecklist = async (req, res) => {
   try {
-    const { id } = req.body;
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to initialize checklists' });
+    }
+
+    // Try to find the trip to get destination
+    const trip = await prisma.trip.findFirst({
+      where: { id: ctx.tripId }
+    });
+    const destination = trip?.destination || trip?.title || '';
+
+    // Fetch active SOP templates for this destination
+    const templates = await prisma.opsSOPTemplate.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        destination: { contains: destination, mode: 'insensitive' }
+      }
+    });
+
+    const defaults = [
+      { stage: 'PRE_TRIP_30D', tasks: ['Hotel booking confirmed', 'Train tickets reviewed', 'Guide confirmed', 'WhatsApp group created'] },
+      { stage: 'PRE_TRIP_7D', tasks: ['Packing list sent', 'SIM/mobile advisory sent', 'Emergency contact collected'] },
+      { stage: 'PRE_TRIP_1D', tasks: ['Vehicle reconfirmed', 'Hotel reconfirmed', 'Trip leader briefed'] },
+      { stage: 'DEPARTURE_DAY', tasks: ['Headcount completed', 'Documents checked', 'Group photo completed'] },
+      { stage: 'DURING_TRIP', tasks: ['Daily check-in logged', 'Incident review completed'] },
+      { stage: 'POST_TRIP', tasks: ['Feedback form sent', 'Photos collected', 'Next-trip follow-up created'] }
+    ];
+
+    const tasksToCreate = [];
+    if (templates.length > 0) {
+      templates.forEach(tpl => {
+        tasksToCreate.push({
+          stage: tpl.stage,
+          taskName: tpl.taskName
+        });
+      });
+    } else {
+      defaults.forEach(dGroup => {
+        dGroup.tasks.forEach(tName => {
+          tasksToCreate.push({
+            stage: dGroup.stage,
+            taskName: tName
+          });
+        });
+      });
+    }
+
+    // Idempotent creation: get existing tasks
+    const existing = await prisma.opsTripChecklist.findMany({
+      where: ctx.where,
+      select: { stage: true, taskName: true }
+    });
+
+    const seedData = [];
+    tasksToCreate.forEach(task => {
+      const alreadyExists = existing.some(e => e.stage === task.stage && e.taskName === task.taskName);
+      if (!alreadyExists) {
+        seedData.push({
+          tenantId: ctx.tenantId,
+          tripId: ctx.tripId,
+          departureDate: ctx.departureDate,
+          stage: task.stage,
+          taskName: task.taskName,
+          isCompleted: false
+        });
+      }
+    });
+
+    if (seedData.length > 0) {
+      await prisma.opsTripChecklist.createMany({ data: seedData });
+    }
+
+    const items = await prisma.opsTripChecklist.findMany({ 
+      where: ctx.where, 
+      include: { 
+        completedBy: { select: { id: true, name: true } },
+        activities: {
+          include: { actor: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { taskName: 'asc' }
+    });
+
+    return res.json({ success: true, message: 'Checklist initialized successfully', data: items });
+  } catch (err) {
+    console.error('initializeChecklist error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to initialize checklist' });
+  }
+};
+
+exports.completeChecklistItem = async (req, res) => {
+  try {
+    const { id, notes } = req.body;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to checklist items' });
+    }
     const item = await prisma.opsTripChecklist.findUnique({ where: { id } });
     if (!item) return res.status(404).json({ success: false, message: 'Checklist item not found' });
+
+    if (item.isCompleted) {
+      return res.status(400).json({ success: false, message: 'Checklist item is already completed' });
+    }
 
     const updated = await prisma.opsTripChecklist.update({
       where: { id },
       data: {
-        isCompleted: !item.isCompleted,
-        completedById: !item.isCompleted ? req.user.id : null,
-        completedAt: !item.isCompleted ? new Date() : null
+        isCompleted: true,
+        completedById: req.user.id,
+        completedAt: new Date(),
+        notes: notes || item.notes
       }
     });
+
+    await prisma.opsChecklistActivity.create({
+      data: {
+        tenantId: item.tenantId,
+        checklistItemId: item.id,
+        action: 'COMPLETE',
+        previousStatus: false,
+        nextStatus: true,
+        notes: notes || null,
+        actorId: req.user.id
+      }
+    });
+
     return res.json({ success: true, data: updated });
   } catch (err) {
-    console.error('toggleChecklistItem error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to update checklist item' });
+    console.error('completeChecklistItem error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to complete checklist item' });
+  }
+};
+
+exports.reopenChecklistItem = async (req, res) => {
+  try {
+    const { id, notes } = req.body;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to checklist items' });
+    }
+    const item = await prisma.opsTripChecklist.findUnique({ where: { id } });
+    if (!item) return res.status(404).json({ success: false, message: 'Checklist item not found' });
+
+    if (!item.isCompleted) {
+      return res.status(400).json({ success: false, message: 'Checklist item is already open' });
+    }
+
+    if (!notes || !notes.trim()) {
+      return res.status(400).json({ success: false, message: 'Reopening a checklist item requires an explicit reason (notes)' });
+    }
+
+    const updated = await prisma.opsTripChecklist.update({
+      where: { id },
+      data: {
+        isCompleted: false,
+        completedById: null,
+        completedAt: null,
+        notes: notes
+      }
+    });
+
+    await prisma.opsChecklistActivity.create({
+      data: {
+        tenantId: item.tenantId,
+        checklistItemId: item.id,
+        action: 'REOPEN',
+        previousStatus: true,
+        nextStatus: false,
+        notes: notes,
+        actorId: req.user.id
+      }
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('reopenChecklistItem error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to reopen checklist item' });
   }
 };
 
@@ -579,9 +757,21 @@ exports.getIncidents = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to incident logs' });
+    }
+
     const incidents = await prisma.opsIncidentLog.findMany({
       where: ctx.where,
-      include: { reportedBy: { select: { id: true, name: true } } },
+      include: { 
+        reportedBy: { select: { id: true, name: true } },
+        resolvedBy: { select: { id: true, name: true } },
+        activities: {
+          include: { actor: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     });
     return res.json({ success: true, data: incidents });
@@ -595,7 +785,17 @@ exports.createIncident = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
-    const { title, severity, description, resolution } = req.body;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to create incident logs' });
+    }
+
+    const { title, severity, description, incidentType } = req.body;
+    const VALID_INCIDENT_TYPES = ['MEDICAL', 'LOST_LUGGAGE', 'HOTEL_ISSUE', 'TRANSPORT_ISSUE', 'GUEST_CONFLICT', 'DOCUMENT_ISSUE', 'OTHER'];
+    if (incidentType && !VALID_INCIDENT_TYPES.includes(incidentType)) {
+      return res.status(400).json({ success: false, message: 'Invalid incidentType value' });
+    }
+
     const incident = await prisma.opsIncidentLog.create({
       data: {
         tenantId: ctx.tenantId,
@@ -604,14 +804,107 @@ exports.createIncident = async (req, res) => {
         title,
         severity: severity || 'MEDIUM',
         description,
-        resolution,
+        incidentType: incidentType || 'OTHER',
+        status: 'OPEN',
         reportedById: req.user.id
       }
     });
+
+    await prisma.opsIncidentActivity.create({
+      data: {
+        tenantId: ctx.tenantId,
+        incidentId: incident.id,
+        action: 'CREATE',
+        notes: description,
+        actorId: req.user.id
+      }
+    });
+
     return res.status(201).json({ success: true, data: incident });
   } catch (err) {
     console.error('createIncident error:', err);
     return res.status(500).json({ success: false, message: 'Failed to log incident' });
+  }
+};
+
+exports.resolveIncident = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { resolution } = req.body;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to resolve incidents' });
+    }
+
+    const incident = await prisma.opsIncidentLog.findUnique({ where: { id } });
+    if (!incident) return res.status(404).json({ success: false, message: 'Incident log not found' });
+
+    const updated = await prisma.opsIncidentLog.update({
+      where: { id },
+      data: {
+        status: 'RESOLVED',
+        resolution: resolution || incident.resolution,
+        resolvedById: req.user.id,
+        resolvedAt: new Date()
+      }
+    });
+
+    await prisma.opsIncidentActivity.create({
+      data: {
+        tenantId: incident.tenantId,
+        incidentId: incident.id,
+        action: 'RESOLVE',
+        notes: resolution || null,
+        actorId: req.user.id
+      }
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('resolveIncident error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to resolve incident' });
+  }
+};
+
+exports.reopenIncident = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to reopen incidents' });
+    }
+
+    if (!notes || !notes.trim()) {
+      return res.status(400).json({ success: false, message: 'Reopening an incident requires a reason (notes)' });
+    }
+
+    const incident = await prisma.opsIncidentLog.findUnique({ where: { id } });
+    if (!incident) return res.status(404).json({ success: false, message: 'Incident log not found' });
+
+    const updated = await prisma.opsIncidentLog.update({
+      where: { id },
+      data: {
+        status: 'OPEN',
+        resolvedById: null,
+        resolvedAt: null
+      }
+    });
+
+    await prisma.opsIncidentActivity.create({
+      data: {
+        tenantId: incident.tenantId,
+        incidentId: incident.id,
+        action: 'REOPEN',
+        notes: notes.trim(),
+        actorId: req.user.id
+      }
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('reopenIncident error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to reopen incident' });
   }
 };
 
@@ -633,149 +926,704 @@ exports.createRoomInventory = async (req, res) => {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
-    const items = Array.isArray(req.body.rooms) ? req.body.rooms : [req.body];
-    const roomsData = [];
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to modify room inventory' });
+    }
 
-    for (const item of items) {
-      const { roomLabel, roomType, genderGroup, capacity, hotelName, notes, quantity } = item;
-      const qty = parseInt(quantity) || 1;
+    const { roomLabel, roomType, genderGroup, capacity, hotelName, notes, quantity } = req.body;
+    if (!roomLabel || !roomType || !capacity) {
+      return res.status(400).json({ success: false, message: 'roomLabel, roomType, and capacity are required' });
+    }
 
-      const cleanLabel = roomLabel || 'Room 101';
-      const match = cleanLabel.match(/\d+$/);
-      let baseNum = match ? parseInt(match[0]) : 1;
-      let labelPrefix = match ? cleanLabel.slice(0, cleanLabel.lastIndexOf(match[0])) : `${cleanLabel} `;
+    const qty = quantity ? parseInt(quantity) : 1;
+    const createdRooms = [];
+
+    // Parse starting room number if any
+    const labelMatch = roomLabel.match(/^(.*?)(\d+)$/);
+    if (qty > 1 && labelMatch) {
+      const prefix = labelMatch[1];
+      const startNum = parseInt(labelMatch[2]);
+      const totalDigits = labelMatch[2].length;
 
       for (let i = 0; i < qty; i++) {
-        roomsData.push({
+        const currentNum = startNum + i;
+        const currentLabel = `${prefix}${String(currentNum).padStart(totalDigits, '0')}`;
+        const newRoom = await prisma.opsRoomInventory.create({
+          data: {
+            tenantId: ctx.tenantId,
+            tripId: ctx.tripId,
+            departureDate: ctx.departureDate,
+            roomLabel: currentLabel,
+            roomType,
+            genderGroup: genderGroup || 'GROUP',
+            capacity: parseInt(capacity),
+            hotelName,
+            notes
+          }
+        });
+        createdRooms.push(newRoom);
+      }
+    } else {
+      const newRoom = await prisma.opsRoomInventory.create({
+        data: {
           tenantId: ctx.tenantId,
           tripId: ctx.tripId,
           departureDate: ctx.departureDate,
-          roomLabel: `${labelPrefix}${baseNum + i}`,
-          roomType: roomType || 'TWIN',
-          genderGroup: genderGroup || 'BOYS',
-          capacity: parseInt(capacity) || 2,
-          hotelName: hotelName || null,
-          notes: notes || null
-        });
-      }
+          roomLabel,
+          roomType,
+          genderGroup: genderGroup || 'GROUP',
+          capacity: parseInt(capacity),
+          hotelName,
+          notes
+        }
+      });
+      createdRooms.push(newRoom);
     }
 
-    if (roomsData.length > 0) {
-      await prisma.opsRoomInventory.createMany({ data: roomsData });
-    }
-
-    return res.status(201).json({ success: true, message: `Successfully created ${roomsData.length} rooms` });
+    return res.status(201).json({ success: true, data: qty > 1 ? createdRooms : createdRooms[0] });
   } catch (err) {
     console.error('createRoomInventory error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to create room(s)' });
+    return res.status(500).json({ success: false, message: 'Failed to create room inventory' });
   }
 };
 
 exports.deleteRoomInventory = async (req, res) => {
   try {
-    await prisma.opsRoomInventory.delete({ where: { id: req.params.id } });
-    return res.json({ success: true, message: 'Room deleted' });
+    const { id } = req.params;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to delete room inventory' });
+    }
+
+    await prisma.opsRoomInventory.delete({ where: { id } });
+    return res.json({ success: true, message: 'Room inventory deleted successfully' });
   } catch (err) {
     console.error('deleteRoomInventory error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to delete room' });
+    return res.status(500).json({ success: false, message: 'Failed to delete room inventory' });
   }
 };
 
-// ── AUTO ALLOCATION RUNS (DEPARTURE SCOPED) ──
+// ── TRAVELER SEGREGATION / AUTO-ALLOCATION ENGINE ──
 exports.generateAllocation = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
-    const bookingWhere = ctx.bookingWhere;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to run allocations' });
+    }
 
-    const [bookings, fleet, roomInventory] = await Promise.all([
-      prisma.booking.findMany({ where: bookingWhere }),
-      prisma.opsTransportFleet.findMany({ where: ctx.where }),
-      prisma.opsRoomInventory.findMany({ where: ctx.where, orderBy: { roomLabel: 'asc' } })
-    ]);
+    const bookings = await prisma.booking.findMany({
+      where: ctx.bookingWhere,
+      include: { travelers: true }
+    });
 
-    const allocationResult = runAutoAllocation(bookings, fleet, roomInventory);
+    const fleet = await prisma.opsTransportFleet.findMany({ where: ctx.where });
+    const rooms = await prisma.opsRoomInventory.findMany({ where: ctx.where });
 
-    const existingCount = await prisma.opsAllocationRun.count({ where: ctx.where });
-    const version = existingCount + 1;
+    const result = await runAutoAllocation(bookings, fleet, rooms);
 
-    const draftRun = await prisma.opsAllocationRun.create({
+    // Get current version count to bump
+    const runCount = await prisma.opsAllocationRun.count({ where: ctx.where });
+    const run = await prisma.opsAllocationRun.create({
       data: {
         tenantId: ctx.tenantId,
         tripId: ctx.tripId,
         departureDate: ctx.departureDate,
-        version,
+        version: runCount + 1,
         status: 'DRAFT',
-        resultJson: allocationResult,
+        resultJson: result,
         actorId: req.user.id
       }
     });
 
-    return res.json({ success: true, data: { allocationRunId: draftRun.id, version, status: 'DRAFT', ...allocationResult } });
+    return res.json({ success: true, data: { allocationRunId: run.id, ...result } });
   } catch (err) {
     console.error('generateAllocation error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to generate allocation draft' });
+    return res.status(500).json({ success: false, message: 'Failed to generate traveler allocations' });
   }
 };
 
 exports.confirmAllocation = async (req, res) => {
   try {
     const { allocationRunId } = req.body;
-    const run = await prisma.opsAllocationRun.findUnique({ where: { id: allocationRunId } });
-
-    if (!run) return res.status(404).json({ success: false, message: 'Allocation run draft not found' });
-    if (run.status === 'CONFIRMED') return res.status(400).json({ success: false, message: 'Allocation run is already confirmed' });
-
-    const resultJson = run.resultJson || {};
-    const flags = resultJson.flags || [];
-    const blockingFlags = flags.filter(f => f.includes('TRAVELER_GENDER_MISSING') || f.includes('Capacity overflow'));
-
-    if (blockingFlags.length > 0) {
-      return res.status(422).json({
-        success: false,
-        message: 'Cannot confirm allocation run with active blocking flags. Please resolve issues first.',
-        blockingFlags
-      });
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to confirm allocations' });
     }
 
-    const confirmedRun = await prisma.opsAllocationRun.update({
-      where: { id: allocationRunId },
-      data: { status: 'CONFIRMED', actorId: req.user.id }
+    const run = await prisma.opsAllocationRun.findUnique({ where: { id: allocationRunId } });
+    if (!run) return res.status(404).json({ success: false, message: 'Allocation draft run not found' });
+
+    await prisma.$transaction(async (tx) => {
+      // Mark run as CONFIRMED
+      await tx.opsAllocationRun.update({
+        where: { id: run.id },
+        data: { status: 'CONFIRMED', actorId: req.user.id }
+      });
+
+      // Clear existing confirmed allocations for this specific departure date
+      const scope = { tripId: run.tripId, departureDate: run.departureDate };
+      await tx.opsVehicleAllocation.deleteMany({ where: scope });
+      await tx.opsRoomAllocation.deleteMany({ where: scope });
+
+      // Save confirmed results to vehicle allocations
+      const result = run.resultJson;
+      const vehicleAllocations = [];
+      const roomAllocations = [];
+
+      if (result.vehicles) {
+        result.vehicles.forEach(v => {
+          v.assignedTravelers.forEach(t => {
+            vehicleAllocations.push({
+              tripId: run.tripId,
+              departureDate: run.departureDate,
+              fleetId: v.fleetId,
+              bookingId: t.bookingId,
+              travelerName: t.name,
+              seatNumber: t.seatNumber || null
+            });
+          });
+        });
+      }
+
+      if (result.rooms) {
+        result.rooms.forEach(r => {
+          r.assignedTravelers.forEach(t => {
+            roomAllocations.push({
+              tripId: run.tripId,
+              departureDate: run.departureDate,
+              roomNumber: r.roomLabel,
+              roomType: r.roomType,
+              genderGroup: r.genderGroup,
+              bookingId: t.bookingId,
+              travelerName: t.name
+            });
+          });
+        });
+      }
+
+      if (vehicleAllocations.length > 0) {
+        await tx.opsVehicleAllocation.createMany({ data: vehicleAllocations });
+      }
+      if (roomAllocations.length > 0) {
+        await tx.opsRoomAllocation.createMany({ data: roomAllocations });
+      }
     });
 
-    return res.json({ success: true, message: 'Allocation run confirmed successfully', data: confirmedRun });
+    return res.json({ success: true, message: 'Allocation successfully locked and confirmed' });
   } catch (err) {
     console.error('confirmAllocation error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to confirm allocation run' });
+    return res.status(500).json({ success: false, message: 'Failed to lock allocation run' });
   }
 };
 
 exports.overrideAllocation = async (req, res) => {
   try {
-    const { allocationRunId, targetType, targetId, beforeValue, afterValue, reason } = req.body;
-
-    if (!reason || !reason.trim()) {
-      return res.status(400).json({ success: false, message: 'A valid reason is required for manual overrides' });
+    const { allocationRunId, targetType, targetId, afterValue, reason } = req.body;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to override allocations' });
     }
 
+    const run = await prisma.opsAllocationRun.findUnique({ where: { id: allocationRunId } });
+    if (!run) return res.status(404).json({ success: false, message: 'Allocation run not found' });
+
+    // Store manual override record
     const override = await prisma.opsAllocationOverride.create({
       data: {
-        tenantId: req.user.tenantId || 'default',
-        allocationRunId,
-        targetType: targetType || 'VEHICLE',
+        tenantId: run.tenantId,
+        allocationRunId: run.id,
+        targetType,
         targetId,
-        beforeValue: beforeValue || null,
+        beforeValue: null,
         afterValue,
-        reason: reason.trim(),
+        reason,
         actorId: req.user.id
       }
     });
 
-    return res.status(201).json({ success: true, message: 'Manual allocation override logged', data: override });
+    return res.json({ success: true, data: override });
   } catch (err) {
     console.error('overrideAllocation error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to record manual allocation override' });
+    return res.status(500).json({ success: false, message: 'Failed to record manual override' });
+  }
+};
+
+// ── SOP LIBRARY CRUD ──
+exports.getSopLibrary = async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || 'default';
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to SOP library' });
+    }
+
+    const { destination, includeArchived } = req.query;
+    const where = { tenantId };
+    
+    if (destination) {
+      where.destination = { contains: destination, mode: 'insensitive' };
+    }
+
+    // Default: return active only. Standard operations users see active only.
+    // Superadmin and admins can request archived SOPs using includeArchived=true.
+    const isAdminOrSuper = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    if (!isAdminOrSuper || includeArchived !== 'true') {
+      where.isActive = true;
+    }
+
+    const items = await prisma.opsSopLibrary.findMany({ 
+      where, 
+      orderBy: { destination: 'asc' },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+        updatedBy: { select: { id: true, name: true } },
+        archivedBy: { select: { id: true, name: true } }
+      }
+    });
+    return res.json({ success: true, data: items });
+  } catch (err) {
+    console.error('getSopLibrary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch SOP library' });
+  }
+};
+
+exports.createSopLibrary = async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || 'default';
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to create SOPs' });
+    }
+
+    const { destination, title, content } = req.body;
+    if (!destination || !title || !content) {
+      return res.status(400).json({ success: false, message: 'Destination, title and content are required' });
+    }
+
+    const item = await prisma.opsSopLibrary.create({
+      data: {
+        tenantId,
+        destination,
+        title,
+        content,
+        isActive: true,
+        createdById: req.user.id,
+        updatedById: req.user.id
+      }
+    });
+    return res.status(201).json({ success: true, data: item });
+  } catch (err) {
+    console.error('createSopLibrary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to create SOP library item' });
+  }
+};
+
+exports.updateSopLibrary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to edit SOPs' });
+    }
+
+    const { destination, title, content } = req.body;
+
+    const item = await prisma.opsSopLibrary.findUnique({ where: { id } });
+    if (!item) return res.status(404).json({ success: false, message: 'SOP library item not found' });
+
+    const updated = await prisma.opsSopLibrary.update({
+      where: { id },
+      data: {
+        destination: destination !== undefined ? destination : item.destination,
+        title: title !== undefined ? title : item.title,
+        content: content !== undefined ? content : item.content,
+        updatedById: req.user.id
+      }
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('updateSopLibrary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update SOP library item' });
+  }
+};
+
+exports.archiveSopLibrary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to SOP archive actions' });
+    }
+
+    const item = await prisma.opsSopLibrary.findUnique({ where: { id } });
+    if (!item) return res.status(404).json({ success: false, message: 'SOP library item not found' });
+
+    const updated = await prisma.opsSopLibrary.update({
+      where: { id },
+      data: {
+        isActive: false,
+        archivedAt: new Date(),
+        archivedById: req.user.id
+      }
+    });
+
+    return res.json({ success: true, message: 'SOP library item archived successfully', data: updated });
+  } catch (err) {
+    console.error('archiveSopLibrary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to archive SOP library item' });
+  }
+};
+
+exports.restoreSopLibrary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to SOP restore actions' });
+    }
+
+    const item = await prisma.opsSopLibrary.findUnique({ where: { id } });
+    if (!item) return res.status(404).json({ success: false, message: 'SOP library item not found' });
+
+    const updated = await prisma.opsSopLibrary.update({
+      where: { id },
+      data: {
+        isActive: true,
+        archivedAt: null,
+        archivedById: null,
+        updatedById: req.user.id
+      }
+    });
+
+    return res.json({ success: true, message: 'SOP library item restored successfully', data: updated });
+  } catch (err) {
+    console.error('restoreSopLibrary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to restore SOP library item' });
+  }
+};
+
+// ── TRIP LEADER ASSIGNMENT ──
+exports.getTripLeader = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role has no access to leader assignments' });
+    }
+
+    const leaders = await prisma.opsTripLeader.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        archivedAt: null
+      },
+      include: {
+        assignedBy: { select: { id: true, name: true } },
+        updatedBy: { select: { id: true, name: true } },
+        archivedBy: { select: { id: true, name: true } },
+        activities: {
+          include: { actor: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    return res.json({ success: true, data: leaders });
+  } catch (err) {
+    console.error('getTripLeader error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch trip leaders' });
+  }
+};
+
+exports.assignTripLeader = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to assign leaders' });
+    }
+
+    const { leaderName, leaderPhone, leaderType, isPrimary, notes } = req.body;
+    if (!leaderName || !leaderPhone) {
+      return res.status(400).json({ success: false, message: 'Leader name and phone contact are required' });
+    }
+
+    if (leaderType && !['INTERNAL', 'FREELANCE'].includes(leaderType)) {
+      return res.status(400).json({ success: false, message: 'Invalid leader type value' });
+    }
+
+    const existing = await prisma.opsTripLeader.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        leaderPhone
+      }
+    });
+
+    let leader;
+    await prisma.$transaction(async (tx) => {
+      if (isPrimary) {
+        await tx.opsTripLeader.updateMany({
+          where: {
+            tenantId: ctx.tenantId,
+            tripId: ctx.tripId,
+            departureDate: ctx.departureDate,
+            archivedAt: null
+          },
+          data: { isPrimary: false }
+        });
+      }
+
+      if (existing) {
+        leader = await tx.opsTripLeader.update({
+          where: { id: existing.id },
+          data: {
+            leaderName,
+            leaderType: leaderType || existing.leaderType,
+            isPrimary: !!isPrimary,
+            notes: notes !== undefined ? notes : existing.notes,
+            archivedAt: null,
+            archivedById: null,
+            updatedById: req.user.id
+          }
+        });
+
+        await tx.opsTripLeaderActivity.create({
+          data: {
+            tenantId: ctx.tenantId,
+            leaderAssignmentId: leader.id,
+            action: 'ASSIGN',
+            beforeValue: existing,
+            afterValue: leader,
+            actorId: req.user.id,
+            notes: 'Reassigned/updated trip leader'
+          }
+        });
+      } else {
+        leader = await tx.opsTripLeader.create({
+          data: {
+            tenantId: ctx.tenantId,
+            tripId: ctx.tripId,
+            departureDate: ctx.departureDate,
+            leaderName,
+            leaderPhone,
+            leaderType: leaderType || 'INTERNAL',
+            isPrimary: !!isPrimary,
+            notes: notes || null,
+            assignedById: req.user.id,
+            updatedById: req.user.id
+          }
+        });
+
+        await tx.opsTripLeaderActivity.create({
+          data: {
+            tenantId: ctx.tenantId,
+            leaderAssignmentId: leader.id,
+            action: 'ASSIGN',
+            beforeValue: null,
+            afterValue: leader,
+            actorId: req.user.id,
+            notes: 'Assigned new trip leader'
+          }
+        });
+      }
+    });
+
+    return res.json({ success: true, data: leader });
+  } catch (err) {
+    console.error('assignTripLeader error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to assign trip leader' });
+  }
+};
+
+exports.patchTripLeader = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to update leaders' });
+    }
+
+    const { id, leaderPhone: lookupPhone, leaderName, leaderPhone, leaderType, isPrimary, notes } = req.body;
+
+    const existing = await prisma.opsTripLeader.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        OR: [
+          id ? { id } : null,
+          lookupPhone ? { leaderPhone: lookupPhone } : null
+        ].filter(Boolean)
+      }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Leader assignment not found for this departure' });
+    }
+
+    if (leaderType && !['INTERNAL', 'FREELANCE'].includes(leaderType)) {
+      return res.status(400).json({ success: false, message: 'Invalid leader type value' });
+    }
+
+    let updated;
+    await prisma.$transaction(async (tx) => {
+      if (isPrimary) {
+        await tx.opsTripLeader.updateMany({
+          where: {
+            tenantId: ctx.tenantId,
+            tripId: ctx.tripId,
+            departureDate: ctx.departureDate,
+            id: { not: existing.id },
+            archivedAt: null
+          },
+          data: { isPrimary: false }
+        });
+      }
+
+      updated = await tx.opsTripLeader.update({
+        where: { id: existing.id },
+        data: {
+          leaderName: leaderName !== undefined ? leaderName : existing.leaderName,
+          leaderPhone: leaderPhone !== undefined ? leaderPhone : existing.leaderPhone,
+          leaderType: leaderType !== undefined ? leaderType : existing.leaderType,
+          isPrimary: isPrimary !== undefined ? !!isPrimary : existing.isPrimary,
+          notes: notes !== undefined ? notes : existing.notes,
+          updatedById: req.user.id
+        }
+      });
+
+      await tx.opsTripLeaderActivity.create({
+        data: {
+          tenantId: ctx.tenantId,
+          leaderAssignmentId: existing.id,
+          action: 'UPDATE',
+          beforeValue: existing,
+          afterValue: updated,
+          actorId: req.user.id,
+          notes: 'Updated leader details'
+        }
+      });
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('patchTripLeader error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update trip leader' });
+  }
+};
+
+exports.archiveTripLeader = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to archive leaders' });
+    }
+
+    const { id, leaderPhone } = req.body;
+
+    const existing = await prisma.opsTripLeader.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        OR: [
+          id ? { id } : null,
+          leaderPhone ? { leaderPhone } : null
+        ].filter(Boolean)
+      }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Leader assignment not found for this departure' });
+    }
+
+    let updated;
+    await prisma.$transaction(async (tx) => {
+      updated = await tx.opsTripLeader.update({
+        where: { id: existing.id },
+        data: {
+          archivedAt: new Date(),
+          archivedById: req.user.id
+        }
+      });
+
+      await tx.opsTripLeaderActivity.create({
+        data: {
+          tenantId: ctx.tenantId,
+          leaderAssignmentId: existing.id,
+          action: 'ARCHIVE',
+          beforeValue: existing,
+          afterValue: updated,
+          actorId: req.user.id,
+          notes: 'Archived leader assignment'
+        }
+      });
+    });
+
+    return res.json({ success: true, message: 'Leader assignment archived successfully', data: updated });
+  } catch (err) {
+    console.error('archiveTripLeader error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to archive trip leader' });
+  }
+};
+
+exports.restoreTripLeader = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    if (req.user?.role === 'sales') {
+      return res.status(403).json({ success: false, message: 'Sales role is not allowed to restore leaders' });
+    }
+
+    const { id, leaderPhone } = req.body;
+
+    const existing = await prisma.opsTripLeader.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        OR: [
+          id ? { id } : null,
+          leaderPhone ? { leaderPhone } : null
+        ].filter(Boolean)
+      }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Leader assignment not found for this departure' });
+    }
+
+    let updated;
+    await prisma.$transaction(async (tx) => {
+      updated = await tx.opsTripLeader.update({
+        where: { id: existing.id },
+        data: {
+          archivedAt: null,
+          archivedById: null
+        }
+      });
+
+      await tx.opsTripLeaderActivity.create({
+        data: {
+          tenantId: ctx.tenantId,
+          leaderAssignmentId: existing.id,
+          action: 'RESTORE',
+          beforeValue: existing,
+          afterValue: updated,
+          actorId: req.user.id,
+          notes: 'Restored leader assignment'
+        }
+      });
+    });
+
+    return res.json({ success: true, message: 'Leader assignment restored successfully', data: updated });
+  } catch (err) {
+    console.error('restoreTripLeader error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to restore trip leader' });
   }
 };
 
