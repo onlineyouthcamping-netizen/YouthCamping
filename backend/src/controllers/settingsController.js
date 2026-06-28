@@ -83,41 +83,48 @@ const defaultFooterConfig = {
   ]
 };
 
+const settingsCache = new Map();
+const SETTINGS_CACHE_TTL = 10 * 60 * 1000;
+
 exports.getSettings = async (req, res) => {
   try {
+    const cached = settingsCache.get('settings');
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json({ success: true, data: cached.data });
+    }
+
     const setting = await prisma.setting.findUnique({
       where: { key: SETTINGS_KEY }
     });
 
     if (!setting) {
-      // Return default settings if none exist
-      return res.json({
-        success: true,
-        data: {
-          bookingForm: {
-            roomSharingOptions: [
-              { label: 'Triple Sharing', priceAdjustment: 0 },
-              { label: 'Twin Sharing', priceAdjustment: 1500 },
-              { label: 'Quad Sharing', priceAdjustment: -1000 }
-            ],
-            trainOptions: [
-              { label: 'Non AC', priceAdjustment: 0 },
-              { label: '3AC', priceAdjustment: 2500 },
-              { label: 'No', priceAdjustment: -1500 }
-            ],
-            submitButtonText: 'Confirm Booking',
-            gstOption: 'full'
-          },
-          inquiryPopup: {
-            enabled: true,
-            delay: 12,
-            title: "Plan Your Next Trip",
-            description: "Connect with our destination experts"
-          }
+      const defaultData = {
+        bookingForm: {
+          roomSharingOptions: [
+            { label: 'Triple Sharing', priceAdjustment: 0 },
+            { label: 'Twin Sharing', priceAdjustment: 1500 },
+            { label: 'Quad Sharing', priceAdjustment: -1000 }
+          ],
+          trainOptions: [
+            { label: 'Non AC', priceAdjustment: 0 },
+            { label: '3AC', priceAdjustment: 2500 },
+            { label: 'No', priceAdjustment: -1500 }
+          ],
+          submitButtonText: 'Confirm Booking',
+          gstOption: 'full'
+        },
+        inquiryPopup: {
+          enabled: true,
+          delay: 12,
+          title: "Plan Your Next Trip",
+          description: "Connect with our destination experts"
         }
-      });
+      };
+      settingsCache.set('settings', { data: defaultData, expiresAt: Date.now() + SETTINGS_CACHE_TTL });
+      return res.json({ success: true, data: defaultData });
     }
 
+    settingsCache.set('settings', { data: setting.value, expiresAt: Date.now() + SETTINGS_CACHE_TTL });
     res.json({ success: true, data: setting.value });
   } catch (error) {
     console.error("Settings Fetch Error:", error);
@@ -127,6 +134,12 @@ exports.getSettings = async (req, res) => {
 
 exports.getPublicSettings = async (req, res) => {
   try {
+    const cached = settingsCache.get('public_settings');
+    if (cached && Date.now() < cached.expiresAt) {
+      res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=600');
+      return res.json({ success: true, data: cached.data });
+    }
+
     const setting = await prisma.setting.findUnique({
       where: { key: SETTINGS_KEY },
       select: { value: true }
@@ -146,6 +159,7 @@ exports.getPublicSettings = async (req, res) => {
       theme: value.theme,
     };
 
+    settingsCache.set('public_settings', { data, expiresAt: Date.now() + SETTINGS_CACHE_TTL });
     res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=600');
     res.json({ success: true, data });
   } catch (error) {

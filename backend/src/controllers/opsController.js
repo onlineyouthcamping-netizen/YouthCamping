@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { runAutoAllocation } = require('../utils/autoAllocationEngine');
+const opsSummaryCache = new Map();
 
 /**
  * Shared server-side India timezone (Asia/Kolkata) normalization method for departure calendar dates.
@@ -512,6 +513,12 @@ exports.getWorkspaceSummary = async (req, res) => {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
 
+    const cacheKey = `ops_summary_${ctx.tripId}_${ctx.departureDate || 'all'}`;
+    const cached = opsSummaryCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json({ success: true, data: cached.data });
+    }
+
     const [bookingAggregate, bookingRefs, seatConfig, checklistCounts, openIncidentCount, leaders,
       hotelCounts, transportCount, roomAllocationCount, vehicleAllocationCount, latestAllocation] = await Promise.all([
       prisma.booking.aggregate({
@@ -572,47 +579,47 @@ exports.getWorkspaceSummary = async (req, res) => {
     const hotelByStatus = Object.fromEntries((hotelCounts || []).map((row) => [row.confirmed, row._count._all]));
     const approvedCollections = accountingByStatus.APPROVED || 0;
 
-    return res.json({
-      success: true,
-      data: {
-        acceptedTravelerCount: travelerCount,
-        ticketReadiness: {
-          approved: ticketsByStatus.APPROVED || 0,
-          pending: (ticketsByStatus.PENDING_VERIFICATION || 0) + (ticketsByStatus.DRAFT || 0),
-          cancelled: ticketsByStatus.CANCELLED || 0
-        },
-        approvedCollections,
-        pendingCollections: accountingByStatus.PENDING || 0,
-        remainingCollections: Math.max(0, totalBookingAmount - approvedCollections),
-        seatAvailability: {
-          configured: Boolean(seatConfig),
-          totalSeatsCap,
-          alertThreshold: seatConfig?.alertThreshold ?? 25,
-          blockedSeats,
-          seatsSold: travelerCount,
-          seatsAvailable: Math.max(0, totalSeatsCap - travelerCount - blockedSeats),
-          waitingList: Math.max(0, travelerCount + blockedSeats - totalSeatsCap)
-        },
-        hotelTransportStatus: {
-          hotelsTotal: (hotelCounts || []).reduce((sum, row) => sum + (row._count?._all || 0), 0),
-          hotelsConfirmed: hotelByStatus.CONFIRMED || 0,
-          transportTotal: transportCount || 0
-        },
-        allocationState: {
-          status: latestAllocation?.status || 'NOT_STARTED',
-          version: latestAllocation?.version || 0,
-          roomAllocations: roomAllocationCount || 0,
-          vehicleAllocations: vehicleAllocationCount || 0
-        },
-        checklistCompletion: {
-          completed: checklistByStatus.true || 0,
-          total: (checklistByStatus.true || 0) + (checklistByStatus.false || 0)
-        },
-        blockingFlagCount: openIncidentCount || 0,
-        openIncidentCount: openIncidentCount || 0,
-        leaders: leaders || []
-      }
-    });
+    const resData = {
+      acceptedTravelerCount: travelerCount,
+      ticketReadiness: {
+        approved: ticketsByStatus.APPROVED || 0,
+        pending: (ticketsByStatus.PENDING_VERIFICATION || 0) + (ticketsByStatus.DRAFT || 0),
+        cancelled: ticketsByStatus.CANCELLED || 0
+      },
+      approvedCollections,
+      pendingCollections: accountingByStatus.PENDING || 0,
+      remainingCollections: Math.max(0, totalBookingAmount - approvedCollections),
+      seatAvailability: {
+        configured: Boolean(seatConfig),
+        totalSeatsCap,
+        alertThreshold: seatConfig?.alertThreshold ?? 25,
+        blockedSeats,
+        seatsSold: travelerCount,
+        seatsAvailable: Math.max(0, totalSeatsCap - travelerCount - blockedSeats),
+        waitingList: Math.max(0, travelerCount + blockedSeats - totalSeatsCap)
+      },
+      hotelTransportStatus: {
+        hotelsTotal: (hotelCounts || []).reduce((sum, row) => sum + (row._count?._all || 0), 0),
+        hotelsConfirmed: hotelByStatus.CONFIRMED || 0,
+        transportTotal: transportCount || 0
+      },
+      allocationState: {
+        status: latestAllocation?.status || 'NOT_STARTED',
+        version: latestAllocation?.version || 0,
+        roomAllocations: roomAllocationCount || 0,
+        vehicleAllocations: vehicleAllocationCount || 0
+      },
+      checklistCompletion: {
+        completed: checklistByStatus.true || 0,
+        total: (checklistByStatus.true || 0) + (checklistByStatus.false || 0)
+      },
+      blockingFlagCount: openIncidentCount || 0,
+      openIncidentCount: openIncidentCount || 0,
+      leaders: leaders || []
+    };
+
+    opsSummaryCache.set(cacheKey, { data: resData, expiresAt: Date.now() + 60000 });
+    return res.json({ success: true, data: resData });
   } catch (err) {
     console.error('getWorkspaceSummary error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch operations summary' });
