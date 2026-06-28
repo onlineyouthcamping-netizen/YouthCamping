@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { Prisma } = require('@prisma/client');
+const ticketCountCache = new Map();
 
 // Helper to check ownership of booking for sales role
 const checkBookingOwnership = async (bookingId, user) => {
@@ -638,9 +639,21 @@ exports.getApprovalsQueue = async (req, res) => {
       where.booking = { salesAdminId: userId };
     }
 
+    const cacheKey = `ticket_count_${JSON.stringify(where)}`;
+    let totalPromise;
+    const cachedCount = ticketCountCache.get(cacheKey);
+    if (cachedCount && Date.now() < cachedCount.expiresAt) {
+      totalPromise = Promise.resolve(cachedCount.count);
+    } else {
+      totalPromise = prisma.trainTicket.count({ where }).then(c => {
+        ticketCountCache.set(cacheKey, { count: c, expiresAt: Date.now() + 30000 });
+        return c;
+      });
+    }
+
     const queryStart = Date.now();
     const [totalCount, tickets] = await Promise.all([
-      prisma.trainTicket.count({ where }),
+      totalPromise,
       prisma.trainTicket.findMany({
         where,
         select: {

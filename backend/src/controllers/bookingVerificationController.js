@@ -1,4 +1,5 @@
 const { prisma } = require('../lib/prisma');
+const countCache = new Map();
 const {
   getTicketActionConfig,
   appendTicketHistory,
@@ -188,6 +189,18 @@ exports.getVerificationQueue = async (req, res) => {
       where.booking = { salesAdminId: userId };
     }
 
+    const cacheKey = `verification_count_${JSON.stringify(where)}`;
+    let totalPromise;
+    const cachedCount = countCache.get(cacheKey);
+    if (cachedCount && Date.now() < cachedCount.expiresAt) {
+      totalPromise = Promise.resolve(cachedCount.count);
+    } else {
+      totalPromise = prisma.bookingVerification.count({ where }).then(c => {
+        countCache.set(cacheKey, { count: c, expiresAt: Date.now() + 30000 });
+        return c;
+      });
+    }
+
     const queryStart = Date.now();
     const [verifications, total] = await Promise.all([
       prisma.bookingVerification.findMany({
@@ -223,7 +236,7 @@ exports.getVerificationQueue = async (req, res) => {
           verifiedBy: { select: { id: true, name: true } }
         }
       }),
-      prisma.bookingVerification.count({ where })
+      totalPromise
     ]);
     const queryDuration = Date.now() - queryStart;
 
