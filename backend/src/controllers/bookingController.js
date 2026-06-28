@@ -1194,15 +1194,27 @@ exports.searchByPhone = async (req, res, next) => {
 // TRIP DROPDOWN (for booking forms)
 // ────────────────────────────────────────────
 
+const tripsCache = new Map(); // tenantId -> { data, expiresAt }
+const TRIPS_CACHE_TTL = 5 * 60 * 1000;
+
 exports.getTrips = async (req, res, next) => {
   try {
+    const tenantId = req.user.tenantId || 'default';
+    const cached = tripsCache.get(tenantId);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.status(200).json({ success: true, data: cached.data });
+    }
+
     const trips = await prisma.trip.findMany({
-      where: { tenantId: req.user.tenantId },
+      where: { tenantId },
       select: { id: true, title: true, price: true }
     });
+    const formatted = trips.map(t => ({ id: t.id, tripCode: t.id, title: t.title, tripName: t.title, price: t.price }));
+    tripsCache.set(tenantId, { data: formatted, expiresAt: Date.now() + TRIPS_CACHE_TTL });
+
     res.status(200).json({
       success: true,
-      data: trips.map(t => ({ id: t.id, tripCode: t.id, title: t.title, tripName: t.title, price: t.price }))
+      data: formatted
     });
   } catch (error) { next(error); }
 };

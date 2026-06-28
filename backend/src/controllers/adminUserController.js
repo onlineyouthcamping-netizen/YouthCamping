@@ -2,15 +2,22 @@ const { prisma } = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/auditLogger');
 
+const usersCache = new Map(); // tenantId -> { data, expiresAt }
+const USERS_CACHE_TTL = 5 * 60 * 1000;
+
 // @desc    List all admin users (Superadmin only)
 // @route   GET /api/admin/users
 // @access  Private (superadmin)
 exports.listUsers = async (req, res, next) => {
   try {
+    const tenantId = req.user.tenantId || 'default';
+    const cached = usersCache.get(tenantId);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json({ success: true, data: cached.data });
+    }
+
     const users = await prisma.admin.findMany({
-      where: {
-        tenantId: req.user.tenantId
-      },
+      where: { tenantId },
       select: {
         id: true,
         name: true,
@@ -24,6 +31,7 @@ exports.listUsers = async (req, res, next) => {
       },
       orderBy: { createdAt: 'desc' }
     });
+    usersCache.set(tenantId, { data: users, expiresAt: Date.now() + USERS_CACHE_TTL });
     res.json({ success: true, data: users });
   } catch (error) {
     next(error);
