@@ -53,7 +53,7 @@ const FloatingSocialBar = dynamicImport(() => import("@/components/FloatingSocia
 
 import { Trip, Review, Blog } from "@/types";
 
-export const revalidate = 30;
+export const revalidate = 300;
 
 async function settleWithin<T>(promise: Promise<T>, milliseconds: number, fallback: T): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;

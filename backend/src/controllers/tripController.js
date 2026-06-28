@@ -539,7 +539,9 @@ exports.getTripDepartures = async (req, res, next) => {
     });
 
     if (!trip) {
-      return res.status(404).json({ success: false, message: 'Trip not found' });
+      // Trip exists in bookings but has no public Trip record yet, or wrong tenant.
+      // Return empty dates rather than 404 so frontend can show empty-state gracefully.
+      return res.json({ success: true, data: [] });
     }
 
     let dates = trip.availableDates;
