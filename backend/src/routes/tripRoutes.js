@@ -5,6 +5,7 @@ const {
   getTrips,
   getPublicTripCards,
   getPublicTripDetail,
+  getPublicTripLookup,
   getTrip,
   getTripBySlug,
   createTrip,
@@ -21,6 +22,7 @@ const { stripFinancialFieldsForGuides } = require('../middleware/financialStripp
 // Public routes
 router.get('/public/cards', getPublicTripCards);
 router.get('/public/slug/:slug', getPublicTripDetail);
+router.get('/public/lookup/:identifier', getPublicTripLookup);
 
 router.get('/', authenticate, stripFinancialFieldsForGuides, getTrips);
 

@@ -303,7 +303,7 @@ function BookingForm() {
         
         if (targetIdentifier) {
           try {
-            const res = await fetch(`${API_BASE_URL}/trips/${encodeURIComponent(targetIdentifier)}`);
+            const res = await fetch(`${API_BASE_URL}/trips/public/lookup/${encodeURIComponent(targetIdentifier)}`);
             const json = await res.json();
             if (json.success && json.data) {
               foundTrip = json.data;
@@ -312,7 +312,7 @@ function BookingForm() {
         }
 
         if (!foundTrip && initialParams.tripName) {
-          const res = await fetch(`${API_BASE_URL}/trips?status=all`);
+          const res = await fetch(`${API_BASE_URL}/trips/public/cards`);
           const json = await res.json();
           if (json.success && json.data.length > 0) {
             const normalize = (str: string) => 
@@ -323,21 +323,24 @@ function BookingForm() {
                 .trim();
 
             const targetNormalized = normalize(initialParams.tripName);
-            foundTrip = json.data.find((t: any) => normalize(t.title) === targetNormalized || normalize(t.slug) === targetNormalized) ||
+            const matched = json.data.find((t: any) => normalize(t.title) === targetNormalized || normalize(t.slug) === targetNormalized) ||
                         json.data.find((t: any) => normalize(t.title).includes(targetNormalized) || targetNormalized.includes(normalize(t.title)));
+            if (matched && matched.id) {
+              // Re-fetch full detail via public lookup
+              try {
+                const detailRes = await fetch(`${API_BASE_URL}/trips/public/lookup/${matched.id}`);
+                const detailJson = await detailRes.json();
+                if (detailJson.success && detailJson.data) {
+                  foundTrip = detailJson.data;
+                }
+              } catch (_e) {
+                foundTrip = matched;
+              }
+            }
           }
         }
 
         if (foundTrip) {
-          if (foundTrip.id) {
-            try {
-              const detailRes = await fetch(`${API_BASE_URL}/trips/${foundTrip.id}`);
-              const detailJson = await detailRes.json();
-              if (detailJson.success && detailJson.data) {
-                foundTrip = detailJson.data;
-              }
-            } catch (_e) {}
-          }
           setTripData(foundTrip);
           // Always use the master trip price as the baseline basePrice so that the variant deductions are calculated correctly from the baseline
           const baseline = foundTrip.price || (foundTrip.variants && foundTrip.variants.length > 0 ? Math.max(...foundTrip.variants.map((v: any) => v.discountedPrice || 0)) : 13999);

@@ -497,6 +497,105 @@ exports.getTripBySlug = async (req, res, next) => {
 };
 
 /**
+ * @desc    Public trip lookup by id, slug, shortName, or title (no auth required)
+ * @route   GET /api/trips/public/lookup/:identifier
+ * @access  Public
+ */
+exports.getPublicTripLookup = async (req, res, next) => {
+  try {
+    const { identifier } = req.params;
+    const tenantId = 'default';
+
+    const trip = await prisma.trip.findFirst({
+      where: {
+        OR: [
+          { id: identifier },
+          { slug: identifier },
+          { shortName: identifier },
+          { title: identifier },
+          { title: { contains: identifier, mode: 'insensitive' } },
+          { slug: { contains: identifier, mode: 'insensitive' } }
+        ],
+        tenantId
+      },
+      select: {
+        id: true,
+        title: true,
+        shortName: true,
+        slug: true,
+        location: true,
+        price: true,
+        duration: true,
+        description: true,
+        category: true,
+        status: true,
+        heroImage: true,
+        images: true,
+        itinerary: true,
+        availableDates: true,
+        variants: true,
+        travelOptions: true,
+        roomOptions: true,
+        highlights: true,
+        inclusions: true,
+        exclusions: true,
+        faqs: true,
+        addons: true,
+        maxGroupSize: true,
+        difficulty: true,
+        departureCity: true,
+        pickupCities: true,
+        ageLimit: true,
+        attractions: true,
+        activities: true,
+        accommodations: true,
+        route: true,
+        ageGroup: true,
+        gstPercentage: true,
+      }
+    });
+
+    if (!trip) {
+      return res.status(404).json({ success: false, message: 'Trip not found' });
+    }
+
+    // Fetch reviews
+    const reviewWhereOr = [{ tripId: trip.id }];
+    if (trip.title) reviewWhereOr.push({ tripName: trip.title });
+    if (trip.shortName) reviewWhereOr.push({ tripName: trip.shortName });
+
+    const reviews = await prisma.review.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+        OR: reviewWhereOr
+      },
+      select: {
+        id: true,
+        userName: true,
+        comment: true,
+        rating: true,
+        tripName: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    setPublicCache(res, 60);
+    res.json({
+      success: true,
+      data: {
+        ...trip,
+        availableDates: toPublicDates(trip.availableDates),
+        reviews
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Shuffle trips order
  * @route   POST /api/trips/shuffle
  * @access  Private/Admin
