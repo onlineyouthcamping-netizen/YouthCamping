@@ -77,9 +77,19 @@ exports.createBookingLink = async (req, res, next) => {
     const tenantId = req.user?.tenantId || 'default';
 
     const trip = await prisma.trip.findFirst({
-      where: { id: tripId, tenantId },
+      where: {
+        OR: [
+          { id: String(tripId) },
+          { slug: String(tripId) },
+          { title: String(tripId) }
+        ],
+        tenantId
+      },
       select: { id: true, title: true },
     });
+
+    const finalTripId = trip ? trip.id : String(tripId);
+    const finalTripName = trip ? trip.title : null;
 
     const { token, tokenPrefix } = generateToken();
     const tokenHash = sha256(token);
@@ -113,8 +123,8 @@ exports.createBookingLink = async (req, res, next) => {
 
     const signedMetadata = createSignedPayload({
       tenantId,
-      tripId,
-      tripName: trip ? trip.title : null,
+      tripId: finalTripId,
+      tripName: finalTripName,
       departureDate: parsedDepartureDate.toISOString(),
       pickupCity: String(pickupCity),
       paymentMode: String(paymentMode),
@@ -135,8 +145,8 @@ exports.createBookingLink = async (req, res, next) => {
       data: {
         tenantId,
         createdByAdminId: finalAdminId,
-        tripId,
-        tripName: trip ? trip.title : null,
+        tripId: finalTripId,
+        tripName: finalTripName,
         departureDate: parsedDepartureDate,
         pickupCity: String(pickupCity),
         paymentMode: String(paymentMode),
@@ -211,32 +221,45 @@ exports.getBookingLinks = async (req, res, next) => {
         skip: (page - 1) * limit,
         take: limit,
         select: {
-        id: true,
-        createdByAdminId: true,
-        tripId: true,
-        tripName: true,
-        departureDate: true,
-        pickupCity: true,
-        paymentMode: true,
-        customAmount: true,
-        customTime: true,
-        headerTitle: true,
-        headerSubtitle: true,
-        expiresAt: true,
-        status: true,
-        tokenPrefix: true,
-        shareUrl: true,
-        openedCount: true,
-        completedCount: true,
-        createdAt: true,
+          id: true,
+          createdByAdminId: true,
+          tripId: true,
+          tripName: true,
+          departureDate: true,
+          pickupCity: true,
+          paymentMode: true,
+          customAmount: true,
+          customTime: true,
+          headerTitle: true,
+          headerSubtitle: true,
+          expiresAt: true,
+          status: true,
+          tokenPrefix: true,
+          shareUrl: true,
+          openedCount: true,
+          completedCount: true,
+          createdAt: true,
         },
       })
     ]);
 
+    // Populate live trip titles to guarantee details match live trips
+    const tripIds = Array.from(new Set(links.map(l => l.tripId).filter(Boolean)));
+    const liveTrips = tripIds.length > 0 ? await prisma.trip.findMany({
+      where: { id: { in: tripIds } },
+      select: { id: true, title: true }
+    }) : [];
+    const tripMap = new Map(liveTrips.map(t => [t.id, t.title]));
+
+    const formattedLinks = links.map(l => ({
+      ...l,
+      tripName: tripMap.get(l.tripId) || l.tripName || 'Custom Trip'
+    }));
+
     res.json({
       success: true,
-      count: links.length,
-      data: links,
+      count: formattedLinks.length,
+      data: formattedLinks,
       pagination: {
         page,
         limit,
@@ -364,15 +387,21 @@ exports.resolveBookingLink = async (req, res, next) => {
       });
     });
 
-    // Return immutable snapshot used for prefill
+    // Fetch live trip title to guarantee exact detail matching
+    const liveTrip = await prisma.trip.findFirst({
+      where: { OR: [{ id: link.tripId }, { slug: link.tripId }, { title: link.tripId }] },
+      select: { id: true, title: true }
+    });
+
+    // Return immutable snapshot used for prefill with live matched trip details
     return res.json({
       success: true,
       data: {
         bookingLinkId: link.id,
         salesAdminId: link.createdByAdminId,
         tokenPrefix: link.tokenPrefix,
-        tripId: link.tripId,
-        tripName: link.tripName,
+        tripId: liveTrip ? liveTrip.id : link.tripId,
+        tripName: liveTrip ? liveTrip.title : (link.tripName || 'Custom Trip'),
         departureDate: link.departureDate ? link.departureDate.toISOString() : null,
         pickupCity: link.pickupCity,
         paymentMode: link.paymentMode,
