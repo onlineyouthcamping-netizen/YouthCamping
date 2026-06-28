@@ -389,7 +389,7 @@ exports.resolveBookingLink = async (req, res, next) => {
 
     // Fetch live trip title to guarantee exact detail matching
     const liveTrip = await prisma.trip.findFirst({
-      where: { OR: [{ id: link.tripId }, { slug: link.tripId }, { title: link.tripId }] },
+      where: { OR: [{ id: link.tripId }, { slug: link.tripId }, { title: link.tripId }, { shortName: link.tripId }] },
       select: { id: true, title: true }
     });
 
