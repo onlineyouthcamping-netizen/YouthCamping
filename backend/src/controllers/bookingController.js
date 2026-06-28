@@ -284,6 +284,7 @@ async function verifyAndCalculateBooking(trip, body, isAdmin, tx = prisma) {
 // ────────────────────────────────────────────
 
 exports.getBookings = async (req, res, next) => {
+  const start = Date.now();
   try {
     const { status, tripId, paymentStatus, payment_status, search, salesAdminId, balanceOnly, bookingStart, bookingEnd, depStart, depEnd } = req.query;
 
@@ -316,6 +317,7 @@ exports.getBookings = async (req, res, next) => {
       where.remainingAmount = { gt: 0 };
     }
 
+    const authCheckTime = Date.now();
     // Role-based constraint: sales can only see bookings sourced from their own salesAdminId.
     if (req.user?.role === 'sales') {
       where.salesAdminId = req.user.id;
@@ -336,6 +338,7 @@ exports.getBookings = async (req, res, next) => {
     } else if (salesAdminId && salesAdminId !== 'all') {
       where.salesAdminId = salesAdminId;
     }
+    const authDuration = Date.now() - authCheckTime;
 
     // Search query map
     if (search) {
@@ -372,6 +375,7 @@ exports.getBookings = async (req, res, next) => {
     }
 
     // 3. Database query parallel execution
+    const queryStart = Date.now();
     const [totalCount, bookings] = await Promise.all([
       prisma.booking.count({ where }),
       prisma.booking.findMany({
@@ -382,6 +386,7 @@ exports.getBookings = async (req, res, next) => {
           tripId: true,
           tripName: true,
           status: true,
+          name: true,
           fullName: true,
           mobile: true,
           email: true,
@@ -399,7 +404,6 @@ exports.getBookings = async (req, res, next) => {
           notes: true,
           departureDate: true,
           createdAt: true,
-          passengers: true,
           salesAdminId: true,
           sourceBookingLink: {
             select: {
@@ -416,23 +420,16 @@ exports.getBookings = async (req, res, next) => {
         orderBy: { createdAt: 'desc' }
       })
     ]);
+    const queryDuration = Date.now() - queryStart;
 
     const totalPages = Math.ceil(totalCount / limit);
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1;
 
-    const mappedBookings = bookings.map(b => {
-      let extra = {};
-      if (b.passengers && typeof b.passengers === 'object') {
-        extra = b.passengers.details || {};
-      }
-      return { ...b, ...extra, passengers: undefined };
-    });
-
-    res.status(200).json({
+    const resBody = {
       success: true,
-      count: mappedBookings.length,
-      data: mappedBookings,
+      count: bookings.length,
+      data: bookings,
       pagination: {
         page,
         limit,
@@ -441,7 +438,15 @@ exports.getBookings = async (req, res, next) => {
         hasNextPage,
         hasPreviousPage
       }
-    });
+    };
+
+    if (process.env.ENABLE_PERFORMANCE_METRICS === 'true') {
+      const duration = Date.now() - start;
+      const payloadBytes = Buffer.byteLength(JSON.stringify(resBody));
+      console.log(`[METRICS] getBookings - Total: ${duration}ms, Auth: ${authDuration}ms, Query: ${queryDuration}ms, Rows: ${bookings.length}, Payload: ${payloadBytes} bytes`);
+    }
+
+    res.status(200).json(resBody);
   } catch (error) { next(error); }
 };
 
