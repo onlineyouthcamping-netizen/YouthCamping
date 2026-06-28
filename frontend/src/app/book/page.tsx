@@ -214,30 +214,40 @@ function BookingForm() {
   // Keep selectedCity synced once joiningPoints are resolved, matching the url price param or localStorage if applicable
   useEffect(() => {
     if (joiningPoints.length > 0) {
+      const normalize = (s: string) =>
+        (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+      // 1. Primary Source of Truth: If token/link prefilled a pickup city in URL, use it as top priority
+      if (initialParams.pickupCity) {
+        const target = normalize(initialParams.pickupCity);
+        const matched = joiningPoints.find((j: any) => {
+          const cName = normalize(j.cityName);
+          return cName === target || cName.includes(target) || target.includes(cName);
+        });
+        if (matched) {
+          setSelectedCity(matched);
+          return;
+        }
+      }
+
+      // 2. Secondary Source: Check localStorage for previous user session preference
       const tripId = tripData?.id || initialParams.tripId || 'default';
       const storageKey = `selected_joining_point_${tripId}`;
       const persistedCityName = localStorage.getItem(storageKey);
 
       if (persistedCityName) {
-        const matched = joiningPoints.find((j: any) => j.cityName === persistedCityName);
+        const target = normalize(persistedCityName);
+        const matched = joiningPoints.find((j: any) => {
+          const cName = normalize(j.cityName);
+          return cName === target || cName.includes(target) || target.includes(cName);
+        });
         if (matched) {
           setSelectedCity(matched);
           return;
         }
       }
 
-      // If token/link prefilled a pickup city, use it as the source of truth
-      if (initialParams.pickupCity) {
-        const normalize = (s: string) =>
-          (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-        const target = normalize(initialParams.pickupCity);
-        const matched = joiningPoints.find((j: any) => normalize(j.cityName) === target);
-        if (matched) {
-          setSelectedCity(matched);
-          return;
-        }
-      }
-
+      // 3. Tertiary Source: Match by base price variant index
       if (initialParams.basePrice && tripData?.variants && Array.isArray(tripData.variants)) {
         const matchingVariantIdx = tripData.variants.findIndex((v: any) => v.discountedPrice === initialParams.basePrice);
         if (matchingVariantIdx !== -1 && matchingVariantIdx < joiningPoints.length && joiningPoints[matchingVariantIdx]) {
