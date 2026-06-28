@@ -527,24 +527,26 @@ exports.getTripDepartures = async (req, res, next) => {
   try {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || 'default';
-    const trip = await prisma.trip.findFirst({
+
+    // First find the trip globally to distinguish between non-existence and cross-tenant access
+    const tripGlobal = await prisma.trip.findFirst({
       where: {
         OR: [
           { id },
           { slug: id }
-        ],
-        tenantId
-      },
-      select: { availableDates: true }
+        ]
+      }
     });
 
-    if (!trip) {
-      // Trip exists in bookings but has no public Trip record yet, or wrong tenant.
-      // Return empty dates rather than 404 so frontend can show empty-state gracefully.
-      return res.json({ success: true, data: [] });
+    if (!tripGlobal) {
+      return res.status(404).json({ success: false, message: 'Trip not found' });
     }
 
-    let dates = trip.availableDates;
+    if (tripGlobal.tenantId !== tenantId) {
+      return res.status(403).json({ success: false, message: 'Access denied: unauthorized tenant' });
+    }
+
+    let dates = tripGlobal.availableDates;
     if (typeof dates === 'string') {
       try {
         dates = JSON.parse(dates);
