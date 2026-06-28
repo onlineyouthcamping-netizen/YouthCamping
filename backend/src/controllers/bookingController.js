@@ -125,18 +125,24 @@ async function verifyAndCalculateBooking(trip, body, isAdmin, tx = prisma) {
     }
   }
 
-  // 3. Resolve joining city / variant
-  const pickupCity = body.pickupCity || 'Delhi';
+  // 3. Resolve joining city / variant flexibly
+  const rawPickupCity = String(body.pickupCity || 'Delhi').trim();
+  const normalizedTarget = rawPickupCity.toLowerCase();
   let selectedCityObj = null;
 
   // Search variants
   const variants = parseJsonArray(trip.variants);
-  const vMatch = variants.find(v => v.location === pickupCity);
+  const vMatch = variants.find(v => {
+    const loc = String(v.location || v.cityName || v.name || v.variantName || v.city || '').trim().toLowerCase();
+    return loc === normalizedTarget || (loc.length > 0 && (loc.includes(normalizedTarget) || normalizedTarget.includes(loc)));
+  });
+
   if (vMatch) {
+    const locName = vMatch.location || vMatch.cityName || vMatch.name || vMatch.variantName || rawPickupCity;
     const variantPrice = Math.round(Number(vMatch.discountedPrice) || Number(vMatch.originalPrice) || 0);
     selectedCityObj = {
-      cityName: vMatch.location,
-      price: variantPrice,
+      cityName: locName,
+      price: variantPrice > 0 ? variantPrice : Math.round(Number(trip.price) || 0),
       skipDays: Number(vMatch.skipDays) || 0,
       excludeTravel: vMatch.excludeTravel === true
     };
@@ -145,33 +151,47 @@ async function verifyAndCalculateBooking(trip, body, isAdmin, tx = prisma) {
   // Search pickupCities
   if (!selectedCityObj) {
     const pickupCities = parseJsonArray(trip.pickupCities);
-    const cMatch = pickupCities.find(c => c.cityName === pickupCity);
+    const cMatch = pickupCities.find(c => {
+      const loc = String(c.cityName || c.location || c.name || '').trim().toLowerCase();
+      return loc === normalizedTarget || (loc.length > 0 && (loc.includes(normalizedTarget) || normalizedTarget.includes(loc)));
+    });
+
     if (cMatch) {
       const deduction = Math.round(Number(cMatch.deductionAmount) || 0);
       selectedCityObj = {
-        cityName: cMatch.cityName,
-        price: Math.round(Math.max(0, trip.price - deduction)),
+        cityName: cMatch.cityName || cMatch.location || rawPickupCity,
+        price: Math.round(Math.max(0, (Number(trip.price) || 0) - deduction)),
         skipDays: Number(cMatch.skipDays) || 0,
         excludeTravel: false
       };
     }
   }
 
-  // Search fallback
+  // Search fallback joining points
   if (!selectedCityObj) {
-    const fMatch = FALLBACK_JOINING_POINTS.find(p => p.cityName === pickupCity);
+    const fMatch = FALLBACK_JOINING_POINTS.find(p => {
+      const loc = String(p.cityName || '').trim().toLowerCase();
+      return loc === normalizedTarget || (loc.length > 0 && (loc.includes(normalizedTarget) || normalizedTarget.includes(loc)));
+    });
+
     if (fMatch) {
       selectedCityObj = {
         cityName: fMatch.cityName,
-        price: Math.round(Math.max(0, trip.price - fMatch.deductionAmount)),
+        price: Math.round(Math.max(0, (Number(trip.price) || 0) - fMatch.deductionAmount)),
         skipDays: fMatch.skipDays,
         excludeTravel: false
       };
     }
   }
 
+  // Graceful default if city is custom or not mapped
   if (!selectedCityObj) {
-    throw new Error('Selected joining city/variant is invalid for this trip');
+    selectedCityObj = {
+      cityName: rawPickupCity,
+      price: Math.round(Number(trip.price) || 0),
+      skipDays: 0,
+      excludeTravel: false
+    };
   }
 
   // 4. Calculate prices
