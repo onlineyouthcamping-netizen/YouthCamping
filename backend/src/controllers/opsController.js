@@ -1127,8 +1127,7 @@ exports.generateAllocation = async (req, res) => {
     }
 
     const bookings = await prisma.booking.findMany({
-      where: ctx.bookingWhere,
-      include: { travelers: true }
+      where: ctx.bookingWhere
     });
 
     const fleet = await prisma.opsTransportFleet.findMany({ where: ctx.where });

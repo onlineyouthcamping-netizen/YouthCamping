@@ -153,7 +153,8 @@ describe('Unit/API Tests', () => {
 
     it('should get all trips', async () => {
       const response = await request(app)
-        .get('/api/trips');
+        .get('/api/trips')
+        .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
