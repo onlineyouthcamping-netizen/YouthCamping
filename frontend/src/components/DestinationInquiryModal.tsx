@@ -223,24 +223,24 @@ export default function DestinationInquiryModal({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="relative">
-                      <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 pointer-events-none" />
+                      <Calendar className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
                       <input
                         required
                         type="date"
-                        className="w-full pl-12 pr-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm text-zinc-500 h-12 md:h-14"
+                        className="w-full pl-10 pr-2 sm:pl-11 sm:pr-4 py-3 sm:py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-xs sm:text-sm text-zinc-700 h-12 md:h-14 [color-scheme:light]"
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       />
                     </div>
                     <div className="relative">
-                      <Users className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 pointer-events-none" />
+                      <Users className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
                       <input
                         required
                         type="number"
                         placeholder="Travellers"
-                        className="w-full pl-12 pr-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-12 md:h-14"
+                        className="w-full pl-10 pr-4 sm:pl-11 sm:pr-6 py-3 sm:py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-xs sm:text-sm placeholder:text-zinc-300 h-12 md:h-14"
                         value={formData.count}
                         onChange={(e) => setFormData({ ...formData, count: e.target.value })}
                       />
