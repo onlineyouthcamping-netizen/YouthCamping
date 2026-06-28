@@ -599,7 +599,13 @@ exports.bulkUpdateTickets = async (req, res) => {
  * GET /api/train-tickets/approvals
  */
 exports.getApprovalsQueue = async (req, res) => {
+  const start = Date.now();
   try {
+    const authStart = Date.now();
+    const role = req.user.role;
+    const userId = req.user.id;
+    const authDuration = Date.now() - authStart;
+
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = [25, 50, 100].includes(requestedLimit) ? requestedLimit : 25;
@@ -628,15 +634,28 @@ exports.getApprovalsQueue = async (req, res) => {
     }
 
     // Sales can only view their own booking tickets
-    if (req.user.role === 'sales') {
-      where.booking = { salesAdminId: req.user.id };
+    if (role === 'sales') {
+      where.booking = { salesAdminId: userId };
     }
 
+    const queryStart = Date.now();
     const [totalCount, tickets] = await Promise.all([
       prisma.trainTicket.count({ where }),
       prisma.trainTicket.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          travelerName: true,
+          ticketStatus: true,
+          approvalStatus: true,
+          trainName: true,
+          trainNumber: true,
+          journeyDate: true,
+          sourceStation: true,
+          destinationStation: true,
+          submittedByAdminId: true,
+          updatedAt: true,
+          createdAt: true,
           booking: {
             select: {
               bookingId: true,
@@ -653,12 +672,21 @@ exports.getApprovalsQueue = async (req, res) => {
         orderBy: { updatedAt: 'desc' }
       }),
     ]);
+    const queryDuration = Date.now() - queryStart;
 
-    return res.json({
+    const resBody = {
       success: true,
       data: tickets,
       pagination: { page, limit, totalCount, totalPages: Math.max(1, Math.ceil(totalCount / limit)) },
-    });
+    };
+
+    if (process.env.ENABLE_PERFORMANCE_METRICS === 'true') {
+      const duration = Date.now() - start;
+      const payloadBytes = Buffer.byteLength(JSON.stringify(resBody));
+      console.log(`[METRICS] getApprovalsQueue - Total: ${duration}ms, Auth: ${authDuration}ms, Query: ${queryDuration}ms, Rows: ${tickets.length}, Payload: ${payloadBytes} bytes`);
+    }
+
+    return res.json(resBody);
   } catch (err) {
     console.error('getApprovalsQueue error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch approvals queue' });
@@ -694,7 +722,6 @@ exports.getAlerts = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to fetch alerts' });
   }
 };
-
 // Alert scanner logic
 async function runAlertScanner(tenantId) {
   try {
