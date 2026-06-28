@@ -12,7 +12,8 @@ const {
   deleteTrip,
   shuffleTrips,
   bulkUpdateTripOrder,
-  seedLiveData
+  seedLiveData,
+  getTripDepartures
 } = require('../controllers/tripController');
 const { authenticate, requirePermission, enforceOwnership } = require('../middleware/auth');
 const { stripFinancialFieldsForGuides } = require('../middleware/financialStripper');
@@ -27,6 +28,7 @@ router.get('/seed/live-data', authenticate, seedLiveData);
 
 router.get('/slug/:slug', authenticate, stripFinancialFieldsForGuides, getTripBySlug);
 
+router.get('/:id/departures', authenticate, getTripDepartures);
 router.get('/:id', authenticate, enforceOwnership('trip'), stripFinancialFieldsForGuides, getTrip);
 
 // Admin routes

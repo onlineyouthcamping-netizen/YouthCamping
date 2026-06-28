@@ -522,3 +522,44 @@ exports.bulkUpdateTripOrder = async (req, res, next) => {
 exports.seedLiveData = async (req, res) => {
   res.json({ success: true, message: 'Seeding logic disabled in production/dev' });
 };
+
+exports.getTripDepartures = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || 'default';
+    const trip = await prisma.trip.findFirst({
+      where: {
+        OR: [
+          { id },
+          { slug: id }
+        ],
+        tenantId
+      },
+      select: { availableDates: true }
+    });
+
+    if (!trip) {
+      return res.status(404).json({ success: false, message: 'Trip not found' });
+    }
+
+    let dates = trip.availableDates;
+    if (typeof dates === 'string') {
+      try {
+        dates = JSON.parse(dates);
+      } catch (_) {
+        dates = [];
+      }
+    }
+    if (!Array.isArray(dates)) dates = [];
+
+    const dateStrings = dates.map(d => {
+      if (typeof d === 'string') return d;
+      if (d && typeof d === 'object' && d.date) return d.date;
+      return null;
+    }).filter(Boolean);
+
+    res.json({ success: true, data: dateStrings });
+  } catch (error) {
+    next(error);
+  }
+};
