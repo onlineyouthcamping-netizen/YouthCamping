@@ -551,7 +551,6 @@ exports.getPublicTripLookup = async (req, res, next) => {
         accommodations: true,
         route: true,
         ageGroup: true,
-        gstPercentage: true,
       }
     });
 
