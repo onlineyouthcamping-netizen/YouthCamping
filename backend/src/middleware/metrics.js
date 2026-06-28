@@ -4,12 +4,22 @@
  */
 module.exports = (req, res, next) => {
   const start = Date.now();
+  req._reqStart = start;
+  req._timings = { auth: 0, db: 0 };
 
   // Intercept writeHead to set Server-Timing before headers are sent
   const originalWriteHead = res.writeHead;
   res.writeHead = function (...args) {
-    const duration = Date.now() - start;
-    res.setHeader('Server-Timing', `app;dur=${duration}`);
+    const appDur = Date.now() - start;
+    const authDur = req._timings?.auth || 0;
+    const dbDur = req._timings?.db || 0;
+    const handlerDur = Math.max(0, appDur - authDur - dbDur);
+
+    if (process.env.ENABLE_PERFORMANCE_METRICS === 'true') {
+      res.setHeader('Server-Timing', `auth;dur=${authDur}, db;dur=${dbDur}, handler;dur=${handlerDur}, app;dur=${appDur}`);
+    } else {
+      res.setHeader('Server-Timing', `app;dur=${appDur}`);
+    }
     return originalWriteHead.apply(this, args);
   };
 

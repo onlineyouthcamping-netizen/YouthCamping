@@ -9,6 +9,7 @@ const FORBIDDEN_SYNTHETIC_IDENTITIES = new Set([
 
 // JWT auth middleware
 const authenticate = async (req, res, next) => {
+  const authStart = Date.now();
   try {
     const authHeader = req.headers.authorization || '';
     if (!authHeader.startsWith('Bearer ')) {
@@ -47,6 +48,7 @@ const authenticate = async (req, res, next) => {
         tenantId: user.tenantId || 'default'
       };
       req.admin = req.user;
+      if (req._timings) req._timings.auth = Date.now() - authStart;
       return next();
     }
 
@@ -68,6 +70,7 @@ const authenticate = async (req, res, next) => {
 
     req.user = user;
     req.admin = user;
+    if (req._timings) req._timings.auth = Date.now() - authStart;
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
