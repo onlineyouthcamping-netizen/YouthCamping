@@ -227,7 +227,7 @@ function BookingForm() {
       if (initialParams.basePrice && tripData?.variants && Array.isArray(tripData.variants)) {
         const matchingVariantIdx = tripData.variants.findIndex((v: any) => v.discountedPrice === initialParams.basePrice);
         if (matchingVariantIdx !== -1 && matchingVariantIdx < joiningPoints.length && joiningPoints[matchingVariantIdx]) {
-          setSelectedCity(matchingVariantIdx);
+          setSelectedCity(joiningPoints[matchingVariantIdx]);
           return;
         }
       }
@@ -686,7 +686,7 @@ function BookingForm() {
 
               <div className="h-px bg-slate-100" />
 
-              {/* Location */}
+              {/* Location / Joining Point */}
               <div className="flex items-center gap-4">
                 {/* Location Icon Badge */}
                 <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
@@ -696,11 +696,15 @@ function BookingForm() {
                 </div>
                 {/* Location text */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm md:text-base font-extrabold text-slate-900 leading-tight capitalize">
-                    {selectedCity?.cityName || tripData?.location || 'Delhi'}
+                  <p className="text-xs font-extrabold text-rose-500 uppercase tracking-wider">
+                    Joining Point
+                  </p>
+                  <p className="text-sm md:text-base font-extrabold text-slate-900 leading-tight capitalize mt-0.5">
+                    {typeof selectedCity === 'object' && selectedCity?.cityName ? selectedCity.cityName : (tripData?.location || 'Delhi')}
+                    {typeof selectedCity === 'object' && selectedCity?.pickupPoint ? ` (${selectedCity.pickupPoint})` : ''}
                   </p>
                   <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCity?.cityName || tripData?.location || 'Delhi')}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(typeof selectedCity === 'object' && selectedCity?.cityName ? `${selectedCity.cityName} ${selectedCity.pickupPoint || ''}` : (tripData?.location || 'Delhi'))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] text-rose-500 hover:text-rose-600 font-bold mt-0.5 inline-flex items-center gap-0.5 transition-colors"
