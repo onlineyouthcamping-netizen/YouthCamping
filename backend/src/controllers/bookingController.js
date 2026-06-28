@@ -1,4 +1,5 @@
 const { prisma } = require('../lib/prisma');
+const bookingCountCache = new Map();
 const { syncBookingToSheets } = require('../utils/googleSheetsSync');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -375,9 +376,21 @@ exports.getBookings = async (req, res, next) => {
     }
 
     // 3. Database query parallel execution
+    const cacheKey = `booking_count_${JSON.stringify(where)}`;
+    let totalPromise;
+    const cachedCount = bookingCountCache.get(cacheKey);
+    if (cachedCount && Date.now() < cachedCount.expiresAt) {
+      totalPromise = Promise.resolve(cachedCount.count);
+    } else {
+      totalPromise = prisma.booking.count({ where }).then(c => {
+        bookingCountCache.set(cacheKey, { count: c, expiresAt: Date.now() + 30000 });
+        return c;
+      });
+    }
+
     const queryStart = Date.now();
     const [totalCount, bookings] = await Promise.all([
-      prisma.booking.count({ where }),
+      totalPromise,
       prisma.booking.findMany({
         where,
         select: {
