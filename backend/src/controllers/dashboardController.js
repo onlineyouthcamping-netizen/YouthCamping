@@ -1,4 +1,5 @@
-const { prisma } = require('../lib/prisma');
+const statsCache = new Map();
+const STATS_CACHE_TTL = 15 * 1000; // 15 seconds
 
 /**
  * @desc    Get dashboard statistics (Scoped by tenantId)
@@ -7,7 +8,12 @@ const { prisma } = require('../lib/prisma');
  */
 exports.getStats = async (req, res, next) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user.tenantId || 'default';
+    const cacheKey = `stats_${tenantId}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json({ success: true, data: cached.data });
+    }
 
     // Use Promise.all for parallel counting
     const [totalTrips, totalBookings] = await Promise.all([
@@ -15,14 +21,18 @@ exports.getStats = async (req, res, next) => {
       prisma.booking.count({ where: { tenantId } })
     ]);
 
+    const resData = {
+      bookings: totalBookings,
+      trips: totalTrips,
+      totalBookings,
+      totalTrips
+    };
+
+    statsCache.set(cacheKey, { data: resData, expiresAt: Date.now() + STATS_CACHE_TTL });
+
     res.json({ 
       success: true,
-      data: {
-        bookings: totalBookings,
-        trips: totalTrips,
-        totalBookings,
-        totalTrips
-      }
+      data: resData
     });
   } catch (error) {
     console.error('❌ Stats error:', error.message);
