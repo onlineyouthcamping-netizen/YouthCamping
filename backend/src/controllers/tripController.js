@@ -37,15 +37,7 @@ const parseJsonArray = (value) => {
   }
 };
 
-const toPublicVariantSummary = (variants) => {
-  const firstVariant = parseJsonArray(variants)[0];
-  if (!firstVariant || typeof firstVariant !== 'object') return [];
-
-  return [{
-    originalPrice: firstVariant.originalPrice,
-    discountedPrice: firstVariant.discountedPrice,
-  }];
-};
+const toPublicVariantSummary = (variants) => parseJsonArray(variants);
 
 const toPublicRouteSummary = (route) => parseJsonArray(route)
   .slice(0, 2)

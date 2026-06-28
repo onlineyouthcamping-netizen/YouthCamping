@@ -339,6 +339,15 @@ function BookingForm() {
         }
 
         if (foundTrip) {
+          if (foundTrip.id) {
+            try {
+              const detailRes = await fetch(`${API_BASE_URL}/trips/${foundTrip.id}`);
+              const detailJson = await detailRes.json();
+              if (detailJson.success && detailJson.data) {
+                foundTrip = detailJson.data;
+              }
+            } catch (_e) {}
+          }
           setTripData(foundTrip);
           // Always use the master trip price as the baseline basePrice so that the variant deductions are calculated correctly from the baseline
           const baseline = foundTrip.price || (foundTrip.variants && foundTrip.variants.length > 0 ? Math.max(...foundTrip.variants.map((v: any) => v.discountedPrice || 0)) : 13999);
