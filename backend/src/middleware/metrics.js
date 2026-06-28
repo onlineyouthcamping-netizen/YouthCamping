@@ -1,3 +1,5 @@
+const { requestStorage } = require('../lib/prisma');
+
 /**
  * Performance metrics middleware for logging request timing and size.
  * Safe to run in production, opt-in only.
@@ -44,5 +46,7 @@ module.exports = (req, res, next) => {
     }
   });
 
-  next();
+  requestStorage.run(req._timings, () => {
+    next();
+  });
 };
