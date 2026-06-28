@@ -261,7 +261,11 @@ exports.getTrip = async (req, res, next) => {
       where: {
         OR: [
           { id },
-          { slug: id }
+          { slug: id },
+          { title: id },
+          { shortName: id },
+          { title: { contains: id, mode: 'insensitive' } },
+          { slug: { contains: id, mode: 'insensitive' } }
         ],
         tenantId
       }
