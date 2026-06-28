@@ -62,15 +62,6 @@ exports.getTicketsByBooking = async (req, res) => {
 
     const tickets = await prisma.trainTicket.findMany({
       where: { bookingId, tenantId: req.user.tenantId },
-      include: {
-        history: {
-          orderBy: { createdAt: 'desc' },
-          include: { performedBy: { select: { id: true, name: true, role: true } } }
-        },
-        supersedes: true,
-        supersededBy: true,
-        submittedBy: { select: { id: true, name: true } }
-      },
       orderBy: { createdAt: 'asc' }
     });
 
@@ -78,6 +69,42 @@ exports.getTicketsByBooking = async (req, res) => {
   } catch (err) {
     console.error('getTicketsByBooking error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch tickets' });
+  }
+};
+
+/**
+ * GET /api/train-tickets/:ticketId/history
+ * Loaded only when the existing ticket History control is opened.
+ */
+exports.getTicketHistory = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Forbidden: You do not own this ticket' });
+    }
+
+    const history = await prisma.trainTicketHistory.findMany({
+      where: { ticketId },
+      select: {
+        id: true,
+        action: true,
+        fromStatus: true,
+        toStatus: true,
+        fromApproval: true,
+        toApproval: true,
+        notes: true,
+        createdAt: true,
+        performedBy: { select: { id: true, name: true, role: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+
+    return res.json({ success: true, data: history });
+  } catch (err) {
+    console.error('getTicketHistory error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch ticket history' });
   }
 };
 
@@ -506,42 +533,52 @@ exports.bulkUpdateTickets = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ticketIds is required and must not be empty' });
     }
 
-    const updatedTickets = [];
+    const uniqueTicketIds = [...new Set(ticketIds)];
+    const eligibleWhere = {
+      id: { in: uniqueTicketIds },
+      tenantId: req.user.tenantId,
+      isLocked: false
+    };
+    if (req.user.role === 'sales') {
+      eligibleWhere.booking = { salesAdminId: req.user.id };
+    } else if (!['superadmin', 'admin', 'operations', 'BOOKING_VERIFIER'].includes(req.user.role)) {
+      return res.json({ success: true, data: { updatedCount: 0, tickets: [] }, message: '0 tickets updated successfully' });
+    }
 
-    for (const ticketId of ticketIds) {
-      const isOwner = await checkTicketOwnership(ticketId, req.user);
-      if (!isOwner) {
-        continue; // Skip tickets that sales user doesn't own
-      }
+    const eligibleTickets = await prisma.trainTicket.findMany({
+      where: eligibleWhere,
+      select: { id: true, ticketStatus: true, approvalStatus: true }
+    });
+    const eligibleIds = eligibleTickets.map((ticket) => ticket.id);
 
-      const ticket = await prisma.trainTicket.findUnique({ where: { id: ticketId } });
-      if (!ticket || ticket.isLocked) {
-        continue; // Skip locked tickets
-      }
+    const updateData = {};
+    if (status !== undefined) updateData.ticketStatus = status;
+    if (trainNumber !== undefined) updateData.trainNumber = trainNumber;
+    if (journeyDate !== undefined) updateData.journeyDate = journeyDate ? new Date(journeyDate) : null;
+    if (pnr !== undefined) updateData.pnr = pnr;
+    if (coach !== undefined) updateData.coach = coach;
+    if (seatNumber !== undefined) updateData.seatNumber = seatNumber;
+    if (berthType !== undefined) updateData.berthType = berthType;
 
-      const updateData = {};
-      if (status !== undefined) updateData.ticketStatus = status;
-      if (trainNumber !== undefined) updateData.trainNumber = trainNumber;
-      if (journeyDate !== undefined) updateData.journeyDate = journeyDate ? new Date(journeyDate) : null;
-      if (pnr !== undefined) updateData.pnr = pnr;
-      if (coach !== undefined) updateData.coach = coach;
-
-      // seat and berth must not be changed unless explicitly selected/passed
-      if (seatNumber !== undefined) updateData.seatNumber = seatNumber;
-      if (berthType !== undefined) updateData.berthType = berthType;
-
-      const updated = await prisma.trainTicket.update({
-        where: { id: ticketId },
-        data: updateData
+    let updatedTickets = [];
+    if (eligibleIds.length > 0) {
+      updatedTickets = await prisma.$transaction(async (tx) => {
+        await tx.trainTicket.updateMany({ where: { id: { in: eligibleIds } }, data: updateData });
+        await tx.trainTicketHistory.createMany({
+          data: eligibleTickets.map((ticket) => ({
+            ticketId: ticket.id,
+            action: 'BULK_UPDATE',
+            fromStatus: ticket.ticketStatus,
+            toStatus: status || ticket.ticketStatus,
+            toApproval: ticket.approvalStatus,
+            notes: notes || 'Bulk updated fields',
+            performedById: req.user.id
+          }))
+        });
+        return tx.trainTicket.findMany({ where: { id: { in: eligibleIds } } });
       });
-
-      await logHistory(ticketId, 'BULK_UPDATE', req, {
-        fromStatus: ticket.ticketStatus,
-        toStatus: updated.ticketStatus,
-        notes: notes || 'Bulk updated fields'
-      });
-
-      updatedTickets.push(updated);
+      const inputOrder = new Map(uniqueTicketIds.map((id, index) => [id, index]));
+      updatedTickets.sort((a, b) => inputOrder.get(a.id) - inputOrder.get(b.id));
     }
 
     return res.json({
@@ -563,34 +600,65 @@ exports.bulkUpdateTickets = async (req, res) => {
  */
 exports.getApprovalsQueue = async (req, res) => {
   try {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = [25, 50, 100].includes(requestedLimit) ? requestedLimit : 25;
     const where = {
       tenantId: req.user.tenantId,
-      approvalStatus: 'SUBMITTED'
+      approvalStatus: req.query.approvalStatus && req.query.approvalStatus !== 'ALL'
+        ? req.query.approvalStatus
+        : 'SUBMITTED'
     };
+
+    if (req.query.ticketStatus && req.query.ticketStatus !== 'ALL') {
+      where.ticketStatus = req.query.ticketStatus;
+    }
+    if (req.query.urgent === 'true') {
+      where.journeyDate = { gte: new Date(), lte: new Date(Date.now() + 10 * 86400000) };
+      where.ticketStatus = { in: ['PENDING', 'WAITLISTED', 'RAC'] };
+    }
+    if (req.query.search) {
+      where.OR = [
+        { travelerName: { contains: req.query.search, mode: 'insensitive' } },
+        { trainName: { contains: req.query.search, mode: 'insensitive' } },
+        { trainNumber: { contains: req.query.search, mode: 'insensitive' } },
+        { booking: { bookingId: { contains: req.query.search, mode: 'insensitive' } } },
+        { booking: { tripName: { contains: req.query.search, mode: 'insensitive' } } },
+      ];
+    }
 
     // Sales can only view their own booking tickets
     if (req.user.role === 'sales') {
       where.booking = { salesAdminId: req.user.id };
     }
 
-    const tickets = await prisma.trainTicket.findMany({
-      where,
-      include: {
-        booking: {
-          select: {
-            bookingId: true,
-            name: true,
-            fullName: true,
-            tripName: true,
-            salesAdminId: true
-          }
+    const [totalCount, tickets] = await Promise.all([
+      prisma.trainTicket.count({ where }),
+      prisma.trainTicket.findMany({
+        where,
+        include: {
+          booking: {
+            select: {
+              bookingId: true,
+              name: true,
+              fullName: true,
+              tripName: true,
+              salesAdminId: true
+            }
+          },
+          submittedBy: { select: { id: true, name: true } }
         },
-        submittedBy: { select: { id: true, name: true } }
-      },
-      orderBy: { updatedAt: 'desc' }
-    });
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { updatedAt: 'desc' }
+      }),
+    ]);
 
-    return res.json({ success: true, data: tickets });
+    return res.json({
+      success: true,
+      data: tickets,
+      pagination: { page, limit, totalCount, totalPages: Math.max(1, Math.ceil(totalCount / limit)) },
+    });
   } catch (err) {
     console.error('getApprovalsQueue error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch approvals queue' });

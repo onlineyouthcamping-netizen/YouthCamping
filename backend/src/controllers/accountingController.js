@@ -22,6 +22,10 @@ const checkBookingOwnership = async (bookingId, user) => {
 exports.getEntries = async (req, res) => {
   try {
     const { status, salespersonId, paymentMode, bookingId, search } = req.query;
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = [25, 50, 100].includes(requestedLimit) ? requestedLimit : 25;
+    const skip = (page - 1) * limit;
 
     const where = {
       tenantId: req.user.tenantId || 'default'
@@ -33,6 +37,8 @@ exports.getEntries = async (req, res) => {
     } else if (salespersonId) {
       where.salespersonId = salespersonId;
     }
+
+    const summaryWhere = { ...where };
 
     if (status) {
       where.status = status;
@@ -54,35 +60,96 @@ exports.getEntries = async (req, res) => {
       ];
     }
 
-    const entries = await prisma.accountingEntry.findMany({
-      where,
-      include: {
-        booking: {
-          select: {
-            bookingId: true,
-            name: true,
-            fullName: true,
-            tripName: true,
-            totalAmount: true,
-            adjustedPrice: true,
-            numberOfTravelers: true,
-            salesAdminId: true
-          }
+    const [totalCount, entries, statusTotals] = await Promise.all([
+      prisma.accountingEntry.count({ where }),
+      prisma.accountingEntry.findMany({
+        where,
+        select: {
+          id: true,
+          tenantId: true,
+          bookingId: true,
+          amount: true,
+          paymentMode: true,
+          referenceNumber: true,
+          status: true,
+          notes: true,
+          rejectionReason: true,
+          salespersonId: true,
+          actionedById: true,
+          createdAt: true,
+          updatedAt: true,
+          booking: {
+            select: {
+              bookingId: true,
+              name: true,
+              fullName: true,
+              tripName: true,
+              totalAmount: true,
+              adjustedPrice: true,
+              numberOfTravelers: true,
+              salesAdminId: true
+            }
+          },
+          salesperson: { select: { id: true, name: true, email: true } },
+          actionedBy: { select: { id: true, name: true } }
         },
-        salesperson: { select: { id: true, name: true, email: true } },
-        actionedBy: { select: { id: true, name: true } },
-        history: {
-          orderBy: { createdAt: 'desc' },
-          include: { actor: { select: { id: true, name: true } } }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.accountingEntry.groupBy({
+        by: ['status'],
+        where: summaryWhere,
+        _sum: { amount: true },
+      }),
+    ]);
 
-    return res.json({ success: true, data: entries });
+    const totals = { APPROVED: 0, PENDING: 0, REJECTED: 0 };
+    for (const row of statusTotals) totals[row.status] = row._sum.amount || 0;
+
+    return res.json({
+      success: true,
+      data: entries,
+      summary: totals,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+      },
+    });
   } catch (err) {
     console.error('getEntries error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch accounting entries' });
+  }
+};
+
+exports.getEntryHistory = async (req, res) => {
+  try {
+    const entry = await prisma.accountingEntry.findFirst({
+      where: { id: req.params.id, tenantId: req.user.tenantId || 'default' },
+      select: { id: true },
+    });
+    if (!entry) return res.status(404).json({ success: false, message: 'Accounting entry not found' });
+
+    const history = await prisma.accountingEntryLog.findMany({
+      where: { accountingEntryId: entry.id },
+      select: {
+        id: true,
+        accountingEntryId: true,
+        action: true,
+        notes: true,
+        actorId: true,
+        createdAt: true,
+        actor: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return res.json({ success: true, data: history });
+  } catch (err) {
+    console.error('getEntryHistory error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch accounting history' });
   }
 };
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   getTicketsByBooking,
+  getTicketHistory,
   createTicket,
   updateTicket,
   submitTicket,
@@ -41,6 +42,7 @@ router.post('/booking/:bookingId', requirePermission('tickets.create'), createTi
 router.post('/bulk-update', requirePermission('tickets.bulk'), bulkUpdateTickets);
 
 // Ticket-level operations
+router.get('/:ticketId/history', requirePermission('tickets.view'), getTicketHistory);
 router.patch('/:ticketId', requirePermission('tickets.edit'), updateTicket);
 router.post('/:ticketId/submit', requirePermission('tickets.submit'), submitTicket);
 router.post('/:ticketId/approve', requirePermission('tickets.approve'), approveTicket);

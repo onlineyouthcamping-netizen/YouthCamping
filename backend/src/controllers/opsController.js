@@ -505,6 +505,120 @@ exports.getOpsAccountingSummary = async (req, res) => {
 };
 
 // ── SEAT MANAGEMENT (DEPARTURE SCOPED) ──
+// Lightweight, read-only departure overview. Detailed rows remain behind their
+// respective tabs and accounting/profit reports remain behind the accounting tab.
+exports.getWorkspaceSummary = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    const [bookingAggregate, bookingRefs, seatConfig, checklistCounts, openIncidentCount, leaders,
+      hotelCounts, transportCount, roomAllocationCount, vehicleAllocationCount, latestAllocation] = await Promise.all([
+      prisma.booking.aggregate({
+        where: ctx.bookingWhere,
+        _sum: { numberOfTravelers: true, totalAmount: true }
+      }),
+      prisma.booking.findMany({ where: ctx.bookingWhere, select: { bookingId: true } }),
+      prisma.opsSeatConfig.findFirst({
+        where: ctx.where,
+        select: { id: true, totalSeatsCap: true, alertThreshold: true, blockedSeats: true }
+      }),
+      prisma.opsTripChecklist.groupBy({
+        by: ['isCompleted'], where: ctx.where, _count: { _all: true }
+      }),
+      prisma.opsIncidentLog.count({ where: { ...ctx.where, status: 'OPEN' } }),
+      prisma.opsTripLeader.findMany({
+        where: { ...ctx.where, archivedAt: null },
+        select: { id: true, leaderName: true, leaderPhone: true, leaderType: true, isPrimary: true },
+        orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+        take: 10
+      }),
+      prisma.opsHotelBooking.groupBy({
+        by: ['confirmed'], where: ctx.where, _count: { _all: true }
+      }),
+      prisma.opsTransportFleet.count({ where: ctx.where }),
+      prisma.opsRoomAllocation.count({ where: { tripId: ctx.tripId, departureDate: ctx.departureDate } }),
+      prisma.opsVehicleAllocation.count({ where: { tripId: ctx.tripId, departureDate: ctx.departureDate } }),
+      prisma.opsAllocationRun.findFirst({
+        where: ctx.where,
+        select: { status: true, version: true },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
+
+    const bookingIds = bookingRefs.map((booking) => booking.bookingId).filter(Boolean);
+    const [ticketCounts, accountingTotals] = bookingIds.length > 0
+      ? await Promise.all([
+          prisma.trainTicketRequest.groupBy({
+            by: ['status'],
+            where: { tenantId: ctx.tenantId, bookingId: { in: bookingIds } },
+            _count: { _all: true }
+          }),
+          prisma.accountingEntry.groupBy({
+            by: ['status'],
+            where: { tenantId: ctx.tenantId, bookingId: { in: bookingIds } },
+            _sum: { amount: true }
+          })
+        ])
+      : [[], []];
+
+    const travelerCount = bookingAggregate._sum.numberOfTravelers || 0;
+    const totalBookingAmount = bookingAggregate._sum.totalAmount || 0;
+    const totalSeatsCap = seatConfig?.totalSeatsCap ?? 30;
+    const blockedSeats = seatConfig?.blockedSeats ?? 0;
+    const ticketsByStatus = Object.fromEntries(ticketCounts.map((row) => [row.status, row._count._all]));
+    const accountingByStatus = Object.fromEntries(accountingTotals.map((row) => [row.status, row._sum.amount || 0]));
+    const checklistByStatus = Object.fromEntries(checklistCounts.map((row) => [String(row.isCompleted), row._count._all]));
+    const hotelByStatus = Object.fromEntries(hotelCounts.map((row) => [row.confirmed, row._count._all]));
+    const approvedCollections = accountingByStatus.APPROVED || 0;
+
+    return res.json({
+      success: true,
+      data: {
+        acceptedTravelerCount: travelerCount,
+        ticketReadiness: {
+          approved: ticketsByStatus.APPROVED || 0,
+          pending: (ticketsByStatus.PENDING_VERIFICATION || 0) + (ticketsByStatus.DRAFT || 0),
+          cancelled: ticketsByStatus.CANCELLED || 0
+        },
+        approvedCollections,
+        pendingCollections: accountingByStatus.PENDING || 0,
+        remainingCollections: Math.max(0, totalBookingAmount - approvedCollections),
+        seatAvailability: {
+          configured: Boolean(seatConfig),
+          totalSeatsCap,
+          alertThreshold: seatConfig?.alertThreshold ?? 25,
+          blockedSeats,
+          seatsSold: travelerCount,
+          seatsAvailable: Math.max(0, totalSeatsCap - travelerCount - blockedSeats),
+          waitingList: Math.max(0, travelerCount + blockedSeats - totalSeatsCap)
+        },
+        hotelTransportStatus: {
+          hotelsTotal: hotelCounts.reduce((sum, row) => sum + row._count._all, 0),
+          hotelsConfirmed: hotelByStatus.CONFIRMED || 0,
+          transportTotal: transportCount
+        },
+        allocationState: {
+          status: latestAllocation?.status || 'NOT_STARTED',
+          version: latestAllocation?.version || 0,
+          roomAllocations: roomAllocationCount,
+          vehicleAllocations: vehicleAllocationCount
+        },
+        checklistCompletion: {
+          completed: checklistByStatus.true || 0,
+          total: (checklistByStatus.true || 0) + (checklistByStatus.false || 0)
+        },
+        blockingFlagCount: openIncidentCount,
+        openIncidentCount,
+        leaders
+      }
+    });
+  } catch (err) {
+    console.error('getWorkspaceSummary error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch operations summary' });
+  }
+};
+
 exports.getSeatConfig = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);

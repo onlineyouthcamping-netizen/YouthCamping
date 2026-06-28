@@ -20,6 +20,7 @@ const {
   deleteRoomInventory,
   getGuidePayments,
   createGuidePayment,
+  getWorkspaceSummary,
   getOpsAccountingSummary,
   getSeatConfig,
   getChecklist,
@@ -74,6 +75,7 @@ router.get('/guides/:tripId', requirePermission('ops.view'), getGuidePayments);
 router.post('/guides/:tripId', requirePermission('ops.manage'), createGuidePayment);
 
 // Summary & Seats
+router.get('/summary/:tripId', requirePermission('ops.view'), getWorkspaceSummary);
 router.get('/accounting-summary/:tripId', requirePermission('ops.view'), getOpsAccountingSummary);
 router.get('/seats/:tripId', requirePermission('ops.view'), getSeatConfig);
 
