@@ -375,21 +375,31 @@ exports.getBookings = async (req, res, next) => {
       prisma.booking.count({ where }),
       prisma.booking.findMany({
         where,
-        include: {
-          tripRef: {
-            select: {
-              id: true,
-              title: true,
-              shortName: true,
-              slug: true,
-              location: true,
-              price: true,
-              duration: true,
-              category: true,
-              status: true,
-              heroImage: true,
-            }
-          },
+        select: {
+          id: true,
+          bookingId: true,
+          tripId: true,
+          tripName: true,
+          status: true,
+          fullName: true,
+          mobile: true,
+          email: true,
+          age: true,
+          gender: true,
+          numberOfTravelers: true,
+          totalAmount: true,
+          advancePaid: true,
+          remainingAmount: true,
+          paymentMode: true,
+          paymentStatus: true,
+          payment_status: true,
+          payment_method: true,
+          upi_reference: true,
+          notes: true,
+          departureDate: true,
+          createdAt: true,
+          passengers: true,
+          salesAdminId: true,
           sourceBookingLink: {
             select: {
               id: true,
@@ -412,12 +422,10 @@ exports.getBookings = async (req, res, next) => {
 
     const mappedBookings = bookings.map(b => {
       let extra = {};
-      let persons = [];
       if (b.passengers && typeof b.passengers === 'object') {
         extra = b.passengers.details || {};
-        persons = b.passengers.persons || [];
       }
-      return { ...b, ...extra, passengers: persons, trip: b.tripRef };
+      return { ...b, ...extra, passengers: undefined };
     });
 
     res.status(200).json({
@@ -451,7 +459,6 @@ exports.getBookingById = async (req, res, next) => {
     const booking = await prisma.booking.findFirst({
       where,
       include: {
-        tripRef: true,
         sourceBookingLink: {
           select: {
             id: true,
@@ -479,7 +486,7 @@ exports.getBookingById = async (req, res, next) => {
     // Connected ecosystem operational summary lookup
     const opsSummary = await buildBookingOpsSummary(booking, tenantId);
 
-    const mappedBooking = { ...booking, ...extra, passengers: persons, trip: booking.tripRef, opsSummary };
+    const mappedBooking = { ...booking, ...extra, passengers: persons, opsSummary };
 
     res.json({ success: true, data: mappedBooking });
   } catch (error) {
@@ -494,32 +501,51 @@ async function buildBookingOpsSummary(booking, tenantId) {
     const tripId = booking.tripId;
     const departureDate = booking.departureDate;
 
-    // 1. Train Tickets
-    const ticketReq = await prisma.trainTicketRequest.findFirst({
-      where: { bookingId },
-      include: { travellers: true }
-    });
+    const [ticketReq, accountingTotals, seatConfig, roomAllocCount, vehicleAllocCount, completedChecklistCount] = await Promise.all([
+      prisma.trainTicketRequest.findFirst({
+        where: { tenantId, bookingId },
+        select: { status: true, _count: { select: { travellers: true } } }
+      }),
+      prisma.accountingEntry.groupBy({
+        by: ['status'],
+        where: { tenantId, bookingId },
+        _sum: { amount: true }
+      }),
+      tripId && departureDate
+        ? prisma.opsSeatConfig.findFirst({
+            where: { tenantId, tripId, departureDate },
+            select: { blockedSeats: true }
+          })
+        : null,
+      tripId && departureDate
+        ? prisma.opsRoomAllocation.count({ where: { tripId, departureDate, bookingId } })
+        : 0,
+      tripId && departureDate
+        ? prisma.opsVehicleAllocation.count({ where: { tripId, departureDate, bookingId } })
+        : 0,
+      tripId && departureDate
+        ? prisma.opsTripChecklist.count({ where: { tenantId, tripId, departureDate, isCompleted: true } })
+        : 0
+    ]);
 
-    let ticketSummary = {
+    const ticketSummary = {
       status: ticketReq ? ticketReq.status : 'NOT_CREATED',
-      totalTravelers: ticketReq && ticketReq.travellers ? ticketReq.travellers.length : 0,
+      totalTravelers: ticketReq?._count.travellers || 0,
       approved: ticketReq && ticketReq.status === 'APPROVED' ? 1 : 0,
       pending: ticketReq && (ticketReq.status === 'PENDING_VERIFICATION' || ticketReq.status === 'DRAFT') ? 1 : 0,
       cancelled: ticketReq && ticketReq.status === 'CANCELLED' ? 1 : 0
     };
 
-    // 2. Accounting Summary (Recognized approved collections)
-    const accountingEntries = await prisma.accountingEntry.findMany({
-      where: { bookingId }
-    });
-
-    const approvedCollection = accountingEntries.filter(a => a.status === 'APPROVED').reduce((s, a) => s + a.amount, 0);
-    const pendingCollection = accountingEntries.filter(a => a.status === 'PENDING').reduce((s, a) => s + a.amount, 0);
-    const bookingTotal = booking.totalPrice || 0;
+    const accountingByStatus = Object.fromEntries(
+      accountingTotals.map((row) => [row.status, row._sum.amount || 0])
+    );
+    const approvedCollection = accountingByStatus.APPROVED || 0;
+    const pendingCollection = accountingByStatus.PENDING || 0;
+    const bookingTotal = booking.totalAmount || 0;
     const remainingAmount = Math.max(0, bookingTotal - approvedCollection);
     const derivedCollectionStatus = approvedCollection >= bookingTotal ? 'Paid' : approvedCollection > 0 ? 'Partially Paid' : 'Pending';
 
-    let accountingSummary = {
+    const accountingSummary = {
       bookingTotal,
       approvedCollection,
       pendingCollection,
@@ -528,40 +554,20 @@ async function buildBookingOpsSummary(booking, tenantId) {
     };
 
     // 3. Operations Summary
-    let opsSummaryData = {
+    const opsSummaryData = {
       departureWorkspaceState: departureDate ? 'ACTIVE' : 'NO_DATE',
-      seatState: 'AVAILABLE',
-      roomAllocationState: 'UNASSIGNED',
-      vehicleAllocationState: 'UNASSIGNED',
-      sopCompletedCount: 0
+      seatState: seatConfig ? (seatConfig.blockedSeats > 0 ? 'BLOCKED' : 'CONFIGURED') : 'AVAILABLE',
+      roomAllocationState: roomAllocCount > 0 ? 'ALLOCATED' : 'UNASSIGNED',
+      vehicleAllocationState: vehicleAllocCount > 0 ? 'ALLOCATED' : 'UNASSIGNED',
+      sopCompletedCount: completedChecklistCount
     };
 
-    if (tripId && departureDate) {
-      const [seatConfig, roomAlloc, vehicleAlloc, checklists] = await Promise.all([
-        prisma.opsSeatConfig.findFirst({ where: { tenantId, tripId, departureDate } }),
-        prisma.opsRoomAllocation.findFirst({ where: { tripId, departureDate, bookingId } }),
-        prisma.opsVehicleAllocation.findFirst({ where: { tripId, departureDate, bookingId } }),
-        prisma.opsTripChecklist.findMany({ where: { tripId, departureDate, isCompleted: true } })
-      ]);
-
-      if (seatConfig) {
-        opsSummaryData.seatState = seatConfig.blockedSeats > 0 ? 'BLOCKED' : 'CONFIGURED';
-      }
-      if (roomAlloc) opsSummaryData.roomAllocationState = 'ALLOCATED';
-      if (vehicleAlloc) opsSummaryData.vehicleAllocationState = 'ALLOCATED';
-      opsSummaryData.sopCompletedCount = checklists.length;
-    }
-
-    // 4. Alerts calculation
-    const alerts = [];
-    if (ticketSummary.pending > 0) alerts.push({ type: 'TICKET_PENDING', message: 'Train ticket verification pending' });
+    let alertCount = ticketSummary.pending > 0 ? 1 : 0;
     if (remainingAmount > 0) {
       const now = new Date();
       if (departureDate) {
         const diffDays = Math.ceil((new Date(departureDate) - now) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 3 && diffDays >= 0) alerts.push({ type: 'UNPAID_BALANCE_3D', message: `Unpaid balance due within ${diffDays} days` });
-        else if (diffDays <= 7 && diffDays >= 0) alerts.push({ type: 'UNPAID_BALANCE_7D', message: `Unpaid balance due within ${diffDays} days` });
-        else if (diffDays < 0) alerts.push({ type: 'POST_DEPARTURE_COLLECTION_WARNING', message: 'Post-departure collection warning: balance remaining' });
+        if (diffDays <= 7) alertCount += 1;
       }
     }
 
@@ -572,7 +578,7 @@ async function buildBookingOpsSummary(booking, tenantId) {
       ticketSummary,
       accountingSummary,
       operationsSummary: opsSummaryData,
-      alerts
+      alertCount
     };
   } catch (err) {
     console.error('buildBookingOpsSummary error:', err);

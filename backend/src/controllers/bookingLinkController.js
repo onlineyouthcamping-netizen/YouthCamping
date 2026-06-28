@@ -201,12 +201,17 @@ exports.getBookingLinks = async (req, res, next) => {
       where.createdByAdminId = String(salesAdminId);
     }
 
-    const links = await prisma.bookingLink.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      select: {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 25));
+    const [totalCount, links] = await Promise.all([
+      prisma.bookingLink.count({ where }),
+      prisma.bookingLink.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
         id: true,
-        tenantId: true,
         createdByAdminId: true,
         tripId: true,
         tripName: true,
@@ -222,24 +227,23 @@ exports.getBookingLinks = async (req, res, next) => {
         tokenPrefix: true,
         shareUrl: true,
         openedCount: true,
-        firstOpenedAt: true,
-        lastOpenedAt: true,
         completedCount: true,
-        lastCompletedAt: true,
-        revokedAt: true,
         createdAt: true,
-        createdByAdmin: {
-          select: { id: true, name: true, email: true },
         },
-        bookings: {
-          select: { id: true, bookingId: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-    });
+      })
+    ]);
 
-    res.json({ success: true, count: links.length, data: links });
+    res.json({
+      success: true,
+      count: links.length,
+      data: links,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit))
+      }
+    });
   } catch (error) {
     next(error);
   }
