@@ -65,6 +65,7 @@ app.options('*', cors(corsOptions));
 
 // Transactional, authenticated, and user-specific API responses must never be
 // cached. Only the explicitly allowlisted Phase 1 public GETs are exempt.
+app.use('/api', require('./middleware/metrics'));
 app.use('/api', apiNoStore);
 
 // Health Check (Before all other routes)

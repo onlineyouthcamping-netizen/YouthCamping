@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { generateBookingId } = require('../utils/bookingIdGenerator');
 const { logAction } = require('../utils/auditLogger');
 const { verifySignedPayload } = require('./bookingLinkController');
+const cache = require('../lib/cache');
 
 // Helper to safely parse dates and avoid crashes with "Invalid Date"
 const safeParseDate = (dateVal) => {
@@ -484,7 +485,8 @@ exports.getBookingById = async (req, res, next) => {
     }
 
     // Connected ecosystem operational summary lookup
-    const opsSummary = await buildBookingOpsSummary(booking, tenantId);
+    const authScope = req.user?.role === 'sales' ? `sales-${req.user.id}` : (req.user?.role || 'admin');
+    const opsSummary = await buildBookingOpsSummary(booking, tenantId, authScope);
 
     const mappedBooking = { ...booking, ...extra, passengers: persons, opsSummary };
 
@@ -495,9 +497,17 @@ exports.getBookingById = async (req, res, next) => {
   }
 };
 
-async function buildBookingOpsSummary(booking, tenantId) {
+async function buildBookingOpsSummary(booking, tenantId, authScope = 'admin') {
   try {
     const bookingId = booking.bookingId;
+    const cacheKey = `admin:summary:booking:${tenantId}:${bookingId}:${authScope}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (_) {}
+    }
+
     const tripId = booking.tripId;
     const departureDate = booking.departureDate;
 
@@ -571,7 +581,7 @@ async function buildBookingOpsSummary(booking, tenantId) {
       }
     }
 
-    return {
+    const result = {
       bookingLinkSource: booking.sourceBookingLink ? booking.sourceBookingLink.tokenPrefix : 'Direct / Manual',
       salespersonOwner: booking.salesAdminId || 'Unassigned',
       travelerCount: booking.numberOfTravelers || 1,
@@ -580,6 +590,9 @@ async function buildBookingOpsSummary(booking, tenantId) {
       operationsSummary: opsSummaryData,
       alertCount
     };
+
+    await cache.set(cacheKey, result, 15); // Cache for 15s
+    return result;
   } catch (err) {
     console.error('buildBookingOpsSummary error:', err);
     return null;
@@ -1029,6 +1042,12 @@ exports.updateBooking = async (req, res, next) => {
       afterData: updateData,
       ipAddress: req.ip || null
     });
+
+    const authScope = req.user?.role === 'sales' ? `sales-${req.user.id}` : (req.user?.role || 'admin');
+    await cache.del(`admin:summary:booking:${req.user.tenantId}:${beforeBooking.bookingId}:${authScope}`);
+    if (authScope !== 'admin') {
+      await cache.del(`admin:summary:booking:${req.user.tenantId}:${beforeBooking.bookingId}:admin`);
+    }
 
     res.json({ success: true, message: 'Booking updated' });
   } catch (error) { next(error); }
