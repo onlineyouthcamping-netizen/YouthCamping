@@ -16,9 +16,11 @@ const {
  * Get verification and train ticket status for a booking.
  */
 exports.getVerificationStatus = async (req, res) => {
+  const start = Date.now();
   try {
     const { bookingId } = req.params;
 
+    const queryStart = Date.now();
     const booking = await prisma.booking.findFirst({
       where: { bookingId, tenantId: req.user.tenantId },
       select: {
@@ -26,31 +28,35 @@ exports.getVerificationStatus = async (req, res) => {
         trainTicketRequired: true,
         trainTicketStatus: true,
         verification: {
-          include: {
-            verifiedBy: { select: { id: true, name: true } },
-            logs: {
-              orderBy: { createdAt: 'desc' },
-              include: { admin: { select: { id: true, name: true } } }
-            }
+          select: {
+            id: true,
+            bookingId: true,
+            status: true,
+            submittedAt: true,
+            verifiedAt: true,
+            verifiedBy: { select: { id: true, name: true } }
           }
         },
         trainTicket: {
-          include: {
-            travellers: true,
-            logs: {
-              orderBy: { createdAt: 'desc' },
-              include: { admin: { select: { id: true, name: true } } }
-            }
+          select: {
+            id: true,
+            bookingId: true,
+            status: true,
+            ticketStatus: true,
+            pnr: true,
+            trainName: true,
+            trainNumber: true
           }
         }
       }
     });
+    const queryDuration = Date.now() - queryStart;
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    return res.json({
+    const resData = {
       success: true,
       data: {
         bookingId: booking.bookingId,
@@ -59,7 +65,15 @@ exports.getVerificationStatus = async (req, res) => {
         verification: booking.verification || null,
         trainTicket: booking.trainTicket || null
       }
-    });
+    };
+
+    if (process.env.ENABLE_PERFORMANCE_METRICS === 'true') {
+      const duration = Date.now() - start;
+      const payloadBytes = Buffer.byteLength(JSON.stringify(resData));
+      console.log(`[METRICS] getVerificationStatus - Total: ${duration}ms, Query: ${queryDuration}ms, Payload: ${payloadBytes} bytes`);
+    }
+
+    return res.json(resData);
   } catch (err) {
     console.error('getVerificationStatus error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch verification status' });
@@ -152,6 +166,7 @@ exports.submitForVerification = async (req, res) => {
  * Get verification queue with pagination and status filter.
  */
 exports.getVerificationQueue = async (req, res) => {
+  const start = Date.now();
   try {
     const role = req.user.role;
     const userId = req.user.id;
@@ -175,13 +190,20 @@ exports.getVerificationQueue = async (req, res) => {
       where.booking = { salesAdminId: userId };
     }
 
+    const queryStart = Date.now();
     const [verifications, total] = await Promise.all([
       prisma.bookingVerification.findMany({
         where,
         skip,
         take: limit,
         orderBy: { updatedAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          bookingId: true,
+          status: true,
+          submittedAt: true,
+          verifiedAt: true,
+          verifiedByAdminId: true,
           booking: {
             select: {
               bookingId: true,
@@ -197,22 +219,17 @@ exports.getVerificationQueue = async (req, res) => {
               salesAdminId: true,
               numberOfTravelers: true,
               paymentStatus: true,
-              passengers: true,
               salesAdmin: { select: { id: true, name: true } }
             }
           },
-          verifiedBy: { select: { id: true, name: true } },
-          logs: {
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-            include: { admin: { select: { id: true, name: true } } }
-          }
+          verifiedBy: { select: { id: true, name: true } }
         }
       }),
       prisma.bookingVerification.count({ where })
     ]);
+    const queryDuration = Date.now() - queryStart;
 
-    return res.json({
+    const resData = {
       success: true,
       data: {
         verifications,
@@ -223,7 +240,15 @@ exports.getVerificationQueue = async (req, res) => {
           totalPages: Math.ceil(total / limit)
         }
       }
-    });
+    };
+
+    if (process.env.ENABLE_PERFORMANCE_METRICS === 'true') {
+      const duration = Date.now() - start;
+      const payloadBytes = Buffer.byteLength(JSON.stringify(resData));
+      console.log(`[METRICS] getVerificationQueue - Total: ${duration}ms, Query: ${queryDuration}ms, Rows: ${verifications.length}, Payload: ${payloadBytes} bytes`);
+    }
+
+    return res.json(resData);
   } catch (err) {
     console.error('getVerificationQueue error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch verification queue' });
