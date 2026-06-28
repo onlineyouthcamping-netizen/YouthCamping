@@ -154,45 +154,59 @@ function BookingForm() {
   const [basePrice, setBasePrice] = useState(initialParams.basePrice || 13999);
   const [travelerAutoFilled, setTravelerAutoFilled] = useState(false);
 
-    // Dynamic joining points loaded from tripData or fallback
+  // Dynamic joining points loaded from tripData or fallback
   const joiningPoints = useMemo(() => {
     const baselinePrice = tripData?.price || basePrice || 13999;
-    
-    // 1. Primary Source: Location Variants (variants)
-    if (tripData?.variants && Array.isArray(tripData.variants) && tripData.variants.length > 0) {
-      return tripData.variants.map((v: any) => {
-        const variantPrice = Number(v.discountedPrice) || Number(v.originalPrice) || 0;
-        const deduction = Math.max(0, baselinePrice - variantPrice);
-        return {
-          cityName: v.location || 'Unknown Point',
-          deductionAmount: deduction,
-          skipDays: Number(v.skipDays) || 0,
-          pickupPoint: v.duration || '',
-          price: variantPrice
-        };
+    const pointsList: any[] = [];
+    const seenCities = new Set<string>();
+
+    const addPoint = (cityName: string, price: number, deduction: number, skipDays: number, pickupPoint: string) => {
+      const trimmedCity = (cityName || '').trim();
+      if (!trimmedCity || seenCities.has(trimmedCity.toLowerCase())) return;
+      seenCities.add(trimmedCity.toLowerCase());
+      pointsList.push({
+        cityName: trimmedCity,
+        deductionAmount: deduction,
+        skipDays,
+        pickupPoint,
+        price
+      });
+    };
+
+    // 1. Location Variants
+    if (tripData?.variants && Array.isArray(tripData.variants)) {
+      tripData.variants.forEach((v: any) => {
+        const cName = v.cityName || v.location || v.name || v.variantName || v.city;
+        if (cName) {
+          const variantPrice = Number(v.discountedPrice) || Number(v.originalPrice) || 0;
+          const deduction = Math.max(0, baselinePrice - variantPrice);
+          const pPoint = v.pickupPoint || v.landmark || v.station || v.address || (v.duration && !v.duration.includes('Day') ? v.duration : 'Assigned Landmark');
+          addPoint(cName, variantPrice > 0 ? variantPrice : baselinePrice, deduction, Number(v.skipDays) || 0, pPoint);
+        }
       });
     }
 
-    // 2. Secondary Source: Pickup Cities
-    if (tripData?.pickupCities && Array.isArray(tripData.pickupCities) && tripData.pickupCities.length > 0) {
-      return tripData.pickupCities.map((c: any) => {
-        const deduction = Number(c.deductionAmount) || 0;
-        const price = Math.max(0, baselinePrice - deduction);
-        return {
-          cityName: c.cityName || 'Unknown Point',
-          deductionAmount: deduction,
-          skipDays: Number(c.skipDays) || 0,
-          pickupPoint: c.pickupPoint || 'Assigned Landmark',
-          price: price
-        };
+    // 2. Pickup Cities
+    if (tripData?.pickupCities && Array.isArray(tripData.pickupCities)) {
+      tripData.pickupCities.forEach((c: any) => {
+        const cName = c.cityName || c.location || c.name;
+        if (cName) {
+          const deduction = Number(c.deductionAmount) || 0;
+          const price = Math.max(0, baselinePrice - deduction);
+          const pPoint = c.pickupPoint || c.landmark || c.station || 'Assigned Landmark';
+          addPoint(cName, price, deduction, Number(c.skipDays) || 0, pPoint);
+        }
       });
     }
 
-    // 3. Fallback
-    return FALLBACK_JOINING_POINTS.map(p => ({
-      ...p,
-      price: Math.max(0, baselinePrice - p.deductionAmount)
-    }));
+    // 3. Fallback joining points if inventory list is empty
+    if (pointsList.length === 0) {
+      FALLBACK_JOINING_POINTS.forEach(p => {
+        addPoint(p.cityName, Math.max(0, baselinePrice - p.deductionAmount), p.deductionAmount, p.skipDays, p.pickupPoint);
+      });
+    }
+
+    return pointsList;
   }, [tripData, basePrice]);
 
   const [selectedCity, setSelectedCity] = useState<any>(FALLBACK_JOINING_POINTS[0]);
