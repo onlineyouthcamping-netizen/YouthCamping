@@ -7,6 +7,9 @@ const FORBIDDEN_SYNTHETIC_IDENTITIES = new Set([
   'dev_user'
 ]);
 
+const adminCache = new Map();
+const ADMIN_CACHE_TTL = 60 * 1000; // 60 seconds
+
 // JWT auth middleware
 const authenticate = async (req, res, next) => {
   const authStart = Date.now();
@@ -25,6 +28,14 @@ const authenticate = async (req, res, next) => {
 
     if (!decoded.id || FORBIDDEN_SYNTHETIC_IDENTITIES.has(decoded.id)) {
       return res.status(401).json({ success: false, message: 'Account not found' });
+    }
+
+    const cached = adminCache.get(decoded.id);
+    if (cached && Date.now() < cached.expiresAt && cached.tokenVersion === decoded.tokenVersion) {
+      req.user = cached.user;
+      req.admin = cached.user;
+      if (req._timings) req._timings.auth = Date.now() - authStart;
+      return next();
     }
 
     const admin = await prisma.admin.findUnique({
@@ -67,6 +78,12 @@ const authenticate = async (req, res, next) => {
       role: admin.role,
       tenantId: admin.tenantId || 'default'
     };
+
+    adminCache.set(decoded.id, {
+      user,
+      tokenVersion: admin.tokenVersion,
+      expiresAt: Date.now() + ADMIN_CACHE_TTL
+    });
 
     req.user = user;
     req.admin = user;
