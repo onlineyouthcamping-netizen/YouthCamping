@@ -517,59 +517,59 @@ exports.getWorkspaceSummary = async (req, res) => {
       prisma.booking.aggregate({
         where: ctx.bookingWhere,
         _sum: { numberOfTravelers: true, totalAmount: true }
-      }),
-      prisma.booking.findMany({ where: ctx.bookingWhere, select: { bookingId: true } }),
+      }).catch(e => ({ _sum: { numberOfTravelers: 0, totalAmount: 0 } })),
+      prisma.booking.findMany({ where: ctx.bookingWhere, select: { bookingId: true } }).catch(e => []),
       prisma.opsSeatConfig.findFirst({
         where: ctx.where,
         select: { id: true, totalSeatsCap: true, alertThreshold: true, blockedSeats: true }
-      }),
+      }).catch(e => null),
       prisma.opsTripChecklist.groupBy({
         by: ['isCompleted'], where: ctx.where, _count: { _all: true }
-      }),
-      prisma.opsIncidentLog.count({ where: { ...ctx.where, status: 'OPEN' } }),
+      }).catch(e => []),
+      prisma.opsIncidentLog.count({ where: { ...ctx.where, status: 'OPEN' } }).catch(e => 0),
       prisma.opsTripLeader.findMany({
         where: { ...ctx.where, archivedAt: null },
         select: { id: true, leaderName: true, leaderPhone: true, leaderType: true, isPrimary: true },
         orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
         take: 10
-      }),
+      }).catch(e => []),
       prisma.opsHotelBooking.groupBy({
         by: ['confirmed'], where: ctx.where, _count: { _all: true }
-      }),
-      prisma.opsTransportFleet.count({ where: ctx.where }),
-      prisma.opsRoomAllocation.count({ where: { tripId: ctx.tripId, departureDate: ctx.departureDate } }),
-      prisma.opsVehicleAllocation.count({ where: { tripId: ctx.tripId, departureDate: ctx.departureDate } }),
+      }).catch(e => []),
+      prisma.opsTransportFleet.count({ where: ctx.where }).catch(e => 0),
+      prisma.opsRoomAllocation.count({ where: { tripId: ctx.tripId, departureDate: ctx.departureDate } }).catch(e => 0),
+      prisma.opsVehicleAllocation.count({ where: { tripId: ctx.tripId, departureDate: ctx.departureDate } }).catch(e => 0),
       prisma.opsAllocationRun.findFirst({
         where: ctx.where,
         select: { status: true, version: true },
         orderBy: { createdAt: 'desc' }
-      })
+      }).catch(e => null)
     ]);
 
-    const bookingIds = bookingRefs.map((booking) => booking.bookingId).filter(Boolean);
+    const bookingIds = (bookingRefs || []).map((booking) => booking.bookingId).filter(Boolean);
     const [ticketCounts, accountingTotals] = bookingIds.length > 0
       ? await Promise.all([
           prisma.trainTicketRequest.groupBy({
             by: ['status'],
             where: { tenantId: ctx.tenantId, bookingId: { in: bookingIds } },
             _count: { _all: true }
-          }),
+          }).catch(e => []),
           prisma.accountingEntry.groupBy({
             by: ['status'],
             where: { tenantId: ctx.tenantId, bookingId: { in: bookingIds } },
             _sum: { amount: true }
-          })
+          }).catch(e => [])
         ])
       : [[], []];
 
-    const travelerCount = bookingAggregate._sum.numberOfTravelers || 0;
-    const totalBookingAmount = bookingAggregate._sum.totalAmount || 0;
+    const travelerCount = bookingAggregate?._sum?.numberOfTravelers || 0;
+    const totalBookingAmount = bookingAggregate?._sum?.totalAmount || 0;
     const totalSeatsCap = seatConfig?.totalSeatsCap ?? 30;
     const blockedSeats = seatConfig?.blockedSeats ?? 0;
-    const ticketsByStatus = Object.fromEntries(ticketCounts.map((row) => [row.status, row._count._all]));
-    const accountingByStatus = Object.fromEntries(accountingTotals.map((row) => [row.status, row._sum.amount || 0]));
-    const checklistByStatus = Object.fromEntries(checklistCounts.map((row) => [String(row.isCompleted), row._count._all]));
-    const hotelByStatus = Object.fromEntries(hotelCounts.map((row) => [row.confirmed, row._count._all]));
+    const ticketsByStatus = Object.fromEntries((ticketCounts || []).map((row) => [row.status, row._count._all]));
+    const accountingByStatus = Object.fromEntries((accountingTotals || []).map((row) => [row.status, row._sum?.amount || 0]));
+    const checklistByStatus = Object.fromEntries((checklistCounts || []).map((row) => [String(row.isCompleted), row._count._all]));
+    const hotelByStatus = Object.fromEntries((hotelCounts || []).map((row) => [row.confirmed, row._count._all]));
     const approvedCollections = accountingByStatus.APPROVED || 0;
 
     return res.json({
@@ -594,23 +594,23 @@ exports.getWorkspaceSummary = async (req, res) => {
           waitingList: Math.max(0, travelerCount + blockedSeats - totalSeatsCap)
         },
         hotelTransportStatus: {
-          hotelsTotal: hotelCounts.reduce((sum, row) => sum + row._count._all, 0),
+          hotelsTotal: (hotelCounts || []).reduce((sum, row) => sum + (row._count?._all || 0), 0),
           hotelsConfirmed: hotelByStatus.CONFIRMED || 0,
-          transportTotal: transportCount
+          transportTotal: transportCount || 0
         },
         allocationState: {
           status: latestAllocation?.status || 'NOT_STARTED',
           version: latestAllocation?.version || 0,
-          roomAllocations: roomAllocationCount,
-          vehicleAllocations: vehicleAllocationCount
+          roomAllocations: roomAllocationCount || 0,
+          vehicleAllocations: vehicleAllocationCount || 0
         },
         checklistCompletion: {
           completed: checklistByStatus.true || 0,
           total: (checklistByStatus.true || 0) + (checklistByStatus.false || 0)
         },
-        blockingFlagCount: openIncidentCount,
-        openIncidentCount,
-        leaders
+        blockingFlagCount: openIncidentCount || 0,
+        openIncidentCount: openIncidentCount || 0,
+        leaders: leaders || []
       }
     });
   } catch (err) {
