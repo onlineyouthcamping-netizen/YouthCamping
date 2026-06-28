@@ -435,25 +435,60 @@ exports.updateTrip = async (req, res, next) => {
 exports.deleteTrip = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user.tenantId || 'default';
 
-    // 1. Delete associated non-relational records (Inquiries, Reviews)
-    // Note: Bookings and TripVendors are handled by DB Cascade (onDelete: Cascade)
-    await prisma.inquiry.deleteMany({ where: { tripId: id, tenantId } });
-    await prisma.review.deleteMany({ where: { tripId: id, tenantId } });
-
-    // 2. Delete the trip (triggers DB cascade for Bookings, etc.)
-    const result = await prisma.trip.deleteMany({
+    // Check if trip exists
+    const trip = await prisma.trip.findFirst({
       where: { id, tenantId }
     });
 
-    if (result.count === 0) {
+    if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found' });
     }
 
-    res.json({ success: true, message: 'Trip removed' });
+    // Check for active bookings tied to this trip
+    const activeBookingCount = await prisma.booking.count({
+      where: { tripId: id, tenantId, status: { notIn: ['cancelled', 'rejected'] } }
+    });
+
+    if (activeBookingCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete trip with ${activeBookingCount} active booking(s). Please cancel or reassign bookings first.`
+      });
+    }
+
+    // Clean up related operations and auxiliary models that restrict deletion
+    await Promise.all([
+      prisma.inquiry.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.review.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsSeatConfig.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsItinerary.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsAttraction.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsPackingItem.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsInclusionExclusion.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsFaq.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsTripChecklist.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsIncidentLog.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsHotelBooking.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsTransportFleet.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsGuidePayment.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsMiscExpense.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsTripExpense.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.opsTripLeader.deleteMany({ where: { tripId: id, tenantId } }).catch(() => {}),
+      prisma.tripAssignment.deleteMany({ where: { tripId: id } }).catch(() => {}),
+      prisma.tripVendor.deleteMany({ where: { tripId: id } }).catch(() => {})
+    ]);
+
+    // Delete the trip
+    await prisma.trip.delete({
+      where: { id }
+    });
+
+    res.json({ success: true, message: 'Trip removed successfully' });
   } catch (error) {
-    next(error);
+    console.error('deleteTrip error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to delete trip' });
   }
 };
 /**
