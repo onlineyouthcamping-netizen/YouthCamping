@@ -42,10 +42,8 @@ exports.getVerificationStatus = async (req, res) => {
             id: true,
             bookingId: true,
             status: true,
-            ticketStatus: true,
             pnr: true,
-            trainName: true,
-            trainNumber: true
+            preferredTrain: true
           }
         }
       }
