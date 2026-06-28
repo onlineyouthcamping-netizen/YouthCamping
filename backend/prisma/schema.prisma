@@ -354,6 +354,8 @@ model Booking {
   @@index([paymentStatus])
   @@index([sourceBookingLinkId])
   @@index([salesAdminId])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, salesAdminId, status, createdAt(sort: Desc)])
 }
 
 model BookingEmailLog {
@@ -567,6 +569,7 @@ model BookingVerification {
 
   @@index([tenantId])
   @@index([status])
+  @@index([tenantId, status, updatedAt(sort: Desc)])
   @@map("booking_verifications")
 }
 
