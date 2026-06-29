@@ -116,6 +116,29 @@ export default function BlogSection({
   );
 }
 
+const BLOG_PHOTO_MAP: Record<string, string> = {
+  kasol: "https://images.unsplash.com/photo-1597037750734-450f6f406560?auto=format&fit=crop&w=800&q=80",
+  parvati: "https://images.unsplash.com/photo-1597037750734-450f6f406560?auto=format&fit=crop&w=800&q=80",
+  spiti: "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80",
+  zanskar: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80",
+  chadar: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80",
+  kedarnath: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+  manali: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+  bali: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80"
+};
+
+function getBlogCover(art: BlogItem): string {
+  if (art.image) {
+    const normalized = normalizeImageUrl(art.image);
+    if (normalized) return normalized;
+  }
+  const titleKey = (art.title || "").toLowerCase();
+  for (const [key, photoUrl] of Object.entries(BLOG_PHOTO_MAP)) {
+    if (titleKey.includes(key)) return photoUrl;
+  }
+  return "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80";
+}
+
 function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMotion: boolean }) {
   const content = art.content || '';
   const isVideo = Boolean(art.hasVideo || content.includes('youtube.com') || content.includes('youtu.be') || content.includes('iframe'));
@@ -131,6 +154,7 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
 
   // Strip HTML for snippet
   const snippet = (art.excerpt || content.replace(/<[^>]*>/g, '')).slice(0, 80) + "...";
+  const blogImageSrc = getBlogCover(art);
 
   return (
     <motion.div
@@ -148,13 +172,14 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
           style={{ height: '220px', minHeight: '220px' }}
         >
           <OptimizedImage 
-            src={normalizeImageUrl(art.image) || "https://images.unsplash.com/photo-1597037750734-450f6f406560"} 
+            src={blogImageSrc} 
             alt={art.title} 
             cloudinaryWidth={600}
             bunnyVariant="x540gt"
             sizes="380px"
             width={600}
             height={340}
+            priority={true}
             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
           />
           {/* Magazine Icon Overlay */}
