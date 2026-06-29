@@ -95,6 +95,50 @@ exports.getTrips = async (req, res, next) => {
 };
 
 /**
+ * @desc    Get lightweight compact trips for dropdown selectors
+ * @route   GET /api/trips/compact
+ * @access  Private/Admin
+ */
+exports.getCompactTrips = async (req, res, next) => {
+  try {
+    const tenantId = req.user?.tenantId || 'default';
+    const where = { tenantId };
+
+    if (req.query.status && req.query.status !== 'all') {
+      where.status = req.query.status;
+    }
+
+    const trips = await prisma.trip.findMany({
+      where,
+      select: {
+        id: true,
+        tripCode: true,
+        title: true,
+        tripName: true,
+        price: true,
+        status: true,
+        travelOptions: true,
+        roomOptions: true,
+        pickupCities: true
+      },
+      orderBy: [
+        { order: 'asc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    res.json({
+      success: true,
+      count: trips.length,
+      data: trips
+    });
+  } catch (error) {
+    console.error("🔥 [Compact Trips Fetch Error]:", error);
+    next(error);
+  }
+};
+
+/**
  * Lightweight published trip cards for the public website.
  * Existing /api/trips responses remain unchanged for backwards compatibility.
  * Capacity and booked-count values are intentionally excluded from this cacheable response.

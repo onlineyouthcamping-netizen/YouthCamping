@@ -3,6 +3,7 @@ const router = express.Router();
 console.log("   [Routes] Loading tripRoutes.js");
 const {
   getTrips,
+  getCompactTrips,
   getPublicTripCards,
   getPublicTripDetail,
   getPublicTripLookup,
@@ -25,6 +26,7 @@ router.get('/public/slug/:slug', getPublicTripDetail);
 router.get('/public/lookup/:identifier', getPublicTripLookup);
 
 router.get('/', authenticate, stripFinancialFieldsForGuides, getTrips);
+router.get('/compact', authenticate, stripFinancialFieldsForGuides, getCompactTrips);
 
 router.get('/seed/live-data', authenticate, seedLiveData);
 

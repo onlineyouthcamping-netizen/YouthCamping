@@ -7,6 +7,11 @@ export const tripsService = {
     return res.data.data;
   },
 
+  async getCompact(): Promise<Trip[]> {
+    const res = await api.get("/trips/compact?status=all");
+    return res.data.data;
+  },
+
   async getById(id: string): Promise<Trip | undefined> {
     const res = await api.get(`/trips/${id}`);
     return res.data.data;
