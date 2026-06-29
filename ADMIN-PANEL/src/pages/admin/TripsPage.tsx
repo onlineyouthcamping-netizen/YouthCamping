@@ -40,17 +40,13 @@ export default function TripsPage() {
   });
 
   const openCreate = () => { setEditing(null); setIsEditingMode(true); };
-  const openEdit = async (t: Trip) => { 
+  const openEdit = (t: Trip) => { 
     if (!t?.id) return;
-    try {
-      const fullTrip = await tripsService.getById(t.id);
-      setEditing(fullTrip || t);
-      setIsEditingMode(true); 
-    } catch (error) {
-      toast.error("Failed to load full trip details");
-      setEditing(t);
-      setIsEditingMode(true);
-    }
+    setEditing(t);
+    setIsEditingMode(true); 
+    tripsService.getById(t.id).then(fullTrip => {
+      if (fullTrip) setEditing(fullTrip);
+    }).catch(() => {});
   };
 
   const handleSave = async (data: TripFormData, editingId?: string) => {

@@ -209,17 +209,25 @@ export default function BookingDetailsView({ booking, onBack, onRefresh, trips }
   const previewFinalTotal = previewTotalWithGST - previewGstDiscount;
 
   useEffect(() => {
-    const fetchGlobalSettings = async () => {
-      try {
-        const data = await settingsService.get();
-        if (data) setSettings(data);
-      } catch (e) {
-        console.error("Failed to load settings", e);
+    setLoadingPayments(true);
+    Promise.allSettled([
+      settingsService.get(),
+      bookingsService.getEmailLogs(booking.id),
+      paymentsService.getByBooking(booking.id)
+    ]).then(([settingsRes, logsRes, paymentsRes]) => {
+      if (settingsRes.status === 'fulfilled' && settingsRes.value) {
+        setSettings(settingsRes.value);
       }
-    };
-    fetchGlobalSettings();
-    fetchEmailLogs();
-    fetchPayments();
+      if (logsRes.status === 'fulfilled' && logsRes.value) {
+        setEmailLogs(logsRes.value);
+      }
+      if (paymentsRes.status === 'fulfilled' && paymentsRes.value) {
+        setPaymentsList(paymentsRes.value.payments || []);
+      }
+    }).finally(() => {
+      setLoadingPayments(false);
+    });
+
     setNotesValue(booking.notes || "");
     setInternalNotesValue(booking.adminNotes || "");
     setConfirmEmail(booking.email || "");
