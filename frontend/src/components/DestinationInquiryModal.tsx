@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar, Users, Send, AlertCircle } from "lucide-react";
 import { normalizeImageUrl, submitInquiry } from "@/lib/api";
@@ -30,6 +31,7 @@ export default function DestinationInquiryModal({
   description,
   source = 'website_booking_button'
 }: DestinationInquiryModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     mobile: "",
@@ -39,6 +41,10 @@ export default function DestinationInquiryModal({
     count: "",
     message: ""
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -117,10 +123,7 @@ export default function DestinationInquiryModal({
     }
   };
 
-  const modalTitle = title || "Plan Your Next Trip";
-  const modalDescription = description || "Connect with our destination experts";
-
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
@@ -285,6 +288,7 @@ export default function DestinationInquiryModal({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
