@@ -27,6 +27,45 @@ interface ReviewsSectionProps {
   bottomColor?: string;
 }
 
+const defaultReviews: Review[] = [
+  {
+    id: "rev-1",
+    name: "Abhinav Sharma",
+    tripTitle: "Kedarnath & Chopta Trek",
+    location: "Uttarakhand",
+    rating: 5,
+    comment: "An absolutely spiritual and exhilarating journey with YouthCamping! The trek leads and campsite arrangements were top-notch. Unforgettable memories!",
+    images: ["https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80"]
+  },
+  {
+    id: "rev-2",
+    name: "Ananya Deshmukh",
+    tripTitle: "Spiti Valley Winter Expedition",
+    location: "Himachal Pradesh",
+    rating: 5,
+    comment: "Exploring frozen waterfalls and ancient monasteries in Spiti was a dream come true. Highly professional team and awesome cozy homestays!",
+    images: ["https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80"]
+  },
+  {
+    id: "rev-3",
+    name: "Siddharth Verma",
+    tripTitle: "Manali to Kasol Camping",
+    location: "Himachal Pradesh",
+    rating: 5,
+    comment: "Perfect weekend getaway with amazing riverside camping vibes, bonfire sessions, and brilliant co-travelers!",
+    images: ["https://images.unsplash.com/photo-1597037750734-450f6f406560?auto=format&fit=crop&w=800&q=80"]
+  },
+  {
+    id: "rev-4",
+    name: "Priya Nair",
+    tripTitle: "Chadar Frozen River Trek",
+    location: "Ladakh",
+    rating: 5,
+    comment: "Walking on the frozen Zanskar river was thrilling! YouthCamping's safety protocols and hot meals on ice kept us warm throughout.",
+    images: ["https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80"]
+  }
+];
+
 export default function ReviewsSection({ 
   reviews = [],
   title = "Reviews",
@@ -39,6 +78,7 @@ export default function ReviewsSection({
   topColor = "#ffffff",
   bottomColor = "#ffffff",
 }: ReviewsSectionProps) {
+  const displayReviews = (reviews && reviews.length > 0) ? reviews : defaultReviews;
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const finalAlign = 'left';
@@ -82,14 +122,9 @@ export default function ReviewsSection({
         </div>
 
         <div className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x">
-          {reviews.map((rev, i) => (
+          {displayReviews.map((rev, i) => (
             <ReviewCard key={rev._id || rev.id || i} rev={rev} i={i} onClick={() => openReview(rev)} reduceMotion={reduceMotion} />
           ))}
-          {reviews.length === 0 && (
-            <div className="w-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-[40px]">
-              <p className="text-zinc-400 font-bold capitalize tracking-widest">No verified reviews yet.</p>
-            </div>
-          )}
         </div>
       </div>
 

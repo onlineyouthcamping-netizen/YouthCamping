@@ -53,7 +53,7 @@ const FloatingSocialBar = dynamicImport(() => import("@/components/FloatingSocia
 
 import { Trip, Review, Blog } from "@/types";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 async function settleWithin<T>(promise: Promise<T>, milliseconds: number, fallback: T): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -79,8 +79,8 @@ export default async function Home() {
   try {
     const results = await Promise.allSettled([
       fetchHomepageTrips(12),
-      settleWithin(fetchHomepageReviews(8), 1500, []),
-      settleWithin(fetchHomepageBlogs(8), 1500, []),
+      settleWithin(fetchHomepageReviews(8), 6000, []),
+      settleWithin(fetchHomepageBlogs(8), 6000, []),
       fetchPageBySlug('home'),
       fetchTheme()
     ]);
