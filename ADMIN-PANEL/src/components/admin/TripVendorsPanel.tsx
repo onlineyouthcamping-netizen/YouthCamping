@@ -95,23 +95,29 @@ export default function TripVendorsPanel({ tripId, tripTitle, tripPrice, open, o
   };
 
   const handleUpdatePayment = async (assignmentId: string, paymentStatus: string, paidAmount: number) => {
+    setSubmitting(true);
     try {
       await vendorsService.updateAssignment(assignmentId, { paymentStatus: paymentStatus as any, paidAmount });
       toast.success("Vendor payment updated");
       loadData();
     } catch {
       toast.error("Failed to update");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleRemove = async (assignmentId: string) => {
     if (!confirm("Remove this vendor from the trip?")) return;
+    setSubmitting(true);
     try {
       await vendorsService.removeAssignment(assignmentId);
       toast.success("Vendor removed from trip");
       loadData();
     } catch {
       toast.error("Failed to remove");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -251,7 +257,7 @@ export default function TripVendorsPanel({ tripId, tripTitle, tripPrice, open, o
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-black">₹{a.agreedCost.toLocaleString()}</span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleRemove(a.id || a._id!)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={submitting} onClick={() => handleRemove(a.id || a._id!)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -260,6 +266,7 @@ export default function TripVendorsPanel({ tripId, tripTitle, tripPrice, open, o
                     <div className="flex items-center gap-3">
                       <Select
                         value={a.paymentStatus}
+                        disabled={submitting}
                         onValueChange={(v) => handleUpdatePayment(a.id || a._id!, v, a.paidAmount)}
                       >
                         <SelectTrigger className="h-8 w-36 rounded-lg text-[10px] font-bold uppercase">
@@ -278,6 +285,7 @@ export default function TripVendorsPanel({ tripId, tripTitle, tripPrice, open, o
                             type="number"
                             placeholder="Paid amount"
                             defaultValue={a.paidAmount || ""}
+                            disabled={submitting}
                             className="h-8 w-28 rounded-lg text-xs"
                             onBlur={(e) => {
                               const val = Number(e.target.value);

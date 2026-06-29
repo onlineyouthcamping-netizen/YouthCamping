@@ -526,7 +526,7 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
                     {/* Submit */}
                     {t.approvalStatus === "DRAFT" && canManage && !t.isLocked && t.ticketStatus !== "CANCELLED" && (
                       <Button size="sm" onClick={() => doSubmitApproval(t.id)} disabled={actionBusy}
-                        className="h-7 px-2 text-[9px] font-bold uppercase bg-blue-600 text-white">
+                        className="h-7 px-2 text-[9px] font-bold uppercase bg-primary hover:bg-primary/90 text-white">
                         <Send className="w-3 h-3 mr-1" />Submit
                       </Button>
                     )}

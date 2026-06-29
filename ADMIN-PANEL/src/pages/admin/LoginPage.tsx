@@ -188,7 +188,7 @@ export default function LoginPage() {
                       <button 
                         type="button"
                         onClick={() => { setView("forgot"); setNotification(null); }}
-                        className="text-blue-600 font-semibold hover:underline"
+                        className="text-primary font-semibold hover:underline"
                       >
                         Forgot password?
                       </button>
@@ -196,7 +196,7 @@ export default function LoginPage() {
                   )}
 
                   {/* Login Button */}
-                  <Button type="submit" className="w-full h-9.5 rounded bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-sm transition-all" disabled={loading}>
+                  <Button type="submit" className="w-full h-9.5 rounded bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-sm transition-all" disabled={loading}>
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -208,7 +208,7 @@ export default function LoginPage() {
                 {loginType === "admin" && (
                   <div className="text-center pt-2">
                     <span className="text-slate-450">Don't have an account? </span>
-                    <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Contact system administrator to request an admin profile."); }} className="text-blue-600 font-semibold hover:underline">
+                    <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Contact system administrator to request an admin profile."); }} className="text-primary font-semibold hover:underline">
                       Contact Administrator &rarr;
                     </a>
                   </div>
@@ -233,7 +233,7 @@ export default function LoginPage() {
                         required 
                       />
                     </div>
-                    <Button type="submit" className="w-full h-9.5 rounded bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold text-xs">
+                    <Button type="submit" className="w-full h-9.5 rounded bg-primary hover:bg-primary/90 text-white font-bold text-xs">
                       Help me via email &rarr;
                     </Button>
                   </form>
@@ -243,7 +243,7 @@ export default function LoginPage() {
                     <button 
                       type="button" 
                       onClick={() => setView("login")} 
-                      className="text-blue-650 font-bold hover:underline"
+                      className="text-primary font-bold hover:underline"
                     >
                       Login now &rarr;
                     </button>
@@ -279,7 +279,7 @@ export default function LoginPage() {
           
           {/* "What's New" Glass container */}
           <div className="relative z-10 bg-slate-950/70 backdrop-blur-md rounded-xl p-8 max-w-sm text-white border border-white/10 shadow-2xl space-y-3.5 transform hover:scale-[1.01] transition-transform duration-300">
-            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block">
+            <span className="text-[9px] font-bold text-primary uppercase tracking-widest block">
               Guides Operations
             </span>
             <h3 className="text-base font-bold tracking-tight text-white leading-tight">
@@ -288,7 +288,7 @@ export default function LoginPage() {
             <p className="text-[10.5px] text-white/70 leading-relaxed font-medium">
               Guides can now log in directly from this portal to see assigned assignments, sync booking travelers, record milestone updates, and log trip expenses. Admins receive all logs instantly on their dashboard.
             </p>
-            <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Guide management portal active."); }} className="text-[10.5px] font-bold text-blue-400 hover:underline flex items-center gap-1 pt-1">
+            <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Guide management portal active."); }} className="text-[10.5px] font-bold text-primary hover:underline flex items-center gap-1 pt-1">
               Read guide manual &rarr;
             </a>
           </div>

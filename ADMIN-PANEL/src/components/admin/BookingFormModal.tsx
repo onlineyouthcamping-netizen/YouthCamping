@@ -186,7 +186,7 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
         <div className="p-8 max-h-[80vh] overflow-y-auto space-y-8 bg-gray-50/50">
           <section className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b pb-2 mb-4">
-              <User className="w-4 h-4 text-blue-600" />
+              <User className="w-4 h-4 text-primary" />
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Personal Information</h3>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -222,7 +222,7 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
 
           <section className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b pb-2 mb-4">
-              <MapPin className="w-4 h-4 text-blue-600" />
+              <MapPin className="w-4 h-4 text-primary" />
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Expedition Selection</h3>
             </div>
             <div className="space-y-1.5">
@@ -257,7 +257,7 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold uppercase text-gray-400">Departure Date *</Label>
-                <Input type="date" value={form.departureDate} onChange={e => setForm({...form, departureDate: e.target.value})} className="font-bold text-blue-600" />
+                <Input type="date" value={form.departureDate} onChange={e => setForm({...form, departureDate: e.target.value})} className="font-bold text-gray-900" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold uppercase text-gray-400">Ticket Status *</Label>
@@ -320,7 +320,7 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold uppercase text-gray-400">Total Amount</Label>
-                <div className="h-10 px-3 flex items-center bg-blue-50 border border-blue-100 rounded-md font-black text-blue-600">
+                <div className="h-10 px-3 flex items-center bg-primary/5 border border-primary/10 rounded-md font-black text-primary">
                   ₹ {total.toLocaleString()}
                 </div>
               </div>
@@ -372,7 +372,7 @@ export default function BookingFormModal({ open, onOpenChange, onSuccess, bookin
           <Button 
             onClick={handleSubmit} 
             disabled={submitting}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-widest px-8 h-12 rounded-xl shadow-lg shadow-blue-100"
+            className="bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-widest px-8 h-12 rounded-xl shadow-lg shadow-primary/20"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             {booking ? "Update Booking" : "Complete Booking"}

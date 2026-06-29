@@ -35,6 +35,7 @@ export default function BookingDetailsModal({ open, onOpenChange, booking, onEdi
     phone: "",
     email: ""
   });
+  const [savingPassenger, setSavingPassenger] = useState(false);
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
 
   const fetchEmailLogs = async () => {
@@ -153,7 +154,9 @@ export default function BookingDetailsModal({ open, onOpenChange, booking, onEdi
       toast.error("Please enter at least a first name");
       return;
     }
+    if (savingPassenger) return;
 
+    setSavingPassenger(true);
     let updatedPassengers = [];
 
     if (editingPassenger) {
@@ -191,6 +194,8 @@ export default function BookingDetailsModal({ open, onOpenChange, booking, onEdi
       }
     } catch (e) {
       toast.error("Failed to save to server, but updated locally");
+    } finally {
+      setSavingPassenger(false);
     }
 
     setNewPassenger({ firstName: "", lastName: "", gender: "Male", age: "", phone: "", email: "" });
@@ -922,11 +927,11 @@ export default function BookingDetailsModal({ open, onOpenChange, booking, onEdi
             </div>
           </div>
           <div className="bg-gray-50 px-8 py-5 flex justify-end gap-3 border-t">
-            <Button variant="ghost" onClick={() => { setShowAddPassenger(false); setEditingPassenger(null); }} className="text-xs font-bold uppercase tracking-widest">Cancel</Button>
+            <Button variant="ghost" disabled={savingPassenger} onClick={() => { setShowAddPassenger(false); setEditingPassenger(null); }} className="text-xs font-bold uppercase tracking-widest">Cancel</Button>
             {!editingPassenger && (
-              <Button onClick={() => handleSavePassenger(true)} className="bg-blue-600 text-white text-xs font-black uppercase tracking-widest px-6 h-10 rounded-lg">Save & Add Another</Button>
+              <Button onClick={() => handleSavePassenger(true)} disabled={savingPassenger} className="bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200 text-xs font-bold uppercase tracking-widest px-6 h-10 rounded-lg">Save & Add Another</Button>
             )}
-            <Button onClick={() => handleSavePassenger(false)} className="bg-emerald-600 text-white text-xs font-black uppercase tracking-widest px-6 h-10 rounded-lg">
+            <Button onClick={() => handleSavePassenger(false)} disabled={savingPassenger} className="bg-emerald-600 text-white text-xs font-black uppercase tracking-widest px-6 h-10 rounded-lg">
               {editingPassenger ? "Update Details" : "Save"}
             </Button>
           </div>

@@ -113,7 +113,7 @@ export default function ItineraryAccordion({ itinerary, startDate, skipDays = 0 
       {(displayItinerary).map((day) => (
         <div 
           key={day.displayDay} 
-          className="group border border-blue-100 rounded-[20px] bg-gradient-to-r from-[#F0F5FF] to-[#D6E4FF] overflow-hidden transition-all duration-300 shadow-sm"
+          className="group border border-orange-100 rounded-[20px] bg-gradient-to-r from-[#FFFDFB] to-[#FFF4EC] overflow-hidden transition-all duration-300 shadow-sm hover:border-orange-200"
         >
           <button
             onClick={() => toggleDay(day.displayDay)}

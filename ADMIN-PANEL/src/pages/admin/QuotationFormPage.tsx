@@ -248,7 +248,7 @@ ${formData.expert?.designation}`;
                     {/* Customer Info */}
                     <div className="modern-card p-10 space-y-8">
                         <div className="flex items-center gap-4 border-b border-slate-50 pb-6">
-                            <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
                                 <Users size={20} />
                             </div>
                             <h3 className="font-bold text-sm uppercase tracking-[0.2em] text-slate-800">Identity Details</h3>
@@ -333,7 +333,7 @@ ${formData.expert?.designation}`;
                             {/* Luxury Tier */}
                             <div className="space-y-6 p-8 bg-primary rounded-[32px] shadow-2xl shadow-orange-100">
                                 <div className="flex items-center gap-3">
-                                    <div className="h-2 w-2 rounded-full bg-blue-400" />
+                                    <div className="h-2 w-2 rounded-full bg-white" />
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40">Luxury Tier Configuration</Label>
                                 </div>
                                 <div className="space-y-2">

@@ -132,7 +132,7 @@ export default function QuotationsPage() {
           const tokenPart = q.shareToken ? `?token=${q.shareToken}` : '';
           window.open(`${baseUrl}/quote/${q.slug || q.id}${tokenPart}`, '_blank');
         }} title="Preview Quote">
-          <Share2 className="h-4 w-4 text-blue-600" />
+          <Share2 className="h-4 w-4 text-primary" />
         </Button>
         <Button variant="ghost" size="icon" onClick={() => handleExtend(q.id)} title="Extend Validity (48h)">
           <Clock className="h-4 w-4 text-orange-500" />

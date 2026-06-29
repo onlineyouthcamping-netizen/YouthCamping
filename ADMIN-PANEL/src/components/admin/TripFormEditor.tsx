@@ -2894,12 +2894,6 @@ export default function TripFormEditor({ editing, onSave, onCancel }: TripFormEd
         </div>
 
       </div>
-
-      {/* Floating Chat offline widget */}
-      <div className="fixed bottom-4 right-4 z-50 bg-[#0070f3] text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 cursor-pointer hover:bg-blue-600 transition-all font-semibold text-[11px]">
-        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        We're offline
-      </div>
     </Tabs>
   );
 }
