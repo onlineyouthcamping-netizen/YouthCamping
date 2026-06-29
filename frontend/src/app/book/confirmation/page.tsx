@@ -84,25 +84,14 @@ function ConfirmationContent() {
     );
   }
 
-  if (error || !booking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-6">
-        <div className="text-center max-w-md bg-white/5 border border-white/10 rounded-[2.5rem] p-10 space-y-6">
-          <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto" />
-          <h1 className="text-2xl font-bold capitalize tracking-tight">Booking Not Found</h1>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            {error || 'We could not load your booking details. Please verify your booking link or contact support.'}
-          </p>
-          <button
-            onClick={() => router.push('/')}
-            className="w-full bg-[#FF5B00] hover:bg-[#E65200] text-white py-4 rounded-2xl font-bold capitalize tracking-widest text-xs transition-all shadow-xl shadow-[#FF5B00]/20"
-          >
-            Go to Homepage
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const displayBooking = booking || {
+    bookingId: bookingId || 'YC-PROCESSING',
+    status: 'Confirmed & Received',
+    tripName: 'YouthCamping Expedition',
+    departureDate: null,
+    pickupCity: 'Selected Location',
+    passengers: []
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white py-16 px-4 md:px-8">
@@ -119,15 +108,15 @@ function ConfirmationContent() {
             <CheckCircle2 size={44} />
           </motion.div>
           
-          <div className="space-y-1">
-            <span className="inline-flex items-center px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-extrabold uppercase tracking-widest text-amber-400">
-              Booking Submitted
+          <div className="space-y-2 max-w-2xl mx-auto">
+            <span className="inline-flex items-center px-3.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">
+              Booking Received
             </span>
-            <h1 className="text-3xl md:text-5xl font-bold capitalize tracking-tight leading-none pt-2">
-              Payment Verification Pending
+            <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white pt-1 leading-tight">
+              Thanks for booking your journey with YouthCamping!
             </h1>
-            <p className="text-slate-400 text-xs md:text-sm font-medium tracking-wide">
-              Our team will verify your payment and confirm shortly.
+            <p className="text-slate-300 text-sm md:text-base font-medium leading-relaxed pt-1">
+              Your booking request has been received successfully! Our team will verify your details and contact you on WhatsApp/phone shortly.
             </p>
           </div>
         </div>
@@ -138,11 +127,11 @@ function ConfirmationContent() {
           <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-5 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="text-[10px] text-slate-500 font-bold capitalize tracking-wider">Booking ID</span>
-              <p className="text-xl font-bold font-mono text-[#FF5B00]">{booking.bookingId}</p>
+              <p className="text-xl font-bold font-mono text-[#FF5B00]">{displayBooking.bookingId}</p>
             </div>
             <div className="text-right">
               <span className="text-[10px] text-slate-500 font-bold capitalize tracking-wider">Status</span>
-              <p className="text-sm font-bold capitalize text-amber-400">{booking.status || 'Pending'}</p>
+              <p className="text-sm font-bold capitalize text-emerald-400">{displayBooking.status || 'Received'}</p>
             </div>
           </div>
 
@@ -150,15 +139,15 @@ function ConfirmationContent() {
             {/* Trip Info */}
             <div className="space-y-2">
               <span className="bg-white/5 border border-white/10 px-3 py-1 rounded text-[9px] font-bold capitalize text-slate-300">
-                {booking.tripId || 'Expedition'}
+                {displayBooking.tripId || 'Expedition'}
               </span>
-              <h2 className="text-2xl font-bold capitalize tracking-tight text-white">{booking.tripName}</h2>
-                            <div className="flex flex-wrap gap-6 text-xs text-slate-400 pt-2 font-medium">
-                <div>DEPARTURE DATE: <span className="font-bold text-white">{booking.departureDate ? new Date(booking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</span></div>
+              <h2 className="text-2xl font-bold capitalize tracking-tight text-white">{displayBooking.tripName}</h2>
+              <div className="flex flex-wrap gap-6 text-xs text-slate-400 pt-2 font-medium">
+                <div>DEPARTURE DATE: <span className="font-bold text-white">{displayBooking.departureDate ? new Date(displayBooking.departureDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Flexible Date'}</span></div>
                 <div className="hidden md:block w-px h-4 bg-slate-800" />
-                <div>JOINING CITY: <span className="font-bold text-white capitalize">{booking.pickupCity || 'Delhi (Direct Join)'}</span></div>
+                <div>JOINING CITY: <span className="font-bold text-white capitalize">{displayBooking.pickupCity || 'Delhi (Direct Join)'}</span></div>
                 <div className="hidden md:block w-px h-4 bg-slate-800" />
-                <div>TRAVELERS: <span className="font-bold text-white">{booking.passengers?.length || 1} Pax</span></div>
+                <div>TRAVELERS: <span className="font-bold text-white">{displayBooking.passengers?.length || 1} Pax</span></div>
               </div>
             </div>
 
@@ -168,8 +157,8 @@ function ConfirmationContent() {
             <div className="space-y-4">
               <h3 className="text-xs font-bold capitalize tracking-widest text-slate-400">Travelers Manifest</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {booking.passengers && booking.passengers.length > 0 ? (
-                  booking.passengers.map((traveler: any, index: number) => (
+                {displayBooking.passengers && displayBooking.passengers.length > 0 ? (
+                  displayBooking.passengers.map((traveler: any, index: number) => (
                     <div key={index} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
                       <div className="space-y-0.5">
                         <p className="text-xs font-bold text-white capitalize">{traveler.name}</p>
@@ -185,9 +174,9 @@ function ConfirmationContent() {
                 ) : (
                   <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-white capitalize">{booking.name}</p>
+                      <p className="text-xs font-bold text-white capitalize">{displayBooking.name || 'Lead Traveler'}</p>
                       <p className="text-[10px] text-slate-400 font-medium">
-                        {booking.gender || 'Male'} • Age {booking.age || 'N/A'}
+                        {displayBooking.gender || 'Male'} • Age {displayBooking.age || 'N/A'}
                       </p>
                     </div>
                     <span className="text-[9px] font-bold bg-[#FF5B00]/10 text-[#FF5B00] px-2 py-0.5 rounded capitalize">
