@@ -136,16 +136,16 @@ export default function DestinationInquiryModal({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative bg-white w-[90vw] md:w-full md:max-w-5xl rounded-[32px] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]"
+            className="relative bg-white w-[92vw] md:w-full md:max-w-5xl rounded-[28px] md:rounded-[32px] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[92vh] md:max-h-[88vh]"
           >
             {/* Prominent Floating Close Button */}
             <button 
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 rounded-full bg-zinc-900/80 hover:bg-zinc-900 text-white flex items-center justify-center transition-all shadow-lg z-[110] focus:outline-none cursor-pointer border border-white/20"
+              className="absolute top-3 right-3 md:top-5 md:right-5 w-9 h-9 md:w-10 md:h-10 rounded-full bg-zinc-900/80 hover:bg-zinc-900 text-white flex items-center justify-center transition-all shadow-lg z-[110] focus:outline-none cursor-pointer border border-white/20"
               aria-label="Close modal"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </button>
 
             {/* Left side: Image & Info - Hidden on mobile to prevent layout/keyboard overflow */}
@@ -170,25 +170,25 @@ export default function DestinationInquiryModal({
             </div>
 
             {/* Right side: Form */}
-            <div className="w-full md:w-1/2 p-6 md:p-12 overflow-y-auto bg-white flex flex-col justify-center">
-              <div className="mb-6 md:mb-10">
-                <h3 className="text-2xl md:text-3xl font-bold text-navy tracking-tighter leading-none mb-3 italic capitalize">{modalTitle}</h3>
+            <div className="w-full md:w-1/2 p-5 sm:p-6 md:p-10 overflow-y-auto bg-white flex flex-col justify-start md:justify-center scrollbar-thin">
+              <div className="mb-4 md:mb-6 pr-6">
+                <h3 className="text-2xl md:text-3xl font-bold text-navy tracking-tighter leading-none mb-2 italic capitalize">{modalTitle}</h3>
                 <p className="text-zinc-400 font-bold text-xs capitalize tracking-widest">{modalDescription}</p>
               </div>
 
               {isSuccess ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-100">
-                    <Send className="w-8 h-8" />
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-sm border border-emerald-100">
+                    <Send className="w-7 h-7" />
                   </div>
-                  <h4 className="text-2xl font-bold text-navy mb-2 capitalize italic tracking-tighter">Request Received!</h4>
-                  <p className="text-zinc-500 font-bold font-montserrat">Our expert will reach out to you within 24 hours.</p>
+                  <h4 className="text-xl font-bold text-navy mb-1.5 capitalize italic tracking-tighter">Request Received!</h4>
+                  <p className="text-zinc-500 font-bold text-sm font-montserrat">Our expert will reach out to you within 24 hours.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 md:space-y-3.5">
                   {error && (
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold">
-                      <AlertCircle className="w-5 h-5 shrink-0" />
+                    <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2.5 text-red-600 text-xs font-bold">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
                       {error}
                     </div>
                   )}
@@ -197,21 +197,21 @@ export default function DestinationInquiryModal({
                       required
                       type="text"
                       placeholder="Your Name"
-                      className="w-full px-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-12 md:h-14"
+                      className="w-full px-5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-11 md:h-12"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     />
                   </div>
                   
                   <div className="flex gap-2">
-                    <div className="px-4 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-400 font-bold text-sm flex items-center shrink-0 h-12 md:h-14">
+                    <div className="px-3.5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-400 font-bold text-sm flex items-center shrink-0 h-11 md:h-12">
                       +91
                     </div>
                     <input
                       required
                       type="tel"
                       placeholder="Mobile No."
-                      className="flex-1 px-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-12 md:h-14"
+                      className="flex-1 px-5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-11 md:h-12"
                       value={formData.mobile}
                       onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                     />
@@ -221,7 +221,7 @@ export default function DestinationInquiryModal({
                     <input
                       type="email"
                       placeholder="Email (optional)"
-                      className="w-full px-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-12 md:h-14"
+                      className="w-full px-5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-11 md:h-12"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
@@ -232,30 +232,30 @@ export default function DestinationInquiryModal({
                       required
                       type="text"
                       placeholder="City of Residence"
-                      className="w-full px-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-12 md:h-14"
+                      className="w-full px-5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-11 md:h-12"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     <div className="relative">
-                      <Calendar className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
+                      <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
                       <input
                         required
                         type="date"
-                        className="w-full pl-10 pr-2 sm:pl-11 sm:pr-4 py-3 sm:py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-xs sm:text-sm text-zinc-700 h-12 md:h-14 [color-scheme:light]"
+                        className="w-full pl-9 pr-2 sm:pl-10 sm:pr-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-xs sm:text-sm text-zinc-700 h-11 md:h-12 [color-scheme:light]"
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       />
                     </div>
                     <div className="relative">
-                      <Users className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
+                      <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
                       <input
                         required
                         type="number"
                         placeholder="Travellers"
-                        className="w-full pl-10 pr-4 sm:pl-11 sm:pr-6 py-3 sm:py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-xs sm:text-sm placeholder:text-zinc-300 h-12 md:h-14"
+                        className="w-full pl-9 pr-3 sm:pl-10 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-xs sm:text-sm placeholder:text-zinc-300 h-11 md:h-12"
                         value={formData.count}
                         onChange={(e) => setFormData({ ...formData, count: e.target.value })}
                       />
@@ -266,7 +266,7 @@ export default function DestinationInquiryModal({
                     <textarea
                       placeholder="Message (optional)"
                       rows={2}
-                      className="w-full px-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 resize-none"
+                      className="w-full px-5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 resize-none"
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     />
@@ -275,7 +275,7 @@ export default function DestinationInquiryModal({
                   <button
                     disabled={isSubmitting}
                     type="submit"
-                    className="w-full py-4 md:py-5 bg-primary-orange text-white rounded-2xl font-bold text-lg capitalize tracking-tighter shadow-xl hover:bg-primary-orange/90 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+                    className="w-full py-3.5 md:py-4 bg-primary-orange text-white rounded-xl sm:rounded-2xl font-bold text-base md:text-lg capitalize tracking-tighter shadow-xl hover:bg-primary-orange/90 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:scale-100 mt-1"
                   >
                     {isSubmitting ? "Connecting..." : "Connect with Expert"}
                   </button>
