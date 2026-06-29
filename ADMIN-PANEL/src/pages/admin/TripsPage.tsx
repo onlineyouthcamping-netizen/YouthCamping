@@ -10,9 +10,11 @@ import { Plus, Pencil, Trash2, Map, CalendarDays, Building2, Shuffle, GripVertic
 import { toast } from "sonner";
 import TripVendorsPanel from "@/components/admin/TripVendorsPanel";
 
+let cachedTripsList: Trip[] | null = null;
+
 export default function TripsPage() {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<Trip[]>(cachedTripsList || []);
+  const [loading, setLoading] = useState(!cachedTripsList);
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [editing, setEditing] = useState<Trip | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -20,13 +22,15 @@ export default function TripsPage() {
   const [sortModalOpen, setSortModalOpen] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!cachedTripsList) setLoading(true);
     try {
       const data = await tripsService.getAll();
-      setTrips(Array.isArray(data) ? data : []);
+      const arr = Array.isArray(data) ? data : [];
+      cachedTripsList = arr;
+      setTrips(arr);
     } catch (err) {
       console.error(err);
-      setTrips([]);
+      if (!cachedTripsList) setTrips([]);
     } finally {
       setLoading(false);
     }
