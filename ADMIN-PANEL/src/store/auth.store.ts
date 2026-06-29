@@ -27,10 +27,10 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   loginAsGuide: (phone: string) => Promise<void>;
   logout: () => void;
-  checkAuth: () => Promise<void>;
+  checkAuth: (force?: boolean) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   admin: null,
   isAuthenticated: false,
   isLoading: true,
@@ -39,17 +39,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     console.log("🚀 Attempting login for:", email);
     try {
-      const data = await authService.login(email, password);
-      console.log("🔑 Login success, token received");
-      localStorage.setItem("token", data.token);
-
-      set({ 
-        admin: data.admin, 
-        isAuthenticated: true, 
-        isLoading: false 
-      });
+      const auth = await authService.login(email, password);
+      localStorage.setItem("token", auth.token);
+      set({ admin: auth.admin, isAuthenticated: true, isLoading: false });
     } catch (err) {
-      console.error("🔥 Login error:", err);
+      console.error("❌ Login failed:", err);
       set({ isLoading: false });
       throw err;
     }
@@ -57,12 +51,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   loginAsGuide: async (phone) => {
     set({ isLoading: true });
-    console.log("🚀 Attempting guide login for:", phone);
+    console.log("🚀 Attempting guide login for phone:", phone);
     try {
-      const guideAuth = await guideService.login(phone, "guide");
-      console.log("🔑 Guide login success, user ID received:", guideAuth.id);
+      const guideAuth = await guideService.login(phone, 'guide');
       localStorage.setItem("guide_token", guideAuth.id.toString());
-      set({ 
+      set({
         admin: {
           id: guideAuth.id,
           name: guideAuth.name,
@@ -70,10 +63,10 @@ export const useAuthStore = create<AuthState>((set) => ({
           role: "guide"
         },
         isAuthenticated: true,
-        isLoading: false 
+        isLoading: false
       });
     } catch (err) {
-      console.error("🔥 Guide login error:", err);
+      console.error("❌ Guide login failed:", err);
       set({ isLoading: false });
       throw err;
     }
@@ -85,17 +78,25 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ admin: null, isAuthenticated: false });
   },
 
-  checkAuth: async () => {
-    set({ isLoading: true });
+  checkAuth: async (force = false) => {
+    const currentState = get();
+    if (!force && currentState.isAuthenticated && currentState.admin) {
+      console.log("⚡ Auth already active in session, skipping re-check");
+      set({ isLoading: false });
+      return;
+    }
+
     const token = localStorage.getItem("token");
     const guideToken = localStorage.getItem("guide_token");
-    console.log("🔍 Checking auth, token exists:", !!token, "guideToken exists:", !!guideToken);
     
     if (!token && !guideToken) {
       console.log("🔄 No tokens found, redirecting to login...");
       set({ admin: null, isAuthenticated: false, isLoading: false });
       return;
     }
+
+    set({ isLoading: true });
+    console.log("🔍 Checking auth, token exists:", !!token, "guideToken exists:", !!guideToken);
 
     // Case 1: Guide login session
     if (guideToken && !token) {

@@ -67,7 +67,17 @@ import { AdminLayout } from "./components/admin/AdminLayout.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import { DynamicThemeProvider } from "./components/admin/DynamicThemeProvider.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,              // 1 min default stale time for queries
+      gcTime: 5 * 60_000,             // 5 min cache garbage collection
+      refetchOnWindowFocus: false,    // prevent unwanted refetches on tab switch
+      refetchOnReconnect: false,
+      retry: 1,
+    },
+  },
+});
 
 const LoadingUI = () => (
   <div className="flex flex-col items-center justify-center min-h-[400px] w-full gap-6">

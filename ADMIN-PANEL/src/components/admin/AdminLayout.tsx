@@ -213,9 +213,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   useEffect(() => {
-    // Verify JWT session on every admin route load
-    checkAuth();
-  }, [checkAuth]);
+    if (!isAuthenticated || !admin) {
+      checkAuth();
+    }
+  }, [checkAuth, isAuthenticated, admin]);
 
   useEffect(() => {
     if (!admin || isLoading) return;
