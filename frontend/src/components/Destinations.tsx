@@ -51,7 +51,8 @@ const DESTINATION_PHOTO_MAP: Record<string, string> = {
 
 function getDestinationPhoto(dest: Destination): string {
   if (dest.img && dest.img !== "/page-builder-defaults/destination-card.svg" && !dest.img.includes("destination-card.svg")) {
-    return normalizeImageUrl(dest.img);
+    const normalized = normalizeImageUrl(dest.img);
+    if (normalized) return normalized;
   }
   const key = (dest.name || "").toLowerCase().trim();
   for (const [nameKey, photoUrl] of Object.entries(DESTINATION_PHOTO_MAP)) {
