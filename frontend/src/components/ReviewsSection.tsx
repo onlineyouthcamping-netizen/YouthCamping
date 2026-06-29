@@ -30,39 +30,51 @@ interface ReviewsSectionProps {
 const defaultReviews: Review[] = [
   {
     id: "rev-1",
-    name: "Abhinav Sharma",
-    tripTitle: "Kedarnath & Chopta Trek",
-    location: "Uttarakhand",
+    userName: "Abhinav Sharma",
+    tripName: "Kedarnath & Chopta Trek",
+    city: "Delhi",
+    userImage: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
     rating: 5,
-    comment: "An absolutely spiritual and exhilarating journey with YouthCamping! The trek leads and campsite arrangements were top-notch. Unforgettable memories!",
-    images: ["https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80"]
+    comment: "An absolutely spiritual and exhilarating journey with YouthCamping! The trek leads and campsite arrangements were top-notch.",
+    isFeatured: true,
+    photos: ["https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80"],
+    createdAt: new Date().toISOString()
   },
   {
     id: "rev-2",
-    name: "Ananya Deshmukh",
-    tripTitle: "Spiti Valley Winter Expedition",
-    location: "Himachal Pradesh",
+    userName: "Ananya Deshmukh",
+    tripName: "Spiti Valley Winter Expedition",
+    city: "Mumbai",
+    userImage: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
     rating: 5,
-    comment: "Exploring frozen waterfalls and ancient monasteries in Spiti was a dream come true. Highly professional team and awesome cozy homestays!",
-    images: ["https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80"]
+    comment: "Exploring frozen waterfalls and ancient monasteries in Spiti was a dream come true. Highly professional team and cozy homestays!",
+    isFeatured: true,
+    photos: ["https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80"],
+    createdAt: new Date().toISOString()
   },
   {
     id: "rev-3",
-    name: "Siddharth Verma",
-    tripTitle: "Manali to Kasol Camping",
-    location: "Himachal Pradesh",
+    userName: "Siddharth Verma",
+    tripName: "Manali to Kasol Camping",
+    city: "Chandigarh",
+    userImage: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80",
     rating: 5,
     comment: "Perfect weekend getaway with amazing riverside camping vibes, bonfire sessions, and brilliant co-travelers!",
-    images: ["https://images.unsplash.com/photo-1597037750734-450f6f406560?auto=format&fit=crop&w=800&q=80"]
+    isFeatured: true,
+    photos: ["https://images.unsplash.com/photo-1597037750734-450f6f406560?auto=format&fit=crop&w=800&q=80"],
+    createdAt: new Date().toISOString()
   },
   {
     id: "rev-4",
-    name: "Priya Nair",
-    tripTitle: "Chadar Frozen River Trek",
-    location: "Ladakh",
+    userName: "Priya Nair",
+    tripName: "Chadar Frozen River Trek",
+    city: "Bengaluru",
+    userImage: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80",
     rating: 5,
     comment: "Walking on the frozen Zanskar river was thrilling! YouthCamping's safety protocols and hot meals on ice kept us warm throughout.",
-    images: ["https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80"]
+    isFeatured: true,
+    photos: ["https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80"],
+    createdAt: new Date().toISOString()
   }
 ];
 
