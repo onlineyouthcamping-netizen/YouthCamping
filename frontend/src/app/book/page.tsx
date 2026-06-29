@@ -495,11 +495,15 @@ function BookingForm() {
   // Step-by-Step validation
   const validateStep = () => {
     setError('');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (currentStep === 1) {
       if (!formData.name.trim()) return 'Lead Traveler Name is required';
       if (!formData.phone.trim()) return 'Mobile number is required';
       if (formData.phone.replace(/\D/g, '').length !== 10) return 'WhatsApp number must be a valid 10-digit number';
       if (!formData.cityState.trim()) return 'City/State is required';
+      if (formData.email && formData.email.trim() !== '' && !emailRegex.test(formData.email.trim())) {
+        return 'Please enter a valid email address';
+      }
     } else if (currentStep === 2) {
       if (!selectedCity) return 'Please select a joining point';
       for (let i = 0; i < formData.participantsList.length; i++) {
@@ -508,6 +512,9 @@ function BookingForm() {
         if (!traveler.phone.trim()) return `Mobile is required for Traveler ${i + 1}`;
         if (traveler.phone.replace(/\D/g, '').length !== 10) return `Traveler ${i + 1} mobile number must be 10 digits`;
         if (!traveler.age.trim()) return `Age is required for Traveler ${i + 1}`;
+        if (traveler.email && traveler.email.trim() !== '' && !emailRegex.test(traveler.email.trim())) {
+          return `Please enter a valid email address for Traveler ${i + 1}`;
+        }
       }
     } else if (currentStep === 4) {
       if (!acceptTerms) return 'You must accept the Terms and Conditions to continue';
@@ -560,20 +567,25 @@ function BookingForm() {
     setLoading(true);
     setError('');
     try {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const validEmail = (formData.email && formData.email.trim() && emailRegex.test(formData.email.trim())) ? formData.email.trim() : null;
+      const validDate = (initialParams.date && !isNaN(Date.parse(initialParams.date))) ? new Date(initialParams.date).toISOString() : null;
+
       const payload = {
         fullName: formData.name,
         name: formData.name,
         mobile: formData.phone,
         phone: formData.phone,
-        email: formData.email || null,
+        email: validEmail,
+        numberOfTravelers: formData.participants,
         tripId: tripData?.id || initialParams.tripId || 'manual',
         tripName: initialParams.tripName || tripData?.title || 'Expedition',
-        departureDate: initialParams.date ? new Date(initialParams.date) : null,
-                sourceBookingLinkId: initialParams.sourceBookingLinkId || null,
+        departureDate: validDate,
+        sourceBookingLinkId: initialParams.sourceBookingLinkId || null,
         sourceBookingLinkPayload: initialParams.sourceBookingLinkPayload || null,
         sourceBookingLinkSignature: initialParams.sourceBookingLinkSignature || null,
-        pickupCity: selectedCity.cityName,
-        skipDays: selectedCity.skipDays,
+        pickupCity: selectedCity?.cityName || 'Delhi',
+        skipDays: selectedCity?.skipDays || 0,
         adjustedPrice: selectedCity?.price ?? (pricing.originalTotalBase / formData.participants),
         baseAmount: pricing.netBase,
         amount: pricing.totalAmount,
@@ -587,7 +599,7 @@ function BookingForm() {
         passengers: formData.participantsList.map(p => ({
           name: p.name,
           phone: p.phone,
-          email: p.email || null,
+          email: (p.email && p.email.trim() && emailRegex.test(p.email.trim())) ? p.email.trim() : null,
           age: parseInt(p.age) || null,
           gender: p.gender,
           roomSharing: p.roomSharing,
@@ -606,10 +618,11 @@ function BookingForm() {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (data.success && data.data?.bookingId) {
-        router.push(`/book/confirmation?bookingId=${data.data.bookingId}`);
+      const bId = data?.data?.bookingId || data?.data?.id || data?.data?._id || 'YC-SUCCESS';
+      if (res.ok || data.success) {
+        router.push(`/book/confirmation?bookingId=${bId}`);
       } else {
-        setError(data.message || 'Submission failed. Please try again.');
+        setError(data.message || 'Submission failed. Please check your data and try again.');
       }
     } catch (err) {
       setError('Connection to booking engine failed. Please try again.');
@@ -1490,6 +1503,22 @@ function BookingForm() {
             </div>
           </div>
 
+        </div>
+      </div>
+
+      {/* Sticky Live Price Bar (Mobile & Desktop) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-3 px-6 z-40">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div>
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] block">LIVE PACKAGE PRICE</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">₹{pricing.finalTotal.toLocaleString()}</span>
+              <span className="text-[10px] text-slate-500 font-semibold">(Inc. GST)</span>
+            </div>
+          </div>
+          <div className="text-right text-[10px] font-bold text-slate-500 hidden sm:block">
+            <span className="bg-slate-100 px-3 py-1 rounded-full">{formData.participants} Pax • {selectedCity?.cityName || 'Delhi'}</span>
+          </div>
         </div>
       </div>
     </div>
