@@ -85,7 +85,10 @@ export default function DestinationInquiryModal({
     };
   }, [isOpen, destination, onClose]);
 
-  if (!destination) return null;
+  const modalTitle = title || "Plan Your Next Trip";
+  const modalDescription = description || "Connect with our destination experts";
+
+  if (!mounted || !destination) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
