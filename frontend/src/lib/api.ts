@@ -12,8 +12,8 @@ type PublicRequestInit = RequestInit & {
   next?: { revalidate?: number };
 };
 
-const publicRevalidate = (seconds: number): RequestInit => ({
-  cache: 'no-store'
+const publicRevalidate = (seconds: number): PublicRequestInit => ({
+  next: { revalidate: Math.min(seconds, 60) },
 });
 
 /**
