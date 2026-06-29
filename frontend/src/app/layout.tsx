@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import dynamic from "next/dynamic";
 import { Metadata } from "next";
+import ScrollToTop from "@/components/ScrollToTop";
 
 const Footer = dynamic(() => import("@/components/Footer"), {
   loading: () => null,
@@ -102,6 +104,9 @@ export default async function RootLayout({
     <html lang="en" className={`${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-montserrat relative">
         <DynamicThemeProvider initialTheme={theme} initialSettings={settings}>
+          <Suspense fallback={null}>
+            <ScrollToTop />
+          </Suspense>
           <Navbar 
             logoUrl={settings?.navbar?.logoUrl} 
             navLinks={settings?.navbar?.links} 
