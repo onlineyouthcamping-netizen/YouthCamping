@@ -166,3 +166,36 @@ exports.removeTripVendor = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @desc    Get bulk trip vendor assignments
+ * @route   GET /api/vendors/bulk
+ */
+exports.getBulkTripVendors = async (req, res, next) => {
+  try {
+    const { tripIds } = req.query;
+    let where = { tenantId: req.user.tenantId };
+    if (tripIds) {
+      const ids = String(tripIds).split(',').filter(Boolean);
+      where.tripId = { in: ids };
+    }
+    const assignments = await prisma.tripVendor.findMany({
+      where,
+      include: { vendor: true },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const byTrip = {};
+    assignments.forEach(a => {
+      if (!byTrip[a.tripId]) byTrip[a.tripId] = [];
+      byTrip[a.tripId].push(a);
+    });
+
+    res.json({
+      success: true,
+      data: byTrip
+    });
+  } catch (error) {
+    next(error);
+  }
+};

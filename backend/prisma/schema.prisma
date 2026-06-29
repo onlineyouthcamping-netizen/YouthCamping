@@ -413,6 +413,8 @@ model BookingLink {
   bookings Booking[]
 
   @@index([tenantId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdByAdminId, createdAt(sort: Desc)])
   @@index([createdByAdminId])
   @@index([tripId])
   @@index([status])

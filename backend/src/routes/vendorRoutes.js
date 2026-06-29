@@ -9,7 +9,8 @@ const {
   assignVendorToTrip,
   getVendorsForTrip,
   updateTripVendor,
-  removeTripVendor
+  removeTripVendor,
+  getBulkTripVendors
 } = require('../controllers/vendorController');
 const { protect } = require('../middleware/auth');
 
@@ -19,6 +20,7 @@ router.use(protect);
 // Vendor CRUD
 router.post('/', createVendor);
 router.get('/', getVendors);
+router.get('/bulk', getBulkTripVendors);
 router.get('/:id', getVendor);
 router.put('/:id', updateVendor);
 router.delete('/:id', deleteVendor);
