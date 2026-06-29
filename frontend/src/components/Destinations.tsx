@@ -32,7 +32,33 @@ interface DestinationsProps {
   bottomColor?: string;
 }
 
-const DESTINATION_FALLBACK = "/page-builder-defaults/destination-card.svg";
+const DESTINATION_FALLBACK = "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80";
+
+const DESTINATION_PHOTO_MAP: Record<string, string> = {
+  bali: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80",
+  maldives: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=800&q=80",
+  thailand: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=800&q=80",
+  singapore: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=800&q=80",
+  malaysia: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80",
+  himachal: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+  uttarakhand: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+  kedarnath: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+  manali: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+  ladakh: "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80",
+  spiti: "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80",
+  goa: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=800&q=80"
+};
+
+function getDestinationPhoto(dest: Destination): string {
+  if (dest.img && dest.img !== "/page-builder-defaults/destination-card.svg" && !dest.img.includes("destination-card.svg")) {
+    return normalizeImageUrl(dest.img);
+  }
+  const key = (dest.name || "").toLowerCase().trim();
+  for (const [nameKey, photoUrl] of Object.entries(DESTINATION_PHOTO_MAP)) {
+    if (key.includes(nameKey)) return photoUrl;
+  }
+  return DESTINATION_FALLBACK;
+}
 
 const defaultDestinations: Destination[] = [
   { 
@@ -74,12 +100,8 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
   reduceMotion: boolean;
   onClick: () => void;
 }) {
-  const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
-
-  const imgSrc = imgError
-    ? DESTINATION_FALLBACK
-    : (dest.img ? normalizeImageUrl(dest.img) : DESTINATION_FALLBACK);
+  const imgSrc = imgError ? DESTINATION_FALLBACK : getDestinationPhoto(dest);
 
   return (
     <motion.div
@@ -88,13 +110,9 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
       whileInView={{ opacity: 1, y: 0 }}
       transition={reduceMotion ? { duration: 0 } : { delay: index * 0.1, duration: 0.6 }}
       viewport={{ once: true }}
-      onClick={onClick}
-      className="relative min-w-[280px] md:min-w-[340px] flex-1 aspect-[3/4.2] rounded-[32px] overflow-hidden group snap-start shadow-xl hover:shadow-2xl transition-all duration-700 cursor-pointer bg-[#E2EBE5]"
+      onClick={() => onClick()}
+      className="relative min-w-[280px] md:min-w-[340px] flex-1 aspect-[3/4.2] rounded-[32px] overflow-hidden group snap-start shadow-xl hover:shadow-2xl transition-all duration-700 cursor-pointer bg-zinc-800"
     >
-      {/* Skeleton loading background — visible until image loads */}
-      {!imgLoaded && (
-        <div className="absolute inset-0 bg-gradient-to-b from-[#D4DFD8] to-[#C4DAD2] animate-pulse" />
-      )}
       <OptimizedImage
         src={imgSrc}
         alt={dest.name}
@@ -102,19 +120,16 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
         height={952}
         cloudinaryWidth={640}
         bunnyVariant="x540gt"
+        priority={true}
         sizes="(max-width: 768px) 280px, 340px"
-        onLoad={() => setImgLoaded(true)}
-        onError={() => { setImgError(true); setImgLoaded(true); }}
-        className={cn(
-          "w-full h-full object-cover transition-all duration-1000 group-hover:scale-110",
-          imgLoaded ? "opacity-100" : "opacity-0"
-        )}
+        onError={() => setImgError(true)}
+        className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
       <div className="absolute inset-0 flex items-center justify-center p-6">
         <h3
-          className="text-2xl md:text-3xl text-white tracking-tighter text-center capitalize"
-          style={{ fontWeight: 'var(--font-weight-card, 500)' }}
+          className="text-2xl md:text-3xl text-white tracking-tighter text-center capitalize drop-shadow-md"
+          style={{ fontWeight: 'var(--font-weight-card, 600)' }}
         >
           {dest.name}
         </h3>
@@ -135,7 +150,11 @@ export default function Destinations({
   topColor = "#ffffff",
   bottomColor = "#ffffff",
 }: DestinationsProps) {
-  const items = (destinations && destinations.length > 0) ? destinations : defaultDestinations;
+  const rawItems = (destinations && destinations.length > 0) ? destinations : defaultDestinations;
+  const items = rawItems.map(d => ({
+    ...d,
+    img: getDestinationPhoto(d)
+  }));
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
