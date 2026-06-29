@@ -136,6 +136,10 @@ app.use('/api/train-tickets', require('./routes/trainTicketRoutes'));
 app.use('/api/accounting', require('./routes/accountingRoutes'));
 app.use('/api/ops', require('./routes/opsRoutes'));
 
+const { protect: protectAnalytics } = require('./middleware/auth');
+const { getBookingLinksAnalytics } = require('./controllers/bookingLinkController');
+app.get('/api/analytics', protectAnalytics, getBookingLinksAnalytics);
+
 
 
 // Serve Static Files
