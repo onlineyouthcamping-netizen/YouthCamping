@@ -65,7 +65,19 @@ export default function DestinationInquiryModal({
       document.body.style.overflow = "unset";
       setIsSuccess(false);
     }
-  }, [isOpen, destination]);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, destination, onClose]);
 
   if (!destination) return null;
 
@@ -126,6 +138,16 @@ export default function DestinationInquiryModal({
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="relative bg-white w-[90vw] md:w-full md:max-w-5xl rounded-[32px] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]"
           >
+            {/* Prominent Floating Close Button */}
+            <button 
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 rounded-full bg-zinc-900/80 hover:bg-zinc-900 text-white flex items-center justify-center transition-all shadow-lg z-[110] focus:outline-none cursor-pointer border border-white/20"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
             {/* Left side: Image & Info - Hidden on mobile to prevent layout/keyboard overflow */}
             <div className="relative w-full md:w-1/2 h-64 md:h-auto hidden md:block">
               <OptimizedImage 
@@ -149,13 +171,6 @@ export default function DestinationInquiryModal({
 
             {/* Right side: Form */}
             <div className="w-full md:w-1/2 p-6 md:p-12 overflow-y-auto bg-white flex flex-col justify-center">
-              <button 
-                onClick={onClose}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-100 transition-colors z-10"
-              >
-                <X className="w-6 h-6 text-zinc-400" />
-              </button>
-
               <div className="mb-6 md:mb-10">
                 <h3 className="text-2xl md:text-3xl font-bold text-navy tracking-tighter leading-none mb-3 italic capitalize">{modalTitle}</h3>
                 <p className="text-zinc-400 font-bold text-xs capitalize tracking-widest">{modalDescription}</p>
