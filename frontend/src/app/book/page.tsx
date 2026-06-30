@@ -1550,18 +1550,18 @@ function BookingForm() {
               <button
                 onClick={handleNext}
                 type="button"
-                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-xl py-2 px-5 font-bold capitalize tracking-widest text-[10px] flex items-center gap-1.5 shadow-md shadow-[#FF5B00]/20 transition-all min-h-[40px]"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-3 px-6 font-extrabold uppercase tracking-widest text-[10px] flex items-center gap-1.5 shadow-lg shadow-[#FF5B00]/25 transition-all active:scale-95 min-h-[44px]"
               >
-                Continue <ChevronRight size={12} />
+                Continue <ChevronRight size={12} strokeWidth={3} />
               </button>
             ) : (
               <button
                 onClick={handleFinalSubmit}
                 disabled={loading}
                 type="button"
-                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-xl py-2 px-5 font-bold capitalize tracking-widest text-[10px] flex items-center gap-1.5 shadow-md shadow-[#FF5B00]/30 transition-all disabled:opacity-50 min-h-[40px]"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-3 px-6 font-extrabold uppercase tracking-widest text-[10px] flex items-center gap-1.5 shadow-lg shadow-[#FF5B00]/35 transition-all active:scale-95 disabled:opacity-50 min-h-[44px]"
               >
-                {loading ? <Loader2 className="animate-spin w-3 h-3" /> : <ShieldCheck size={12} />}
+                {loading ? <Loader2 className="animate-spin w-3 h-3" /> : <ShieldCheck size={12} strokeWidth={3} />}
                 {loading ? 'Processing...' : 'Confirm'}
               </button>
             )}
