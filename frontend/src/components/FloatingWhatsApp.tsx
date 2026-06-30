@@ -17,7 +17,7 @@ export default function FloatingWhatsApp({ settings: initialSettings = null }: {
       href={`https://wa.me/${whatsappNumber}`}
       target="_blank"
       rel="noopener noreferrer"
-      className={`fixed right-8 z-[100] flex items-center justify-center w-16 h-16 bg-[#25d366] text-white rounded-full shadow-2xl hover:scale-110 transition-all group ${isBookPage ? 'bottom-24' : 'bottom-8'}`}
+      className={`fixed z-[100] flex items-center justify-center w-16 h-16 bg-[#25d366] text-white rounded-full shadow-2xl hover:scale-110 transition-all group ${isBookPage ? 'bottom-24 left-8' : 'bottom-8 right-8'}`}
       aria-label="Chat on WhatsApp"
     >
       {/* Pulse Animation */}

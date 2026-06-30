@@ -1385,33 +1385,14 @@ function BookingForm() {
             )}
 
             {/* Nav buttons */}
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex justify-start items-center gap-4">
               {currentStep > 1 && (
                 <button
                   onClick={handlePrev}
                   type="button"
-                  className="bg-white border border-slate-200 text-slate-700 rounded-2xl py-4.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 hover:bg-slate-50"
+                  className="bg-white border border-slate-200 text-slate-700 rounded-2xl py-4.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 hover:bg-slate-50 transition-all active:scale-95"
                 >
                   <ChevronLeft size={14} /> Back
-                </button>
-              )}
-              {currentStep < 4 ? (
-                <button
-                  onClick={handleNext}
-                  type="button"
-                  className="ml-auto bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-4.5 px-8 font-bold capitalize tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-[#FF5B00]/20"
-                >
-                  Continue <ChevronRight size={14} />
-                </button>
-              ) : (
-                <button
-                  onClick={handleFinalSubmit}
-                  disabled={loading}
-                  type="button"
-                  className="ml-auto bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-2xl py-5 px-10 font-bold capitalize tracking-widest text-xs flex items-center gap-2 shadow-lg shadow-[#FF5B00]/30 disabled:opacity-50"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : <ShieldCheck size={14} />}
-                  {loading ? 'Processing...' : 'Confirm & Place Booking'}
                 </button>
               )}
             </div>
