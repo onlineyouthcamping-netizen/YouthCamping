@@ -58,6 +58,7 @@ exports.getStats = async (req, res, next) => {
           name: true,
           tripName: true,
           amount: true,
+          advancePaid: true,
           status: true,
           createdAt: true
         }
@@ -90,8 +91,11 @@ exports.getStats = async (req, res, next) => {
       id: b.id,
       customerName: b.name,
       name: b.name,
+      userName: b.name || "Guest",
       tripName: b.tripName,
-      amount: b.amount,
+      tripTitle: b.tripName || "Unknown Trip",
+      amount: b.amount || 0,
+      paidAmount: b.advancePaid || 0,
       status: b.status,
       createdAt: b.createdAt
     }));
