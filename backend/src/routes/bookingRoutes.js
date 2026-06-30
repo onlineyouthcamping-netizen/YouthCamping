@@ -70,16 +70,17 @@ router.post('/create', (req, res, next) => {
   next();
 }, validate(createBookingSchema), createBooking);
 
+router.get('/colleagues/list', authenticate, getColleagues);
+router.put('/tasks/:taskId', authenticate, updateBookingTask);
+
 router.get('/:id', authenticate, requirePermission('bookings.view'), enforceOwnership('booking'), stripFinancialFieldsForGuides, getBookingById);
 router.put('/:id/confirm', authenticate, requirePermission('bookings.approve'), enforceOwnership('booking'), confirmBooking);
 router.put('/:id', authenticate, requirePermission('bookings.edit'), enforceOwnership('booking'), guardBookingUpdateFields, updateBooking);
 router.patch('/:id/confirm-payment', authenticate, requirePermission('payments.edit'), enforceOwnership('booking'), confirmPayment);
 router.patch('/:id', authenticate, requirePermission('bookings.edit'), guardBookingUpdateFields, updateBookingUpi);
-router.get('/colleagues/list', authenticate, getColleagues);
 router.get('/:id/activity-logs', authenticate, requirePermission('bookings.view'), enforceOwnership('booking'), getBookingActivityLogs);
 router.get('/:id/tasks', authenticate, requirePermission('bookings.view'), enforceOwnership('booking'), getBookingTasks);
 router.post('/:id/tasks', authenticate, requirePermission('bookings.edit'), enforceOwnership('booking'), createBookingTask);
-router.put('/tasks/:taskId', authenticate, updateBookingTask);
 router.delete('/:id', authenticate, requirePermission('bookings.delete'), enforceOwnership('booking'), deleteBooking);
 
 module.exports = router;
