@@ -289,7 +289,7 @@ function BookingForm() {
     cityState: '',
     specialRequests: '',
     participants: 1,
-    participantsList: [{ name: '', phone: '', email: '', age: '', gender: 'Male', roomSharing: 'Triple Sharing', trainOption: 'Sleeper' }]
+    participantsList: [{ name: '', phone: '', email: '', age: '', gender: 'Male', roomSharing: 'Quad Sharing', trainOption: 'Sleeper', foodPreference: 'Normal Food' }]
   });
 
   // Fetch Trip information
@@ -360,7 +360,7 @@ function BookingForm() {
     const list = [...formData.participantsList];
     if (list.length < count) {
       for (let i = list.length; i < count; i++) {
-        list.push({ name: '', phone: '', email: '', age: '', gender: 'Male', roomSharing: 'Triple Sharing', trainOption: 'Sleeper' });
+        list.push({ name: '', phone: '', email: '', age: '', gender: 'Male', roomSharing: 'Quad Sharing', trainOption: 'Sleeper', foodPreference: 'Normal Food' });
       }
     } else if (list.length > count) {
       list.splice(count);
@@ -603,7 +603,8 @@ function BookingForm() {
           age: parseInt(p.age) || null,
           gender: p.gender,
           roomSharing: p.roomSharing,
-          trainOption: p.trainOption
+          trainOption: p.trainOption,
+          foodPreference: p.foodPreference || 'Normal Food'
         })),
         trainClass: formData.participantsList[0]?.trainOption || 'Sleeper',
         roomType: formData.participantsList[0]?.roomSharing || 'Triple Sharing',
@@ -1066,6 +1067,26 @@ function BookingForm() {
                              </div>
                            )}
 
+                          {/* Food Option for this traveler */}
+                          <div className="space-y-1.5 pt-1">
+                            <label className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">Food Option</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {['Normal Food', 'Jain Food'].map((food) => (
+                                <button
+                                  key={food}
+                                  type="button"
+                                  onClick={() => handleParticipantChange(index, 'foodPreference', food)}
+                                  className={cn(
+                                    "py-2.5 rounded-lg font-bold text-[10px] border text-center transition-all min-h-[44px] flex items-center justify-center whitespace-normal break-words px-2 w-full",
+                                    (traveler.foodPreference || 'Normal Food') === food ? "bg-[#FF5B00]/10 border-[#FF5B00] text-[#FF5B00]" : "bg-white border-slate-200 text-slate-500"
+                                  )}
+                                >
+                                  {food}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
                         </div>
                       ))}
                     </div>
@@ -1210,7 +1231,7 @@ function BookingForm() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           <div>
                             <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">JOINING CITY</p>
-                            <p className="font-bold text-slate-800 capitalize mt-1 break-words whitespace-normal leading-tight">{selectedCity?.cityName || 'Delhi'}</p>
+                            <p className="font-bold text-slate-800 capitalize mt-1 break-all whitespace-normal leading-tight">{selectedCity?.cityName || 'Delhi'}</p>
                           </div>
                           <div>
                             <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">DEPARTURE DATE</p>
@@ -1434,7 +1455,7 @@ function BookingForm() {
                   <div className="space-y-3 text-xs border-t border-b border-slate-100 py-4">
                     <div className="flex items-start justify-between text-slate-650 gap-2 min-w-0">
                       <span className="flex items-center font-extrabold shrink-0 text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">JOINING CITY</span>
-                      <span className="font-extrabold text-slate-900 capitalize text-right break-words max-w-[60%] inline-block leading-tight">{selectedCity?.cityName || 'Delhi'}</span>
+                      <span className="font-extrabold text-slate-900 capitalize text-right break-all max-w-[60%] inline-block leading-tight">{selectedCity?.cityName || 'Delhi'}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-slate-650 gap-2 min-w-0">
@@ -1513,7 +1534,7 @@ function BookingForm() {
 
       {/* Sticky Live Price Bar (Mobile & Desktop) */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-3 px-6 z-40">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF5B00] block">LIVE PACKAGE PRICE</span>
             <div className="flex items-baseline gap-2">
@@ -1521,8 +1542,29 @@ function BookingForm() {
               <span className="text-[10px] text-slate-500 font-semibold">(Inc. GST)</span>
             </div>
           </div>
-          <div className="text-right text-[10px] font-bold text-slate-500 hidden sm:block">
-            <span className="bg-slate-100 px-3 py-1 rounded-full">{formData.participants} Pax • {selectedCity?.cityName || 'Delhi'}</span>
+          <div className="flex items-center gap-3">
+            <div className="text-right text-[10px] font-bold text-slate-500 hidden md:block">
+              <span className="bg-slate-100 px-3 py-1 rounded-full">{formData.participants} Pax • {selectedCity?.cityName || 'Delhi'}</span>
+            </div>
+            {currentStep < 4 ? (
+              <button
+                onClick={handleNext}
+                type="button"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-xl py-2 px-5 font-bold capitalize tracking-widest text-[10px] flex items-center gap-1.5 shadow-md shadow-[#FF5B00]/20 transition-all min-h-[40px]"
+              >
+                Continue <ChevronRight size={12} />
+              </button>
+            ) : (
+              <button
+                onClick={handleFinalSubmit}
+                disabled={loading}
+                type="button"
+                className="bg-[#FF5B00] hover:bg-[#E65200] text-white rounded-xl py-2 px-5 font-bold capitalize tracking-widest text-[10px] flex items-center gap-1.5 shadow-md shadow-[#FF5B00]/30 transition-all disabled:opacity-50 min-h-[40px]"
+              >
+                {loading ? <Loader2 className="animate-spin w-3 h-3" /> : <ShieldCheck size={12} />}
+                {loading ? 'Processing...' : 'Confirm'}
+              </button>
+            )}
           </div>
         </div>
       </div>
