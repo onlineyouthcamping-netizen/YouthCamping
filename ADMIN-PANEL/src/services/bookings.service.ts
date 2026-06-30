@@ -111,5 +111,30 @@ export const bookingsService = {
   async getEmailLogs(bookingId: string): Promise<any[]> {
     const res = await api.get(`/emails/logs/${bookingId}`);
     return res.data;
+  },
+
+  async getActivityLogs(bookingId: string): Promise<any[]> {
+    const res = await api.get(`/bookings/${bookingId}/activity-logs`);
+    return res.data.data;
+  },
+
+  async getTasks(bookingId: string): Promise<any[]> {
+    const res = await api.get(`/bookings/${bookingId}/tasks`);
+    return res.data.data;
+  },
+
+  async createTask(bookingId: string, data: any): Promise<any> {
+    const res = await api.post(`/bookings/${bookingId}/tasks`, data);
+    return res.data.data;
+  },
+
+  async updateTask(taskId: string, status: string): Promise<any> {
+    const res = await api.put(`/bookings/tasks/${taskId}`, { status });
+    return res.data.data;
+  },
+
+  async getColleagues(): Promise<any[]> {
+    const res = await api.get('/bookings/colleagues/list');
+    return res.data.data;
   }
 };

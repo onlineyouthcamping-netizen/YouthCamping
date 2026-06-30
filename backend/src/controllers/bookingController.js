@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { generateBookingId } = require('../utils/bookingIdGenerator');
 const { logAction } = require('../utils/auditLogger');
+const { logBookingActivity } = require('../utils/bookingActivityLogger');
 const { verifySignedPayload } = require('./bookingLinkController');
 const cache = require('../lib/cache');
 
@@ -968,6 +969,13 @@ exports.createBooking = async (req, res, next) => {
       });
     }
 
+    await logBookingActivity({
+      bookingId: booking.id,
+      action: 'CREATE',
+      details: `Booking created for ${booking.name} (Trip: ${booking.tripName || 'Manual Booking'})`,
+      performedByAdminId: req.user ? req.user.id : null
+    });
+
     res.status(201).json({ success: true, data: booking, message: 'Booking created successfully' });
   } catch (error) { next(error); }
 };
@@ -1090,6 +1098,25 @@ exports.updateBooking = async (req, res, next) => {
       ipAddress: req.ip || null
     });
 
+    // Log to booking activity log
+    const detailParts = [];
+    if (updateData.status && updateData.status !== beforeBooking.status) detailParts.push(`status changed to ${updateData.status}`);
+    if (updateData.totalAmount !== undefined && updateData.totalAmount !== beforeBooking.totalAmount) detailParts.push(`total amount changed to ₹${updateData.totalAmount}`);
+    if (updateData.advancePaid !== undefined && updateData.advancePaid !== beforeBooking.advancePaid) detailParts.push(`advance paid changed to ₹${updateData.advancePaid}`);
+    if (updateData.paymentStatus && updateData.paymentStatus !== beforeBooking.paymentStatus) detailParts.push(`payment status changed to ${updateData.paymentStatus}`);
+    if (updateData.salesAdminId && updateData.salesAdminId !== beforeBooking.salesAdminId) detailParts.push(`salesperson reassigned`);
+    if (updateData.notes !== undefined && updateData.notes !== beforeBooking.notes) detailParts.push(`notes updated`);
+    if (req.body.passengers !== undefined) detailParts.push(`co-travelers updated`);
+    
+    const activityDetails = detailParts.length > 0 ? `Booking updated: ${detailParts.join(', ')}` : 'Booking details updated';
+
+    await logBookingActivity({
+      bookingId: req.params.id,
+      action: updateData.status ? 'STATUS_CHANGE' : 'DETAILS_UPDATE',
+      details: activityDetails,
+      performedByAdminId: req.user.id
+    });
+
     const authScope = req.user?.role === 'sales' ? `sales-${req.user.id}` : (req.user?.role || 'admin');
     await cache.del(`admin:summary:booking:${req.user.tenantId}:${beforeBooking.bookingId}:${authScope}`);
     if (authScope !== 'admin') {
@@ -1134,6 +1161,13 @@ exports.deleteBooking = async (req, res, next) => {
       beforeData: booking,
       afterData: { status: 'cancelled', paymentStatus: 'Cancelled' },
       ipAddress: req.ip || null
+    });
+
+    await logBookingActivity({
+      bookingId: id,
+      action: 'STATUS_CHANGE',
+      details: 'Booking cancelled (deleted)',
+      performedByAdminId: req.user.id
     });
 
     res.json({ success: true, message: 'Booking cancelled successfully' });
@@ -1186,6 +1220,13 @@ exports.confirmBooking = async (req, res, next) => {
       beforeData: beforeBooking,
       afterData: updatePayload,
       ipAddress: req.ip || null
+    });
+
+    await logBookingActivity({
+      bookingId: req.params.id,
+      action: 'STATUS_CHANGE',
+      details: `Booking status set to confirmed (Total: ₹${totalAmount}, Advance Paid: ₹${targetAdvance} via ${paymentMode})`,
+      performedByAdminId: req.user.id
     });
 
     if (targetAdvance > 0) {
@@ -1654,4 +1695,138 @@ exports.updateBookingUpi = async (req, res, next) => {
 
     res.json({ success: true, message: 'UPI reference saved successfully', data: updatedBooking });
   } catch (error) { next(error); }
+};
+
+exports.getBookingActivityLogs = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const logs = await prisma.bookingActivityLog.findMany({
+      where: { bookingId: id },
+      include: {
+        performedBy: { select: { id: true, name: true, role: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getColleagues = async (req, res, next) => {
+  try {
+    const colleagues = await prisma.admin.findMany({
+      where: {
+        tenantId: req.user.tenantId || 'default',
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json({ success: true, data: colleagues });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getBookingTasks = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const tasks = await prisma.bookingTask.findMany({
+      where: { bookingId: id },
+      include: {
+        assignedBy: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, data: tasks });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.createBookingTask = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, description, assignedToId, dueDate } = req.body;
+
+    if (!title || !assignedToId) {
+      return res.status(400).json({ success: false, message: 'Title and assignedToId are required' });
+    }
+
+    const task = await prisma.bookingTask.create({
+      data: {
+        tenantId: req.user.tenantId || 'default',
+        bookingId: id,
+        title,
+        description: description || '',
+        assignedById: req.user.id,
+        assignedToId,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        status: 'PENDING'
+      },
+      include: {
+        assignedBy: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true } }
+      }
+    });
+
+    // Log in activity log
+    await logBookingActivity({
+      bookingId: id,
+      action: 'TASK_ASSIGNED',
+      details: `Task "${title}" assigned to ${task.assignedTo?.name || 'junior'} by ${task.assignedBy?.name || 'senior'}`,
+      performedByAdminId: req.user.id
+    });
+
+    res.status(201).json({ success: true, data: task });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.updateBookingTask = async (req, res, next) => {
+  try {
+    const { taskId } = req.params;
+    const { status } = req.body;
+
+    const existingTask = await prisma.bookingTask.findUnique({
+      where: { id: taskId },
+      include: {
+        assignedBy: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true } }
+      }
+    });
+
+    if (!existingTask) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const updated = await prisma.bookingTask.update({
+      where: { id: taskId },
+      data: { status },
+      include: {
+        assignedBy: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true } }
+      }
+    });
+
+    // Log to booking activity log
+    await logBookingActivity({
+      bookingId: existingTask.bookingId,
+      action: 'TASK_UPDATED',
+      details: `Task "${existingTask.title}" status changed to ${status}`,
+      performedByAdminId: req.user.id
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    next(error);
+  }
 };

@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { Prisma } = require('@prisma/client');
+const { logBookingActivity } = require('../utils/bookingActivityLogger');
 const ticketCountCache = new Map();
 
 // Helper to check ownership of booking for sales role
@@ -48,6 +49,17 @@ const logHistory = async (ticketId, action, req, extra = {}) => {
       performedById: req.user.id
     }
   });
+
+  if (ticket) {
+    let details = `Train ticket for ${ticket.travelerName || 'unknown'}: ${action}`;
+    if (extra.notes) details += ` (${extra.notes})`;
+    await logBookingActivity({
+      bookingId: ticket.bookingId,
+      action: 'TRAIN_TICKET',
+      details,
+      performedByAdminId: req.user.id
+    });
+  }
 };
 
 /**
@@ -690,7 +702,7 @@ exports.bulkUpdateTickets = async (req, res) => {
 
     const eligibleTickets = await prisma.trainTicket.findMany({
       where: eligibleWhere,
-      select: { id: true, ticketStatus: true, approvalStatus: true }
+      select: { id: true, ticketStatus: true, approvalStatus: true, bookingId: true, travelerName: true }
     });
     const eligibleIds = eligibleTickets.map((ticket) => ticket.id);
 
@@ -720,6 +732,19 @@ exports.bulkUpdateTickets = async (req, res) => {
         });
         return tx.trainTicket.findMany({ where: { id: { in: eligibleIds } } });
       });
+
+      // Log to Booking Activity Log
+      const bookingsAffected = [...new Set(eligibleTickets.map((t) => t.bookingId))];
+      for (const bId of bookingsAffected) {
+        const tNames = eligibleTickets.filter((t) => t.bookingId === bId).map((t) => t.travelerName).join(', ');
+        await logBookingActivity({
+          bookingId: bId,
+          action: 'TRAIN_TICKET',
+          details: `Bulk updated train tickets for passengers: ${tNames} (${notes || 'Bulk updated fields'})`,
+          performedByAdminId: req.user.id
+        });
+      }
+
       const inputOrder = new Map(uniqueTicketIds.map((id, index) => [id, index]));
       updatedTickets.sort((a, b) => inputOrder.get(a.id) - inputOrder.get(b.id));
     }

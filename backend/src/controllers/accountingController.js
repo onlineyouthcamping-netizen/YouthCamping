@@ -1,4 +1,5 @@
 const { prisma } = require('../lib/prisma');
+const { logBookingActivity } = require('../utils/bookingActivityLogger');
 
 // Helper to check booking ownership for sales
 const checkBookingOwnership = async (bookingId, user) => {
@@ -214,6 +215,16 @@ exports.createEntry = async (req, res) => {
       }
     });
 
+    const bookingRecord = await prisma.booking.findUnique({ where: { bookingId } });
+    if (bookingRecord) {
+      await logBookingActivity({
+        bookingId: bookingRecord.id,
+        action: 'PAYMENT_SUBMITTED',
+        details: `Ledger payment of ₹${amount} via ${paymentMode} submitted for approval by salesperson ${req.user.name || 'System'}`,
+        performedByAdminId: req.user.id
+      });
+    }
+
     return res.status(201).json({ success: true, data: entry });
   } catch (err) {
     console.error('createEntry error:', err);
@@ -259,6 +270,16 @@ exports.approveEntry = async (req, res) => {
         actorId: req.user.id
       }
     });
+
+    const bookingRecord = await prisma.booking.findUnique({ where: { bookingId: updated.bookingId } });
+    if (bookingRecord) {
+      await logBookingActivity({
+        bookingId: bookingRecord.id,
+        action: 'PAYMENT_APPROVED',
+        details: `Ledger payment of ₹${updated.amount} approved by manager ${req.user.name || 'System'}`,
+        performedByAdminId: req.user.id
+      });
+    }
 
     return res.json({ success: true, data: updated });
   } catch (err) {
@@ -311,6 +332,16 @@ exports.rejectEntry = async (req, res) => {
         actorId: req.user.id
       }
     });
+
+    const bookingRecord = await prisma.booking.findUnique({ where: { bookingId: updated.bookingId } });
+    if (bookingRecord) {
+      await logBookingActivity({
+        bookingId: bookingRecord.id,
+        action: 'PAYMENT_REJECTED',
+        details: `Ledger payment of ₹${updated.amount} rejected by manager ${req.user.name || 'System'}. Reason: ${reason}`,
+        performedByAdminId: req.user.id
+      });
+    }
 
     return res.json({ success: true, data: updated });
   } catch (err) {
@@ -378,20 +409,37 @@ exports.getReports = async (req, res) => {
     // 4. Monthly revenue trend
     const monthlyTrendMap = {};
 
+    // Grouping breakdowns for Cash and Online collections
+    const cashDatewise = {};
+    const cashTripwise = {};
+    const onlineDatewise = {};
+    const onlineTripwise = {};
+
     entries.forEach(e => {
       if (e.status === 'APPROVED') {
-        // Group by Trip
+        const amount = e.amount;
         const tripName = e.booking?.tripName || 'Unknown Trip';
-        tripRevenueMap[tripName] = (tripRevenueMap[tripName] || 0) + e.amount;
+        const dateStr = new Date(e.createdAt).toISOString().split('T')[0];
 
-        // Group by Salesperson
+        // Standard stats
+        tripRevenueMap[tripName] = (tripRevenueMap[tripName] || 0) + amount;
+
         const spName = e.salesperson?.name || 'Unknown Sales';
-        salesPerformanceMap[spName] = (salesPerformanceMap[spName] || 0) + e.amount;
+        salesPerformanceMap[spName] = (salesPerformanceMap[spName] || 0) + amount;
 
-        // Group by Month (YYYY-MM)
         const date = new Date(e.createdAt);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlyTrendMap[monthKey] = (monthlyTrendMap[monthKey] || 0) + e.amount;
+        monthlyTrendMap[monthKey] = (monthlyTrendMap[monthKey] || 0) + amount;
+
+        // Cash vs Online breakdowns
+        const isCash = e.paymentMode === 'CASH';
+        if (isCash) {
+          cashDatewise[dateStr] = (cashDatewise[dateStr] || 0) + amount;
+          cashTripwise[tripName] = (cashTripwise[tripName] || 0) + amount;
+        } else {
+          onlineDatewise[dateStr] = (onlineDatewise[dateStr] || 0) + amount;
+          onlineTripwise[tripName] = (onlineTripwise[tripName] || 0) + amount;
+        }
       }
     });
 
@@ -402,13 +450,27 @@ exports.getReports = async (req, res) => {
       .map(([month, amount]) => ({ month, amount }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
+    const cashCollectionDatewise = Object.entries(cashDatewise)
+      .map(([date, amount]) => ({ date, amount }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const cashCollectionTripwise = Object.entries(cashTripwise).map(([tripName, amount]) => ({ tripName, amount }));
+    
+    const onlineCollectionDatewise = Object.entries(onlineDatewise)
+      .map(([date, amount]) => ({ date, amount }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const onlineCollectionTripwise = Object.entries(onlineTripwise).map(([tripName, amount]) => ({ tripName, amount }));
+
     return res.json({
       success: true,
       data: {
         pendingTotal,
         revenuePerTrip,
         salespersonCollection,
-        monthlyRevenue
+        monthlyRevenue,
+        cashCollectionDatewise,
+        cashCollectionTripwise,
+        onlineCollectionDatewise,
+        onlineCollectionTripwise
       }
     });
   } catch (err) {

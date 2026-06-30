@@ -49,9 +49,9 @@ function Pill({ label, colorClass }: { label: string; colorClass: string }) {
 
 // ── EMPTY FORM ─────────────────────────────────────────────────────────────────
 const emptyForm = () => ({
-  travelerName: "", passengerReference: "", pnr: "", trainName: "", trainNumber: "",
-  journeyDate: "", sourceStation: "", destinationStation: "", coach: "", seatNumber: "",
-  berthType: "", ticketAmount: "", amountMode: "PAYMENT_LINK", internalNote: "",
+  travelerName: "", pnr: "", trainName: "", trainNumber: "",
+  journeyDate: "", sourceStation: "", destinationStation: "",
+  ticketAmount: "", amountMode: "PAYMENT_LINK", internalNote: "",
   ticketBookingPerson: "", ticketStatus: "PENDING" as const,
 });
 
@@ -90,9 +90,8 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
   const [selected, setSelected]     = useState<Set<string>>(new Set());
   const [showBulk, setShowBulk]     = useState(false);
   const [bulkForm, setBulkForm]     = useState({
-    status: "", trainNumber: "", journeyDate: "", pnr: "", coach: "",
+    status: "", trainNumber: "", journeyDate: "", pnr: "",
     sourceStation: "", destinationStation: "",
-    seatNumber: "", berthType: "", // only sent if explicitly filled
     notes: "",
   });
 
@@ -158,16 +157,12 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
   function openEdit(t: TrainTicket) {
     setForm({
       travelerName: t.travelerName ?? "",
-      passengerReference: t.passengerReference ?? "",
       pnr: t.pnr ?? "",
       trainName: t.trainName ?? "",
       trainNumber: t.trainNumber ?? "",
       journeyDate: t.journeyDate ? t.journeyDate.slice(0, 10) : "",
       sourceStation: t.sourceStation ?? "",
       destinationStation: t.destinationStation ?? "",
-      coach: t.coach ?? "",
-      seatNumber: t.seatNumber ?? "",
-      berthType: t.berthType ?? "",
       ticketAmount: t.ticketAmount != null ? String(t.ticketAmount) : "",
       amountMode: t.amountMode ?? "PAYMENT_LINK",
       internalNote: t.internalNote ?? "",
@@ -185,8 +180,6 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
       trainNumber:       prev.trainNumber       || tmpl.trainNumber       || "",
       sourceStation:     prev.sourceStation     || tmpl.source            || "",
       destinationStation:prev.destinationStation|| tmpl.destination       || "",
-      coach:             prev.coach             || tmpl.defaultCoach      || "",
-      berthType:         prev.berthType         || tmpl.defaultClass      || "",
       journeyDate:       prev.journeyDate       || (tmpl.journeyDate ? tmpl.journeyDate.slice(0, 10) : "") ,
     }));
     toast.success(`Prefilled from template: ${tmpl.trainName || tmpl.trainNumber}`);
@@ -288,12 +281,8 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
     if (bulkForm.trainNumber)       payload.trainNumber       = bulkForm.trainNumber;
     if (bulkForm.journeyDate)       payload.journeyDate       = bulkForm.journeyDate;
     if (bulkForm.pnr)               payload.pnr               = bulkForm.pnr;
-    if (bulkForm.coach)             payload.coach             = bulkForm.coach;
     if (bulkForm.sourceStation)     payload.sourceStation     = bulkForm.sourceStation;
     if (bulkForm.destinationStation)payload.destinationStation = bulkForm.destinationStation;
-    // seat/berth only if explicitly entered
-    if (bulkForm.seatNumber.trim()) payload.seatNumber        = bulkForm.seatNumber;
-    if (bulkForm.berthType.trim())  payload.berthType         = bulkForm.berthType;
 
     setActionBusy(true);
     try {
@@ -396,7 +385,7 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
               <Input value={form.travelerName} onChange={(e) => setForm({ ...form, travelerName: e.target.value })}
                 required className="h-8 text-xs" />
             </div>
-            {(["pnr","trainName","trainNumber","journeyDate","sourceStation","destinationStation","coach","seatNumber","berthType","ticketAmount","passengerReference","ticketBookingPerson"] as const).map((key) => (
+            {(["pnr","trainName","trainNumber","journeyDate","sourceStation","destinationStation","ticketAmount","ticketBookingPerson"] as const).map((key) => (
               <div key={key} className="space-y-1">
                 <label className="text-[9px] font-bold uppercase text-slate-500">
                   {key.replace(/([A-Z])/g, " $1").trim()}
@@ -498,9 +487,6 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
                       {t.trainName && <span>{t.trainName} {t.trainNumber ? `(${t.trainNumber})` : ""}</span>}
                       {t.journeyDate && <span>{new Date(t.journeyDate).toDateString()}</span>}
                       {t.sourceStation && t.destinationStation && <span>{t.sourceStation} → {t.destinationStation}</span>}
-                      {t.coach && <span>Coach {t.coach}</span>}
-                      {t.seatNumber && <span>Seat {t.seatNumber}</span>}
-                      {t.berthType && <span>{t.berthType}</span>}
                       {t.ticketAmount != null && Number(t.ticketAmount) > 0 && (
                         <span className="font-semibold text-slate-700">₹{Number(t.ticketAmount).toFixed(2)}</span>
                       )}
@@ -646,11 +632,8 @@ export default function TrainTicketsPanel({ bookingId, booking, onCountChange }:
                 ["trainNumber", "Train Number", "text"],
                 ["journeyDate", "Journey Date", "date"],
                 ["pnr", "PNR", "text"],
-                ["coach", "Coach", "text"],
                 ["sourceStation", "Source Station", "text"],
                 ["destinationStation", "Destination Station", "text"],
-                ["seatNumber", "Seat Number (optional)", "text"],
-                ["berthType", "Berth Type (optional)", "text"],
               ].map(([key, label, type]) => (
                 <div key={key} className={cn("space-y-1", key === "sourceStation" || key === "destinationStation" ? "col-span-2" : "")}>
                   <label className="text-[9px] font-bold uppercase text-slate-500">{label}</label>

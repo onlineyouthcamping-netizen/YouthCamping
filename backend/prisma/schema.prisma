@@ -36,6 +36,9 @@ model Admin {
   submittedTickets      TrainTicket[]            @relation("TicketSubmittedByAdmin")
   approvalActors        TrainTicketApproval[]    @relation("ApprovalActorAdmin")
   trainTicketGroups     TrainTicketGroup[]       @relation("GroupCreatedByAdmin")
+  bookingActivityLogs   BookingActivityLog[]     @relation("BookingActivityActor")
+  assignedTasks         BookingTask[]            @relation("TaskAssignedBy")
+  receivedTasks         BookingTask[]            @relation("TaskAssignedTo")
 
   // Accounting relations
   salesAccountingEntries   AccountingEntry[] @relation("SalesAccountingEntries")
@@ -133,6 +136,10 @@ model TripVendor {
   paidAmount    Float    @default(0)
   paymentStatus String   @default("pending")
   notes         String?
+  outgoingPaymentMode String?
+  onlinePersonAccount String?
+  cashDepositorName   String?
+  depositAccountName  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -345,6 +352,8 @@ model Booking {
   trainTicket       TrainTicketRequest?
   trainTickets      TrainTicket[]
   trainTicketGroups TrainTicketGroup[]
+  activityLogs      BookingActivityLog[]
+  tasks             BookingTask[]
   accountingEntries AccountingEntry[]
   opsVehicleAllocations OpsVehicleAllocation[]
   opsRoomAllocations    OpsRoomAllocation[]
@@ -1444,4 +1453,41 @@ enum OpsIncidentActivityAction {
   RESOLVE
   REOPEN
   COMMENT
+}
+
+model BookingActivityLog {
+  id                  String   @id @default(cuid())
+  bookingId           String
+  action              String
+  details             String   @db.Text
+  performedByAdminId  String?
+  createdAt           DateTime @default(now())
+
+  booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  performedBy         Admin?   @relation("BookingActivityActor", fields: [performedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+  @@index([createdAt])
+}
+
+model BookingTask {
+  id              String   @id @default(cuid())
+  tenantId        String   @default("default")
+  bookingId       String
+  title           String
+  description     String   @db.Text
+  status          String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  dueDate         DateTime?
+  assignedById    String
+  assignedToId    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  assignedBy      Admin    @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  assignedTo      Admin    @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([bookingId])
+  @@index([assignedById])
+  @@index([assignedToId])
 }
