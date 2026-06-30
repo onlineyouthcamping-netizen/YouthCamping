@@ -36,7 +36,8 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
         name: p.name || p.fullName || b.name,
         gender: parsedGender,
         age: p.age || b.age,
-        groupSize: passList.length
+        groupSize: passList.length,
+        roomSharing: p.roomPreference || p.roomSharing || b.roomSharing || 'Triple Sharing'
       });
     });
   });
@@ -123,6 +124,49 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
     .map(gId => groupMap[gId])
     .filter(g => g.length > 1);
 
+  // ── Helper to chunk arrays into groups of max size ──
+  const chunkArray = (array, size) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  // ── Split multi-person groups into subgroups based on roomSharing preference ──
+  const subgroups = [];
+  multiGroups.forEach(groupMembers => {
+    const males = groupMembers.filter(m => m.gender === 'Male');
+    const females = groupMembers.filter(m => m.gender === 'Female');
+    const others = groupMembers.filter(m => m.gender !== 'Male' && m.gender !== 'Female');
+
+    [males, females, others].forEach(genderGroup => {
+      if (genderGroup.length === 0) return;
+
+      const doubleGroup = genderGroup.filter(m => m.roomSharing === 'Double Sharing');
+      const tripleGroup = genderGroup.filter(m => m.roomSharing === 'Triple Sharing');
+      const quadGroup = genderGroup.filter(m => m.roomSharing === 'Quad Sharing');
+      const remaining = genderGroup.filter(m => 
+        m.roomSharing !== 'Double Sharing' && 
+        m.roomSharing !== 'Triple Sharing' && 
+        m.roomSharing !== 'Quad Sharing'
+      );
+
+      // Chunk double sharing into subgroups of 2
+      chunkArray(doubleGroup, 2).forEach(chunk => subgroups.push(chunk));
+
+      // Chunk triple sharing into subgroups of 3
+      chunkArray(tripleGroup, 3).forEach(chunk => subgroups.push(chunk));
+
+      // Chunk quad sharing into subgroups of 4
+      chunkArray(quadGroup, 4).forEach(chunk => subgroups.push(chunk));
+
+      // For remaining: use group's size or fallback to 3
+      const defaultCapacity = genderGroup.length === 2 ? 2 : 3;
+      chunkArray(remaining, defaultCapacity).forEach(chunk => subgroups.push(chunk));
+    });
+  });
+
   if (Array.isArray(roomInventory) && roomInventory.length > 0) {
     // ── INVENTORY-BASED ROOM ALLOCATION ──
     // Build room slots from inventory
@@ -138,32 +182,54 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
     }));
 
     // Helper: find a room slot matching gender with enough remaining capacity
-    const findRoom = (genderGroup, count) => {
+    const findRoom = (genderGroup, count, prefCapacity = null) => {
+      if (prefCapacity) {
+        const match = roomSlots.find(r => r.genderGroup === genderGroup && r.remaining >= count && r.capacity === prefCapacity);
+        if (match) return match;
+      }
       return roomSlots.find(r => r.genderGroup === genderGroup && r.remaining >= count);
     };
 
-    // Step 1: Assign multi-person groups to GROUP/COUPLE rooms
-    multiGroups.forEach(groupMembers => {
+    // Helper to check if a room slot can accept a traveler of a given gender
+    const canAcceptGender = (room, gender) => {
+      if (room.assigned.length === 0) return true;
+      return room.assigned.every(member => member.gender === gender);
+    };
+
+    // Step 1: Assign multi-person subgroups to GROUP/COUPLE rooms
+    subgroups.forEach(subgroupMembers => {
       let room = null;
-      if (groupMembers.length === 2) {
-        // For couples / duos: prioritize COUPLE rooms, then GROUP, then FAMILY
-        room = findRoom('COUPLE', 2)
-              || findRoom('GROUP', 2)
-              || findRoom('FAMILY', 2);
+      const size = subgroupMembers.length;
+      
+      const prefCapacity = subgroupMembers[0].roomSharing === 'Double Sharing' ? 2 : 
+                           subgroupMembers[0].roomSharing === 'Triple Sharing' ? 3 : 4;
+
+      if (prefCapacity === 2) {
+        // For couples / duos (Double Sharing): prioritize TWIN rooms (capacity 2), then fallback
+        room = findRoom('COUPLE', size, 2)
+              || findRoom('GROUP', size, 2)
+              || findRoom('FAMILY', size, 2)
+              || findRoom('COUPLE', size)
+              || findRoom('GROUP', size)
+              || findRoom('FAMILY', size);
       } else {
-        // For larger groups: prioritize GROUP, then FAMILY, then COUPLE
-        room = findRoom('GROUP', groupMembers.length)
-              || findRoom('FAMILY', groupMembers.length)
-              || findRoom('COUPLE', groupMembers.length);
+        // For Triple/Quad Sharing: prioritize TRIPLE/QUAD rooms, then fallback
+        room = findRoom('GROUP', size, prefCapacity)
+              || findRoom('FAMILY', size, prefCapacity)
+              || findRoom('COUPLE', size, prefCapacity)
+              || findRoom('GROUP', size)
+              || findRoom('FAMILY', size)
+              || findRoom('COUPLE', size);
       }
 
-      // If no matching gender group room fits, fallback to any room with capacity
+      // If no matching gender group room fits, fallback to any room with capacity (matching preference capacity first)
       if (!room) {
-        room = roomSlots.find(r => r.remaining >= groupMembers.length);
+        room = roomSlots.find(r => r.remaining >= size && r.capacity === prefCapacity)
+              || roomSlots.find(r => r.remaining >= size);
       }
 
       if (room) {
-        groupMembers.forEach(t => {
+        subgroupMembers.forEach(t => {
           room.assigned.push(t);
           room.remaining -= 1;
           roomAllocations.push({
@@ -174,17 +240,22 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
             travelerName: t.name
           });
         });
-        // Mark room as fully occupied to ensure multi-person groups have separate, private rooms
-        room.remaining = 0;
+        
+        // Exclusivity: if subgroup matches or exceeds their preferred capacity, room is private
+        if (subgroupMembers.length >= prefCapacity) {
+          room.remaining = 0;
+        }
       } else {
-        flags.push(`⚠️ No room with ${groupMembers.length} capacity for group (${groupMembers[0].name} & ${groupMembers.length - 1} others) — needs manual assignment.`);
+        flags.push(`⚠️ No room with ${subgroupMembers.length} capacity for subgroup (${subgroupMembers[0].name} & ${subgroupMembers.length - 1} others) — needs manual assignment.`);
       }
     });
 
-    // Step 2: Assign solo boys to BOYS rooms
+    // Step 2: Assign solo boys to BOYS rooms or compatible rooms
     soloBoys.forEach(t => {
       let room = findRoom('BOYS', 1);
-      if (!room) room = roomSlots.find(r => r.remaining >= 1 && r.genderGroup !== 'GIRLS');
+      if (!room) {
+        room = roomSlots.find(r => r.remaining >= 1 && r.genderGroup !== 'GIRLS' && canAcceptGender(r, 'Male'));
+      }
       if (room) {
         room.assigned.push(t);
         room.remaining -= 1;
@@ -200,10 +271,12 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
       }
     });
 
-    // Step 3: Assign solo girls to GIRLS rooms
+    // Step 3: Assign solo girls to GIRLS rooms or compatible rooms
     soloGirls.forEach(t => {
       let room = findRoom('GIRLS', 1);
-      if (!room) room = roomSlots.find(r => r.remaining >= 1 && r.genderGroup !== 'BOYS');
+      if (!room) {
+        room = roomSlots.find(r => r.remaining >= 1 && r.genderGroup !== 'BOYS' && canAcceptGender(r, 'Female'));
+      }
       if (room) {
         room.assigned.push(t);
         room.remaining -= 1;
@@ -227,59 +300,87 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
     });
 
   } else {
-    // ── FALLBACK: Auto-generate room numbers (original logic) ──
+    // ── FALLBACK: Auto-generate room numbers (upgraded with virtual slots) ──
     let roomCounter = 101;
+    const virtualRooms = [];
 
-    // Rule 4: Multi-person groups get their own room
-    multiGroups.forEach(groupMembers => {
+    // Step 1: Create virtual rooms for all multi-person subgroups
+    subgroups.forEach(subgroupMembers => {
       const roomNum = `Room ${roomCounter++}`;
-      const roomType = groupMembers.length === 2 ? 'TWIN' : groupMembers.length === 3 ? 'TRIPLE' : 'QUAD/FAMILY';
-      groupMembers.forEach((t) => {
-        roomAllocations.push({
-          roomNumber: roomNum,
-          roomType,
-          genderGroup: 'GROUP',
-          bookingId: t.bookingId,
-          travelerName: t.name
-        });
-      });
+      const prefCapacity = subgroupMembers[0].roomSharing === 'Double Sharing' ? 2 : 
+                           subgroupMembers[0].roomSharing === 'Triple Sharing' ? 3 : 4;
+      
+      const virtualRoom = {
+        roomLabel: roomNum,
+        roomType: subgroupMembers.length === 2 ? 'TWIN' : subgroupMembers.length === 3 ? 'TRIPLE' : 'QUAD/FAMILY',
+        genderGroup: 'GROUP',
+        capacity: prefCapacity,
+        remaining: prefCapacity - subgroupMembers.length,
+        assigned: [...subgroupMembers]
+      };
+
+      // Exclusivity: if subgroup matches or exceeds preferred capacity, room is private
+      if (subgroupMembers.length >= prefCapacity) {
+        virtualRoom.remaining = 0;
+      }
+
+      virtualRooms.push(virtualRoom);
     });
 
-    // Club Solo Boys into twin rooms
-    for (let i = 0; i < soloBoys.length; i += 2) {
-      const roomNum = `Room ${roomCounter++}`;
-      const pair = soloBoys.slice(i, i + 2);
-      if (pair.length === 1) {
-        flags.push(`⚠️ 1 solo male (${pair[0].name}) unallocated to twin room — needs manual room assignment.`);
-      }
-      pair.forEach((t) => {
-        roomAllocations.push({
-          roomNumber: roomNum,
-          roomType: pair.length === 1 ? 'SINGLE' : 'TWIN',
+    // Step 2: Assign solo boys to existing compatible rooms, or create new twin/single rooms
+    soloBoys.forEach(t => {
+      let room = virtualRooms.find(r => r.remaining >= 1 && r.assigned.every(m => m.gender === 'Male'));
+      if (room) {
+        room.assigned.push(t);
+        room.remaining -= 1;
+      } else {
+        const roomNum = `Room ${roomCounter++}`;
+        virtualRooms.push({
+          roomLabel: roomNum,
+          roomType: 'TWIN',
           genderGroup: 'BOYS',
-          bookingId: t.bookingId,
-          travelerName: t.name
+          capacity: 2,
+          remaining: 1,
+          assigned: [t]
         });
-      });
-    }
-
-    // Club Solo Girls into twin rooms
-    for (let i = 0; i < soloGirls.length; i += 2) {
-      const roomNum = `Room ${roomCounter++}`;
-      const pair = soloGirls.slice(i, i + 2);
-      if (pair.length === 1) {
-        flags.push(`⚠️ 1 solo female (${pair[0].name}) unallocated to twin room — needs manual room assignment.`);
       }
-      pair.forEach((t) => {
-        roomAllocations.push({
-          roomNumber: roomNum,
-          roomType: pair.length === 1 ? 'SINGLE' : 'TWIN',
+    });
+
+    // Step 3: Assign solo girls to existing compatible rooms, or create new twin/single rooms
+    soloGirls.forEach(t => {
+      let room = virtualRooms.find(r => r.remaining >= 1 && r.assigned.every(m => m.gender === 'Female'));
+      if (room) {
+        room.assigned.push(t);
+        room.remaining -= 1;
+      } else {
+        const roomNum = `Room ${roomCounter++}`;
+        virtualRooms.push({
+          roomLabel: roomNum,
+          roomType: 'TWIN',
           genderGroup: 'GIRLS',
+          capacity: 2,
+          remaining: 1,
+          assigned: [t]
+        });
+      }
+    });
+
+    // Populate roomAllocations and add warning flags for single/unpaired solos
+    virtualRooms.forEach(room => {
+      room.assigned.forEach(t => {
+        roomAllocations.push({
+          roomNumber: room.roomLabel,
+          roomType: room.roomType,
+          genderGroup: room.genderGroup,
           bookingId: t.bookingId,
           travelerName: t.name
         });
       });
-    }
+
+      if (room.assigned.length === 1 && (room.genderGroup === 'BOYS' || room.genderGroup === 'GIRLS')) {
+        flags.push(`⚠️ 1 solo ${room.genderGroup === 'BOYS' ? 'male' : 'female'} (${room.assigned[0].name}) unallocated to twin room — needs manual room assignment.`);
+      }
+    });
   }
 
   // ── WHATSAPP TEXT FORMATTING ──

@@ -7,7 +7,7 @@ async function run() {
   const departureDateShort = '2026-07-02';
 
   try {
-    console.log('Seeding Spiti Valley July batch...');
+    console.log('Seeding Spiti Valley July batch with exact passenger names...');
 
     // 1. Ensure the trip has this departure date available
     const trip = await prisma.trip.findUnique({ where: { id: tripId } });
@@ -35,7 +35,7 @@ async function run() {
     });
     console.log(`Cleared ${deleteRes.count} existing bookings for ${departureDateShort}`);
 
-    // 3. Define the bookings to seed
+    // 3. Define the bookings to seed (34 participants across 10 bookings)
     const bookingsData = [
       {
         bookingId: 'BK-260518294643',
@@ -45,8 +45,8 @@ async function run() {
         amount: 47000,
         advancePaid: 10000,
         passengers: [
-          { name: 'Takshrajsinh Rana', gender: 'Male', age: 18, phone: '+918866525115', email: 'takshrajsinhrana@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Chandramouli Patel', gender: 'Male', age: 17, phone: '+918320209404', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+          { name: 'Mr Takshrajsinh Rana', gender: 'Male', age: 18, phone: '+918866525115', email: 'takshrajsinhrana@gmail.com', roomPreference: 'Double Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Chandramouli Patel', gender: 'Male', age: 17, phone: '+918320209404', email: '', roomPreference: 'Double Sharing', foodPreference: 'Normal Food' }
         ]
       },
       {
@@ -92,11 +92,11 @@ async function run() {
         advancePaid: 30500,
         passengers: [
           { name: 'Mr Earth Patel', gender: 'Male', age: 22, phone: '+919265920925', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Harsh Verma', gender: 'Male', age: 22, phone: '+919712345678', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Abhikum Patel', gender: 'Male', age: 22, phone: '+919712345679', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
           { name: 'Mr Rajveersinh Chauhan', gender: 'Male', age: 22, phone: '+919725292046', email: 'rajveerchauhan1821@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Devrajsinh Chauhan', gender: 'Male', age: 22, phone: '+919712345678', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Harshvardhan Vaghela', gender: 'Male', age: 22, phone: '+919712345679', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Yuvraj Patel', gender: 'Male', age: 22, phone: '+919712345680', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Prince Patel', gender: 'Male', age: 22, phone: '+919712345681', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+          { name: 'Mr Aakash Bhatt', gender: 'Male', age: 22, phone: '+919712345680', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Mehta Mineshkumar', gender: 'Male', age: 22, phone: '+919712345681', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
         ]
       },
       {
@@ -106,11 +106,10 @@ async function run() {
         phone: '+918128730687',
         amount: 108010.35,
         advancePaid: 15750,
-        notes: 'Ahmedabad to Ahmedabad javma 2 tier Ac retrun ma 3 tier Ac per person = 24200 /- 250 booking amount gst total price = 26950 /- per person +personal car = 9050 /- total package personal = 36000/-',
         passengers: [
-          { name: 'Miss Miksha Patel', gender: 'Female', age: 20, phone: '+918128730687', email: 'patel.miksha@yahoo.in', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Miss Riya Patel', gender: 'Female', age: 20, phone: '+918128730688', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Miss Jenny Patel', gender: 'Female', age: 20, phone: '+918128730689', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+          { name: 'Miss Keshaben Patel', gender: 'Female', age: 20, phone: '+918128730687', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Miss Miksha Patel', gender: 'Female', age: 20, phone: '+918128730688', email: 'patel.miksha@yahoo.in', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Miss Jyotikaben Patel', gender: 'Female', age: 20, phone: '+918128730689', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
         ]
       },
       {
@@ -122,10 +121,11 @@ async function run() {
         advancePaid: 15000,
         passengers: [
           { name: 'Mr Shasan Shah', gender: 'Male', age: 25, phone: '+919023276710', email: 'shasanks92@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Meet Shah', gender: 'Male', age: 25, phone: '+919023276711', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Devam Shah', gender: 'Male', age: 25, phone: '+919023276712', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Raj Shah', gender: 'Male', age: 25, phone: '+919023276713', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Henil Shah', gender: 'Male', age: 25, phone: '+919023276714', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+          { name: 'Mr Yash Mehta', gender: 'Male', age: 25, phone: '+919023276711', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Divy Mehta', gender: 'Male', age: 25, phone: '+919023276712', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Vansh Mehta', gender: 'Male', age: 25, phone: '+919023276713', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Veer Shah', gender: 'Male', age: 25, phone: '+919023276714', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
+          { name: 'Mr Harsh Gandhi', gender: 'Male', age: 25, phone: '+919023276715', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
         ]
       },
       {
@@ -133,11 +133,10 @@ async function run() {
         name: 'Tharunkumar Uthamchand',
         email: 'smartsingam@gmail.com',
         phone: '+918610400438',
-        amount: 46000.50,
+        amount: 23000.25,
         advancePaid: 7000,
         passengers: [
-          { name: 'Mr Tharunkumar Uthamchand', gender: 'Male', age: 24, phone: '+918610400438', email: 'smartsingam@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Uthamchand Singam', gender: 'Male', age: 24, phone: '+918610400439', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+          { name: 'Mr Tharunkumar Uthamchand', gender: 'Male', age: 24, phone: '+918610400438', email: 'smartsingam@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
         ]
       },
       {
@@ -145,11 +144,21 @@ async function run() {
         name: 'Tushar Mahida',
         email: 'tusharmahida776@gmail.com',
         phone: '+919313592637',
-        amount: 47499.90,
+        amount: 23749.95,
         advancePaid: 10000,
         passengers: [
-          { name: 'Mr Tushar Mahida', gender: 'Male', age: 21, phone: '+919313592637', email: 'tusharmahida776@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' },
-          { name: 'Mr Ajay Mahida', gender: 'Male', age: 21, phone: '+919313592638', email: '', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+          { name: 'Mr Tushar Mahida', gender: 'Male', age: 21, phone: '+919313592637', email: 'tusharmahida776@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
+        ]
+      },
+      {
+        bookingId: 'BK-260516294371',
+        name: 'Tirth Charola',
+        email: 'tirthcharola@gmail.com',
+        phone: '+919313592699',
+        amount: 23500,
+        advancePaid: 5000,
+        passengers: [
+          { name: 'Mr Tirth Charola', gender: 'Male', age: 21, phone: '+919313592699', email: 'tirthcharola@gmail.com', roomPreference: 'Triple Sharing', foodPreference: 'Normal Food' }
         ]
       },
       {
