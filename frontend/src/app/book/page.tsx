@@ -1229,7 +1229,7 @@ function BookingForm() {
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          <div>
+                          <div className="col-span-2 md:col-span-1">
                             <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">JOINING CITY</p>
                             <p className="font-bold text-slate-800 capitalize mt-1 break-all whitespace-normal leading-tight">{selectedCity?.cityName || 'Delhi'}</p>
                           </div>
