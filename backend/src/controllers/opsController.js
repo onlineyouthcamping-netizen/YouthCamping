@@ -9,17 +9,36 @@ const opsSummaryCache = new Map();
  */
 function normalizeDepartureDateIndia(dateInput) {
   if (!dateInput) return null;
+
+  // If it's already a simple YYYY-MM-DD string, parse directly in UTC to avoid any locale/Intl issues
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    const directDate = new Date(`${dateInput}T00:00:00.000Z`);
+    if (!isNaN(directDate.getTime())) return directDate;
+  }
+
   const d = new Date(dateInput);
   if (isNaN(d.getTime())) return null;
 
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const indiaDateStr = formatter.format(d); // e.g. "2026-07-10"
-  return new Date(`${indiaDateStr}T00:00:00.000Z`);
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const indiaDateStr = formatter.format(d); // e.g. "2026-07-10"
+    const resDate = new Date(`${indiaDateStr}T00:00:00.000Z`);
+    if (!isNaN(resDate.getTime())) return resDate;
+  } catch (e) {
+    console.error('Intl formatting error in normalizeDepartureDateIndia:', e);
+  }
+
+  // Fallback to UTC parts if Intl formatting fails
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const fallbackDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+  return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
 }
 
 // Helper to construct departure filter
@@ -33,7 +52,7 @@ async function parseDepartureFilter(req, res, requireDepartureDate = true) {
   }
 
   const departureDate = normalizeDepartureDateIndia(rawDate);
-  if (requireDepartureDate && !departureDate) {
+  if (requireDepartureDate && (!departureDate || isNaN(departureDate.getTime()))) {
     res.status(400).json({ success: false, message: 'Invalid departureDate format' });
     return null;
   }
