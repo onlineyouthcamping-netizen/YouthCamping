@@ -87,5 +87,6 @@ function redactSensitive(data) {
 }
 
 module.exports = {
-  logAction
+  logAction,
+  redactSensitive
 };

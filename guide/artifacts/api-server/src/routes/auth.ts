@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || "4f9e8d7c6b5a4132211009988776655443322110";
 
 router.post("/auth/login", async (req, res) => {
   try {
@@ -28,7 +30,14 @@ router.post("/auth/login", async (req, res) => {
       return;
     }
 
+    const token = jwt.sign(
+      { id: user.id, role: user.role, phone: user.phone },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.json({
+      token,
       id: user.id,
       phone: user.phone,
       name: user.name,

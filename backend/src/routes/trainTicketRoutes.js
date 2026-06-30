@@ -25,7 +25,7 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 router.use(authenticate);
 
 // Approvals & Alerts (specific routes before parameterized ones)
-router.get('/approvals', requirePermission('tickets.approve'), getApprovalsQueue);
+router.get('/approvals', requirePermission('tickets.view'), getApprovalsQueue);
 router.get('/alerts', requirePermission('tickets.alerts.view'), getAlerts);
 
 // Train Templates

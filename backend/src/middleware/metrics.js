@@ -46,7 +46,11 @@ module.exports = (req, res, next) => {
     }
   });
 
-  requestStorage.run(req._timings, () => {
+  if (requestStorage && typeof requestStorage.run === 'function') {
+    requestStorage.run(req._timings, () => {
+      next();
+    });
+  } else {
     next();
-  });
+  }
 };

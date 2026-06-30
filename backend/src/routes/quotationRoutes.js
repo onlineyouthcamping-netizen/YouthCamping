@@ -50,7 +50,7 @@ router.get('/', authenticate, requirePermission('quotations.view'), async (req, 
     const formatted = quotations.map(q => {
       const d = (typeof q.data === 'object' && q.data) ? q.data : {};
       const jwt = require('jsonwebtoken');
-      const shareToken = jwt.sign({ quotationId: q.id }, process.env.JWT_SECRET);
+      const shareToken = jwt.sign({ quotationId: q.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
       return {
         id: q.id,
         title: q.title,
@@ -136,6 +136,9 @@ router.get('/:idOrSlug', async (req, res, next) => {
           isAuthorized = true;
         }
       } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+          return res.status(401).json({ success: false, message: 'This quotation link has expired' });
+        }
         return res.status(401).json({ success: false, message: 'Invalid or expired share token' });
       }
     }
@@ -145,7 +148,7 @@ router.get('/:idOrSlug', async (req, res, next) => {
     }
 
     const jwt = require('jsonwebtoken');
-    const shareToken = jwt.sign({ quotationId: quotation.id }, process.env.JWT_SECRET);
+    const shareToken = jwt.sign({ quotationId: quotation.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     let responseData = {
       ...(typeof quotation.data === 'object' ? quotation.data : {}),
@@ -238,7 +241,7 @@ router.post('/', authenticate, requirePermission('quotations.create'), async (re
     }
 
     const jwt = require('jsonwebtoken');
-    const shareToken = jwt.sign({ quotationId: quotation.id }, process.env.JWT_SECRET);
+    const shareToken = jwt.sign({ quotationId: quotation.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.json({
       success: true,

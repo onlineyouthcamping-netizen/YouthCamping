@@ -44,12 +44,10 @@ exports.adminLogin = async (req, res, next) => {
       let match = false;
       if (admin.password.startsWith('$2a$') || admin.password.startsWith('$2b$')) {
         match = await bcrypt.compare(password, admin.password);
-        if (!match) {
-          match = await bcrypt.compare(password.trim(), admin.password);
-        }
-      } else {
-        // Plain-text fallback for local dev seed data
+      } else if (process.env.NODE_ENV !== 'production') {
         match = (password === admin.password) || (password.trim() === admin.password);
+      } else {
+        match = false;
       }
       if (match) {
         // Successful login: update lastLoginAt

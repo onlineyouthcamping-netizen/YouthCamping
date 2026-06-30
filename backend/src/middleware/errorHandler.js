@@ -1,3 +1,5 @@
+const { redactSensitive } = require('../utils/auditLogger');
+
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
@@ -5,7 +7,10 @@ const errorHandler = (err, req, res, next) => {
   // Always log errors for debugging, including production (Render)
   console.error(`[ERROR] ${req.method} ${req.url} - ${err.message}`);
   if (err.stack) console.error(err.stack);
-  if (req.body && Object.keys(req.body).length > 0) console.log('[BODY]', JSON.stringify(req.body));
+  if (req.body && Object.keys(req.body).length > 0 && !req.url.includes('login')) {
+    const redacted = redactSensitive(req.body);
+    console.log('[BODY]', JSON.stringify(redacted));
+  }
   if (req.file) console.log('[FILE]', req.file.originalname);
   if (req.files) console.log('[FILES]', req.files.length);
 
@@ -63,9 +68,10 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  const isProd = process.env.NODE_ENV === 'production';
   res.status(error.statusCode || error.status || 500).json({
     success: false,
-    message: error.message || 'Server Error'
+    message: isProd ? 'An unexpected error occurred' : (error.message || 'Server Error')
   });
 };
 

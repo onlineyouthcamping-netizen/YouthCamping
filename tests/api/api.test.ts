@@ -24,13 +24,6 @@ jest.mock('../../backend/src/utils/auditLogger', () => ({
   logAction: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock('bcryptjs', () => ({
-  ...jest.requireActual('bcryptjs'),
-  compare: jest.fn(async (password: string, stored: string) => (
-    password === 'isolated-test-password' && stored === 'isolated-test-hash'
-  )),
-}));
-
 const { prisma } = require('../../backend/src/lib/prisma');
 const app = require('../../backend/src/app');
 
@@ -42,11 +35,11 @@ describe('YouthCamping API Tests', () => {
     prisma.trip.findMany.mockResolvedValue([]);
     prisma.trip.findFirst.mockResolvedValue(null);
     prisma.admin.findUnique.mockImplementation(({ where }: any) => (
-      where.email === TEST_EMAIL
+      (where.email === TEST_EMAIL || where.id === 'isolated-test-admin')
         ? Promise.resolve({
             id: 'isolated-test-admin',
             email: TEST_EMAIL,
-            password: 'isolated-test-hash',
+            password: '$2a$10$AztTcqtGm9FiywzdSz0W9.Ra1yx.XIAPItszeiiBg8G2/7EcCw5.2',
             name: 'Isolated Test Admin',
             role: 'admin',
             tenantId: 'test',
@@ -60,14 +53,20 @@ describe('YouthCamping API Tests', () => {
 
   describe('Trips API', () => {
     it('should fetch all trips', async () => {
-      const response = await request(app).get('/api/trips');
+      const token = jwt.sign({ id: 'isolated-test-admin', role: 'admin', tenantId: 'test', tokenVersion: 0 }, process.env.JWT_SECRET as string);
+      const response = await request(app)
+        .get('/api/trips')
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should return 404 for a non-existent trip', async () => {
-      const response = await request(app).get('/api/trips/non-existent-id');
+      const token = jwt.sign({ id: 'isolated-test-admin', role: 'admin', tenantId: 'test', tokenVersion: 0 }, process.env.JWT_SECRET as string);
+      const response = await request(app)
+        .get('/api/trips/non-existent-id')
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(404);
     });
   });
@@ -116,13 +115,19 @@ describe('YouthCamping API Tests', () => {
 
   describe('API Edge Cases', () => {
     it('should return valid response for non-existent category', async () => {
-      const response = await request(app).get('/api/trips?category=ghost-category');
+      const token = jwt.sign({ id: 'isolated-test-admin', role: 'admin', tenantId: 'test', tokenVersion: 0 }, process.env.JWT_SECRET as string);
+      const response = await request(app)
+        .get('/api/trips?category=ghost-category')
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should handle an empty list without crashing', async () => {
-      const response = await request(app).get('/api/trips');
+      const token = jwt.sign({ id: 'isolated-test-admin', role: 'admin', tenantId: 'test', tokenVersion: 0 }, process.env.JWT_SECRET as string);
+      const response = await request(app)
+        .get('/api/trips')
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body.data.length).toBeGreaterThanOrEqual(0);
     });

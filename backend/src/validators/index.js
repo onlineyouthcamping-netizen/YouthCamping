@@ -34,6 +34,8 @@ const createBookingSchema = z.object({
   tripName: z.string().optional().nullable(),
   sourceBookingLinkId: z.string().optional().nullable(),
   sourceBookingLinkToken: z.string().optional().nullable(),
+  sourceBookingLinkPayload: z.string().optional().nullable(),
+  sourceBookingLinkSignature: z.string().optional().nullable(),
   skipDays: z.number({ coerce: true }).optional().nullable(),
   adjustedPrice: z.number({ coerce: true }).optional().nullable(),
   baseAmount: z.number({ coerce: true }).optional().nullable(),

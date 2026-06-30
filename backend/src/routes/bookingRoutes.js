@@ -27,11 +27,19 @@ const { guardBookingUpdateFields } = require('../middleware/fieldGuard');
 const { stripFinancialFieldsForGuides } = require('../middleware/financialStripper');
 const { validate, createBookingSchema } = require('../validators');
 
+const rateLimit = require('express-rate-limit');
+
+const lookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { success: false, message: "Too many requests. Try again later." }
+});
+
 // ── PUBLIC (Client Form) ──
 router.get('/trip-info/:tripCode', getTripInfo);
 router.post('/submit/:tripCode', submitBookingForm);
-router.get('/my-bookings/search', searchByPhone);
-router.get('/lookup/:bookingId', getBookingPublic);
+router.get('/my-bookings/search', lookupLimiter, searchByPhone);
+router.get('/lookup/:bookingId', lookupLimiter, getBookingPublic);
 
 // ── ADMIN: Trip Management ──
 router.get('/trips', authenticate, requirePermission('trips.view'), stripFinancialFieldsForGuides, getAllTrips);
@@ -61,7 +69,7 @@ router.get('/:id', authenticate, requirePermission('bookings.view'), enforceOwne
 router.put('/:id/confirm', authenticate, requirePermission('bookings.approve'), enforceOwnership('booking'), confirmBooking);
 router.put('/:id', authenticate, requirePermission('bookings.edit'), enforceOwnership('booking'), guardBookingUpdateFields, updateBooking);
 router.patch('/:id/confirm-payment', authenticate, requirePermission('payments.edit'), enforceOwnership('booking'), confirmPayment);
-router.patch('/:id', updateBookingUpi);
+router.patch('/:id', authenticate, requirePermission('bookings.edit'), guardBookingUpdateFields, updateBookingUpi);
 router.delete('/:id', authenticate, requirePermission('bookings.delete'), enforceOwnership('booking'), deleteBooking);
 
 module.exports = router;

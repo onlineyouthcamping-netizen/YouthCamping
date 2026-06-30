@@ -28,7 +28,7 @@ router.get('/public/lookup/:identifier', getPublicTripLookup);
 router.get('/', authenticate, stripFinancialFieldsForGuides, getTrips);
 router.get('/compact', authenticate, stripFinancialFieldsForGuides, getCompactTrips);
 
-router.get('/seed/live-data', authenticate, seedLiveData);
+router.get('/seed/live-data', authenticate, requirePermission('trips.edit'), seedLiveData);
 
 router.get('/slug/:slug', authenticate, stripFinancialFieldsForGuides, getTripBySlug);
 

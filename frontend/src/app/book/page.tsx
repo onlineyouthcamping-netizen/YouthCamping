@@ -622,7 +622,12 @@ function BookingForm() {
       if (res.ok || data.success) {
         router.push(`/book/confirmation?bookingId=${bId}`);
       } else {
-        setError(data.message || 'Submission failed. Please check your data and try again.');
+        if (data.errors && Array.isArray(data.errors)) {
+          const detailMsgs = data.errors.map((e: any) => `${e.field}: ${e.message}`).join(', ');
+          setError(`Validation failed: ${detailMsgs}`);
+        } else {
+          setError(data.message || 'Submission failed. Please check your data and try again.');
+        }
       }
     } catch (err) {
       setError('Connection to booking engine failed. Please try again.');
@@ -1205,7 +1210,7 @@ function BookingForm() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           <div>
                             <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">JOINING CITY</p>
-                            <p className="font-bold text-slate-800 capitalize mt-1">{selectedCity?.cityName || 'Delhi'}</p>
+                            <p className="font-bold text-slate-800 capitalize mt-1 break-words whitespace-normal leading-tight">{selectedCity?.cityName || 'Delhi'}</p>
                           </div>
                           <div>
                             <p className="text-[9px] text-slate-400 uppercase font-extrabold tracking-widest">DEPARTURE DATE</p>
@@ -1427,9 +1432,9 @@ function BookingForm() {
 
                   {/* General Details List */}
                   <div className="space-y-3 text-xs border-t border-b border-slate-100 py-4">
-                    <div className="flex items-center justify-between text-slate-650 gap-2 min-w-0">
-                      <span className="flex items-center font-extrabold shrink-0 text-[10px] uppercase tracking-wider text-slate-500">JOINING CITY</span>
-                      <span className="font-extrabold text-slate-900 capitalize text-right break-words max-w-[60%]">{selectedCity?.cityName || 'Delhi'}</span>
+                    <div className="flex items-start justify-between text-slate-650 gap-2 min-w-0">
+                      <span className="flex items-center font-extrabold shrink-0 text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">JOINING CITY</span>
+                      <span className="font-extrabold text-slate-900 capitalize text-right break-words max-w-[60%] inline-block leading-tight">{selectedCity?.cityName || 'Delhi'}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-slate-650 gap-2 min-w-0">

@@ -49,9 +49,6 @@ const corsOptions = {
     if (/^https?:\/\/localhost(:\d+)?$/i.test(normalizedOrigin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/i.test(normalizedOrigin)) {
       return callback(null, true);
     }
-    if (/\.vercel\.app$/i.test(normalizedOrigin) || /patelparth3315/i.test(normalizedOrigin)) {
-      return callback(null, true);
-    }
     callback(null, false);
   },
   credentials: true,

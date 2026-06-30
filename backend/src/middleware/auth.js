@@ -7,7 +7,7 @@ const FORBIDDEN_SYNTHETIC_IDENTITIES = new Set([
   'dev_user'
 ]);
 
-const adminCache = new Map();
+const cache = require('../lib/cache');
 const ADMIN_CACHE_TTL = 60 * 1000; // 60 seconds
 
 // JWT auth middleware
@@ -30,7 +30,14 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Account not found' });
     }
 
-    const cached = adminCache.get(decoded.id);
+    const cacheKey = `auth:${decoded.id}`;
+    const cachedVal = await cache.get(cacheKey);
+    let cached = null;
+    if (cachedVal) {
+      try {
+        cached = JSON.parse(cachedVal);
+      } catch (e) {}
+    }
     if (cached && Date.now() < cached.expiresAt && cached.tokenVersion === decoded.tokenVersion) {
       req.user = cached.user;
       req.admin = cached.user;
@@ -79,11 +86,11 @@ const authenticate = async (req, res, next) => {
       tenantId: admin.tenantId || 'default'
     };
 
-    adminCache.set(decoded.id, {
+    await cache.set(cacheKey, {
       user,
       tokenVersion: admin.tokenVersion,
       expiresAt: Date.now() + ADMIN_CACHE_TTL
-    });
+    }, 60);
 
     req.user = user;
     req.admin = user;
