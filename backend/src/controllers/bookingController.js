@@ -526,7 +526,13 @@ exports.getBookingById = async (req, res, next) => {
     const authScope = req.user?.role === 'sales' ? `sales-${req.user.id}` : (req.user?.role || 'admin');
     const opsSummary = await buildBookingOpsSummary(booking, tenantId, authScope);
 
-    const mappedBooking = { ...booking, ...extra, passengers: persons, opsSummary };
+    const mappedBooking = { 
+      ...booking, 
+      ...extra, 
+      ticketStatus: booking.trainTicketStatus || extra.ticketStatus || "NOT BOOKED",
+      passengers: persons, 
+      opsSummary 
+    };
 
     res.json({ success: true, data: mappedBooking });
   } catch (error) {
@@ -999,6 +1005,9 @@ exports.updateBooking = async (req, res, next) => {
       persons: updateData.passengers !== undefined ? updateData.passengers : currentPassengers.persons
     };
 
+    if (updateData.ticketStatus !== undefined) {
+      updateData.trainTicketStatus = updateData.ticketStatus;
+    }
     delete updateData.trainClass;
     delete updateData.ticketStatus;
     delete updateData.roomType;

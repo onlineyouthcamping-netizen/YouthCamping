@@ -349,6 +349,9 @@ const templates = {
               <div style="font-weight: 700; color: #1e293b;">${booking.fullName || booking.name}</div>
               <div style="margin-top: 1px;"><a href="mailto:${booking.email}" style="color: #3b82f6; text-decoration: underline;">${booking.email}</a></div>
               <div style="margin-top: 1px; color: #1e293b;">+91${booking.mobile || booking.phone}</div>
+
+              <div style="font-weight: 800; color: #64748b; margin-top: 12px; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">Ticket Status</div>
+              <div style="font-weight: 700; color: #2b9b91; text-transform: uppercase;">${booking.trainTicketStatus || (booking.passengers?.details?.ticketStatus) || 'NOT BOOKED'}</div>
             </div>
           </td>
         </tr>
