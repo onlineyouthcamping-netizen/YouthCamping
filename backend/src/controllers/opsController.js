@@ -1165,7 +1165,7 @@ exports.generateAllocation = async (req, res) => {
 
 exports.confirmAllocation = async (req, res) => {
   try {
-    const { allocationRunId } = req.body;
+    const { allocationRunId, roomAllocations: reqRoomAllocs, vehicleAllocations: reqVehicleAllocs } = req.body;
     if (req.user?.role === 'sales') {
       return res.status(403).json({ success: false, message: 'Sales role is not allowed to confirm allocations' });
     }
@@ -1174,10 +1174,23 @@ exports.confirmAllocation = async (req, res) => {
     if (!run) return res.status(404).json({ success: false, message: 'Allocation draft run not found' });
 
     await prisma.$transaction(async (tx) => {
+      let finalResult = run.resultJson;
+      if (reqRoomAllocs || reqVehicleAllocs) {
+        finalResult = {
+          ...run.resultJson,
+          roomAllocations: reqRoomAllocs || [],
+          vehicleAllocations: reqVehicleAllocs || []
+        };
+      }
+
       // Mark run as CONFIRMED
       await tx.opsAllocationRun.update({
         where: { id: run.id },
-        data: { status: 'CONFIRMED', actorId: req.user.id }
+        data: { 
+          status: 'CONFIRMED', 
+          actorId: req.user.id,
+          resultJson: finalResult
+        }
       });
 
       // Clear existing confirmed allocations for this specific departure date
@@ -1190,7 +1203,18 @@ exports.confirmAllocation = async (req, res) => {
       const vehicleAllocations = [];
       const roomAllocations = [];
 
-      if (result.vehicles) {
+      if (reqVehicleAllocs && reqVehicleAllocs.length > 0) {
+        reqVehicleAllocs.forEach(v => {
+          vehicleAllocations.push({
+            tripId: run.tripId,
+            departureDate: run.departureDate,
+            fleetId: v.fleetId || v.vehicleId,
+            bookingId: v.bookingId,
+            travelerName: v.travelerName,
+            seatNumber: v.seatNumber || null
+          });
+        });
+      } else if (result.vehicles) {
         result.vehicles.forEach(v => {
           v.assignedTravelers.forEach(t => {
             vehicleAllocations.push({
@@ -1205,7 +1229,19 @@ exports.confirmAllocation = async (req, res) => {
         });
       }
 
-      if (result.rooms) {
+      if (reqRoomAllocs && reqRoomAllocs.length > 0) {
+        reqRoomAllocs.forEach(r => {
+          roomAllocations.push({
+            tripId: run.tripId,
+            departureDate: run.departureDate,
+            roomNumber: r.roomNumber || r.roomLabel,
+            roomType: r.roomType,
+            genderGroup: r.genderGroup,
+            bookingId: r.bookingId,
+            travelerName: r.travelerName
+          });
+        });
+      } else if (result.rooms) {
         result.rooms.forEach(r => {
           r.assignedTravelers.forEach(t => {
             roomAllocations.push({
