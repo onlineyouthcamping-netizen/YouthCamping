@@ -36,7 +36,10 @@ const checkTicketOwnership = async (ticketId, user) => {
 
 // Helper to log ticket history
 const logHistory = async (ticketId, action, req, extra = {}) => {
-  const ticket = await prisma.trainTicket.findUnique({ where: { id: ticketId } });
+  const ticket = await prisma.trainTicket.findUnique({
+    where: { id: ticketId },
+    include: { booking: true }
+  });
   await prisma.trainTicketHistory.create({
     data: {
       ticketId,
@@ -54,7 +57,7 @@ const logHistory = async (ticketId, action, req, extra = {}) => {
     let details = `Train ticket for ${ticket.travelerName || 'unknown'}: ${action}`;
     if (extra.notes) details += ` (${extra.notes})`;
     await logBookingActivity({
-      bookingId: ticket.bookingId,
+      bookingId: ticket.booking?.id || ticket.bookingId,
       action: 'TRAIN_TICKET',
       details,
       performedByAdminId: req.user.id
@@ -735,14 +738,23 @@ exports.bulkUpdateTickets = async (req, res) => {
 
       // Log to Booking Activity Log
       const bookingsAffected = [...new Set(eligibleTickets.map((t) => t.bookingId))];
+      const dbBookings = await prisma.booking.findMany({
+        where: { bookingId: { in: bookingsAffected }, tenantId: req.user.tenantId },
+        select: { id: true, bookingId: true }
+      });
+      const bMap = new Map(dbBookings.map(b => [b.bookingId, b.id]));
+
       for (const bId of bookingsAffected) {
         const tNames = eligibleTickets.filter((t) => t.bookingId === bId).map((t) => t.travelerName).join(', ');
-        await logBookingActivity({
-          bookingId: bId,
-          action: 'TRAIN_TICKET',
-          details: `Bulk updated train tickets for passengers: ${tNames} (${notes || 'Bulk updated fields'})`,
-          performedByAdminId: req.user.id
-        });
+        const cuid = bMap.get(bId);
+        if (cuid) {
+          await logBookingActivity({
+            bookingId: cuid,
+            action: 'TRAIN_TICKET',
+            details: `Bulk updated train tickets for passengers: ${tNames} (${notes || 'Bulk updated fields'})`,
+            performedByAdminId: req.user.id
+          });
+        }
       }
 
       const inputOrder = new Map(uniqueTicketIds.map((id, index) => [id, index]));
