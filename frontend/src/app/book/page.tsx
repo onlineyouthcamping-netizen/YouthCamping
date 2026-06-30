@@ -357,10 +357,27 @@ function BookingForm() {
 
   // Adjust passengers list size dynamically
   const syncParticipantsCount = (count: number) => {
-    const list = [...formData.participantsList];
+    const defaultRoomSharing = count === 2 ? 'Double Sharing' : count >= 3 ? 'Triple Sharing' : 'Quad Sharing';
+    let list = [...formData.participantsList];
+    
+    // Auto-update room sharing for all members in the booking
+    list = list.map(item => ({
+      ...item,
+      roomSharing: defaultRoomSharing
+    }));
+
     if (list.length < count) {
       for (let i = list.length; i < count; i++) {
-        list.push({ name: '', phone: '', email: '', age: '', gender: 'Male', roomSharing: 'Quad Sharing', trainOption: 'Sleeper', foodPreference: 'Normal Food' });
+        list.push({ 
+          name: '', 
+          phone: '', 
+          email: '', 
+          age: '', 
+          gender: 'Male', 
+          roomSharing: defaultRoomSharing, 
+          trainOption: 'Sleeper', 
+          foodPreference: 'Normal Food' 
+        });
       }
     } else if (list.length > count) {
       list.splice(count);
