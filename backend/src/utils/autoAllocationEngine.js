@@ -174,6 +174,8 @@ function runAutoAllocation(bookings, fleet, roomInventory) {
             travelerName: t.name
           });
         });
+        // Mark room as fully occupied to ensure multi-person groups have separate, private rooms
+        room.remaining = 0;
       } else {
         flags.push(`⚠️ No room with ${groupMembers.length} capacity for group (${groupMembers[0].name} & ${groupMembers.length - 1} others) — needs manual assignment.`);
       }
