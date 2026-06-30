@@ -33,6 +33,7 @@ const {
   reopenIncident,
   generateAllocation,
   confirmAllocation,
+  getConfirmedAllocations,
   overrideAllocation,
   getSopLibrary,
   createSopLibrary,
@@ -103,6 +104,7 @@ router.post('/leaders/:tripId/restore', requirePermission('ops.manage'), restore
 
 // Auto Allocation Engine (Draft, Confirm, Override)
 router.get('/auto-allocate/:tripId', requirePermission('ops.allocate'), generateAllocation);
+router.get('/auto-allocate/:tripId/confirmed', requirePermission('ops.view'), getConfirmedAllocations);
 router.post('/auto-allocate/confirm', requirePermission('ops.allocate'), confirmAllocation);
 router.post('/auto-allocate/override', requirePermission('ops.allocate'), overrideAllocation);
 

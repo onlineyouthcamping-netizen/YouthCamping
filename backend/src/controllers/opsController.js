@@ -1291,6 +1291,37 @@ exports.confirmAllocation = async (req, res) => {
   }
 };
 
+exports.getConfirmedAllocations = async (req, res) => {
+  try {
+    const ctx = await parseDepartureFilter(req, res, true);
+    if (!ctx) return;
+
+    const rooms = await prisma.opsRoomAllocation.findMany({
+      where: { tripId: ctx.tripId, departureDate: ctx.departureDate },
+      orderBy: { roomNumber: 'asc' }
+    });
+
+    const vehicles = await prisma.opsVehicleAllocation.findMany({
+      where: { tripId: ctx.tripId, departureDate: ctx.departureDate },
+      orderBy: [
+        { fleetId: 'asc' },
+        { seatNumber: 'asc' }
+      ]
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        rooms,
+        vehicles
+      }
+    });
+  } catch (err) {
+    console.error('getConfirmedAllocations error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch confirmed allocations' });
+  }
+};
+
 exports.overrideAllocation = async (req, res) => {
   try {
     const { allocationRunId, targetType, targetId, afterValue, reason } = req.body;
