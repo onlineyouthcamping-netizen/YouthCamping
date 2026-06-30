@@ -4,6 +4,7 @@ const {
   getTicketsByBooking,
   getTicketHistory,
   createTicket,
+  autoGenerateTickets,
   updateTicket,
   submitTicket,
   approveTicket,
@@ -37,6 +38,7 @@ router.delete('/templates/:id', requirePermission('tickets.templates.manage'), d
 // Booking-level ticket operations
 router.get('/booking/:bookingId', requirePermission('tickets.view'), getTicketsByBooking);
 router.post('/booking/:bookingId', requirePermission('tickets.create'), createTicket);
+router.post('/booking/:bookingId/auto-generate', requirePermission('tickets.create'), autoGenerateTickets);
 
 // Bulk Update
 router.post('/bulk-update', requirePermission('tickets.bulk'), bulkUpdateTickets);

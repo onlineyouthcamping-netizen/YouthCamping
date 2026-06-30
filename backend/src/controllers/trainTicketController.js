@@ -166,6 +166,148 @@ exports.createTicket = async (req, res) => {
 };
 
 /**
+ * POST /api/train-tickets/booking/:bookingId/auto-generate
+ * Auto-generates departure + return tickets for all passengers in a booking.
+ * Reads passenger name/age/gender from booking.passengers JSON.
+ * Reads train details from active templates matched to the booking's trip + departureDate.
+ * Sales person only needs to fill PNR and status afterwards.
+ */
+exports.autoGenerateTickets = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const isOwner = await checkBookingOwnership(bookingId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Forbidden: You do not own this booking' });
+    }
+
+    // Fetch the booking with passengers
+    const booking = await prisma.booking.findFirst({
+      where: { bookingId, tenantId: req.user.tenantId }
+    });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Parse passengers list
+    let passengers = [];
+    if (booking.passengers && Array.isArray(booking.passengers)) {
+      passengers = booking.passengers;
+    } else {
+      // Fallback to main booker
+      passengers = [{
+        name: booking.fullName || booking.name,
+        age: booking.age,
+        gender: booking.gender
+      }];
+    }
+
+    if (passengers.length === 0) {
+      return res.status(400).json({ success: false, message: 'No passengers found in this booking' });
+    }
+
+    // Check for already-existing tickets to avoid duplicates
+    const existingTickets = await prisma.trainTicket.findMany({
+      where: { bookingId, tenantId: req.user.tenantId },
+      select: { travelerName: true, sourceStation: true, destinationStation: true }
+    });
+    const existingKey = (name, src, dst) => `${(name || '').trim().toLowerCase()}|${(src || '').toLowerCase()}|${(dst || '').toLowerCase()}`;
+    const existingSet = new Set(existingTickets.map(t => existingKey(t.travelerName, t.sourceStation, t.destinationStation)));
+
+    // Fetch active templates for this trip
+    const templates = await prisma.trainTemplate.findMany({
+      where: {
+        tenantId: req.user.tenantId,
+        isActive: true,
+        ...(booking.tripId ? { tripId: booking.tripId } : {})
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    // Separate departure / return templates
+    // Convention: if there are exactly 2 templates, first = departure, second = return
+    // If there are more, use all of them. If zero, create tickets without train details.
+    const createdTickets = [];
+    const skippedCount = { value: 0 };
+
+    for (const passenger of passengers) {
+      const pName = (passenger.name || passenger.fullName || '').trim();
+      if (!pName) continue;
+
+      const pAge = passenger.age ? String(passenger.age) : null;
+      const pGender = passenger.gender || null;
+      const passengerRef = pAge && pGender ? `${pGender}, Age ${pAge}` : (pAge ? `Age ${pAge}` : (pGender || null));
+
+      if (templates.length === 0) {
+        // No templates — create 2 blank tickets (departure + return)
+        for (const direction of ['DEPARTURE', 'RETURN']) {
+          const key = existingKey(pName, direction === 'DEPARTURE' ? 'Departure' : 'Return', '');
+          if (existingSet.has(key)) { skippedCount.value++; continue; }
+
+          const ticket = await prisma.trainTicket.create({
+            data: {
+              tenantId: req.user.tenantId,
+              bookingId,
+              travelerName: pName,
+              passengerReference: passengerRef,
+              internalNote: `${direction} ticket — auto-generated`,
+              ticketStatus: 'PENDING',
+              approvalStatus: 'DRAFT',
+              isLocked: false,
+              ticketAmount: new Prisma.Decimal(0),
+              refundAmount: new Prisma.Decimal(0),
+            }
+          });
+          await logHistory(ticket.id, 'CREATE', req, { notes: `Auto-generated ${direction.toLowerCase()} ticket` });
+          createdTickets.push(ticket);
+          existingSet.add(key);
+        }
+      } else {
+        // Create one ticket per template per passenger
+        for (const tmpl of templates) {
+          const key = existingKey(pName, tmpl.source, tmpl.destination);
+          if (existingSet.has(key)) { skippedCount.value++; continue; }
+
+          const ticket = await prisma.trainTicket.create({
+            data: {
+              tenantId: req.user.tenantId,
+              bookingId,
+              travelerName: pName,
+              passengerReference: passengerRef,
+              trainName: tmpl.trainName || null,
+              trainNumber: tmpl.trainNumber || null,
+              journeyDate: tmpl.journeyDate || null,
+              sourceStation: tmpl.source || null,
+              destinationStation: tmpl.destination || null,
+              coach: tmpl.defaultCoach || null,
+              berthType: tmpl.defaultClass || null,
+              templateId: tmpl.id,
+              ticketStatus: 'PENDING',
+              approvalStatus: 'DRAFT',
+              isLocked: false,
+              ticketAmount: new Prisma.Decimal(0),
+              refundAmount: new Prisma.Decimal(0),
+              internalNote: `Auto-generated from template: ${tmpl.trainName || tmpl.trainNumber || 'Unknown'}`,
+            }
+          });
+          await logHistory(ticket.id, 'CREATE', req, { notes: `Auto-generated from template ${tmpl.trainName || tmpl.trainNumber}` });
+          createdTickets.push(ticket);
+          existingSet.add(key);
+        }
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: createdTickets,
+      message: `${createdTickets.length} ticket(s) auto-generated` + (skippedCount.value > 0 ? ` (${skippedCount.value} duplicate(s) skipped)` : '')
+    });
+  } catch (err) {
+    console.error('autoGenerateTickets error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to auto-generate tickets' });
+  }
+};
+
+/**
  * PATCH /api/train-tickets/:ticketId
  */
 exports.updateTicket = async (req, res) => {
