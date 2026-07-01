@@ -219,12 +219,15 @@ const templates = {
       `;
     }
 
+    // Use the full-package GST from the DB (now correctly stored as 5% of full package base).
+    // Fallback: compute GST on the full base price if gstAmount is not stored.
     const gstRate = 0.05;
-    const calculatedGst = (booking.gstAmount !== null && booking.gstAmount !== undefined)
+    const calculatedGst = (booking.gstAmount !== null && booking.gstAmount !== undefined && booking.gstAmount > 0)
       ? booking.gstAmount
       : parseFloat(((basePrice - gstDiscount) * gstRate).toFixed(2));
-      
-    const totalWithGst = (booking.totalAmount !== null && booking.totalAmount !== undefined && booking.totalAmount !== 0)
+
+    // totalWithGst = full package total (baseAmount + fullPackageGst)
+    const totalWithGst = (booking.totalAmount !== null && booking.totalAmount !== undefined && booking.totalAmount > 0)
       ? booking.totalAmount
       : (basePrice - gstDiscount + calculatedGst);
 
@@ -245,10 +248,11 @@ const templates = {
       maximumFractionDigits: 2
     });
 
+    const gstPct = Math.round(gstRate * 100);
     priceRowsHtml += `
       <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
         <td style="padding: 12px 10px; color: #334155; text-align: left; font-weight: 700;" colspan="2">
-          GST (Reg no. 24CRFPP3172G1ZT) @ 5%
+          GST (Reg no. 24CRFPP3172G1ZT) @ ${gstPct}%
         </td>
         <td style="padding: 12px 10px; color: #334155; font-weight: 700; text-align: right; white-space: nowrap;">
           ₹ ${calculatedGstFormatted}

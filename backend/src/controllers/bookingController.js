@@ -289,7 +289,10 @@ async function verifyAndCalculateBooking(trip, body, isAdmin, tx = prisma) {
 
   return {
     baseAmount: Math.round(netBase),
-    gstAmount: Math.round(gstAmount),
+    // Always store the FULL PACKAGE GST (not the partial deposit GST).
+    // The email template reads gstAmount to display the correct GST on the invoice.
+    // The partial payment advance is tracked separately via `amount` and `advancePaid`.
+    gstAmount: Math.round(fullPackageGst),
     totalAmount: Math.round(fullPackageTotal),
     amount: Math.round(finalTotal),
     advancePaid: Math.round(advancePaid),

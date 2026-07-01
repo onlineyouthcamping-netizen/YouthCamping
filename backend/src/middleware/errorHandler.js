@@ -69,9 +69,23 @@ const errorHandler = (err, req, res, next) => {
   }
 
   const isProd = process.env.NODE_ENV === 'production';
-  res.status(error.statusCode || error.status || 500).json({
+  const isBusinessOrValidationError = err.message && (
+    err.message.includes('date') || 
+    err.message.includes('trip') || 
+    err.message.includes('capacity') || 
+    err.message.includes('booking') || 
+    err.message.includes('required') ||
+    err.message.includes('spots') ||
+    err.message.includes('pax') ||
+    err.message.includes('traveler')
+  );
+
+  const finalStatus = error.statusCode || error.status || (isBusinessOrValidationError ? 400 : 500);
+  const finalMessage = (isProd && !isBusinessOrValidationError) ? 'An unexpected error occurred' : (error.message || 'Server Error');
+
+  res.status(finalStatus).json({
     success: false,
-    message: isProd ? 'An unexpected error occurred' : (error.message || 'Server Error')
+    message: finalMessage
   });
 };
 
