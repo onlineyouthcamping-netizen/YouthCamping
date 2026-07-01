@@ -153,7 +153,7 @@ export default function ReviewsSection({
 function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number, onClick: () => void, reduceMotion: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const shouldShowReadMore = rev.comment && rev.comment.length > 120;
-  const displayedComment = isExpanded ? rev.comment : (rev.comment || "").slice(0, 120) + (shouldShowReadMore ? " " : "");
+  const displayedComment = isExpanded ? rev.comment : (rev.comment || "").slice(0, 120);
 
   const coverPhoto = rev.photos && rev.photos.length > 0 
     ? rev.photos[0] 
@@ -172,47 +172,49 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
   return (
     <div 
       onClick={onClick}
-      className="flex-none w-[260px] md:w-[280px] min-h-[400px] snap-start bg-white border border-zinc-150 rounded-[16px] shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group cursor-pointer"
+      className="flex-none w-[280px] md:w-[310px] min-h-[410px] snap-start bg-white border border-zinc-100 rounded-[28px] md:rounded-[32px] shadow-[0_15px_35px_rgba(0,0,0,0.06),0_5px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 flex flex-col overflow-hidden group cursor-pointer p-0"
     >
-      {/* Top Image */}
-      <div className="relative w-full h-[160px] shrink-0 bg-zinc-100 overflow-hidden">
+      {/* Top Cover Image (Rounded top corners matching card) */}
+      <div className="relative w-full h-[180px] shrink-0 bg-zinc-100 overflow-hidden">
         <OptimizedImage 
           src={normalizeImageUrl(coverPhoto) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470"} 
           alt="Review cover" 
           cloudinaryWidth={480}
           bunnyVariant="x540gt"
-          sizes="280px"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          sizes="310px"
+          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
         />
       </div>
 
-      <div className="p-4 flex flex-col flex-1">
-        {/* Rating */}
-        <div className="flex gap-0.5 mb-2">
-          {[...Array(5)].map((_, idx) => (
-            <Star 
-              key={idx} 
-              className={`w-[14px] h-[14px] ${idx < (rev.rating || 5) ? "fill-[#fbbc05] text-[#fbbc05]" : "fill-zinc-200 text-zinc-200"}`} 
-            />
-          ))}
-        </div>
+      <div className="p-5 flex flex-col flex-1 justify-between">
+        <div className="flex-1 flex flex-col">
+          {/* 5 Gold Rating Stars */}
+          <div className="flex gap-0.5 mb-3 shrink-0">
+            {[...Array(5)].map((_, idx) => (
+              <Star 
+                key={idx} 
+                className="w-4 h-4 fill-[#fbbc05] text-[#fbbc05]" 
+              />
+            ))}
+          </div>
 
-        {/* Comment */}
-        <div className="mb-4 flex-1">
-          <p className="text-[#333333] text-[13px] leading-[1.5]">
-            {displayedComment}
-            {shouldShowReadMore && !isExpanded && (
-              <span className="text-[#999999] text-[13px] hover:text-[#222222] ml-1">
+          {/* Comment Text */}
+          <div className="mb-4 flex-1">
+            <p className="text-zinc-700 text-sm leading-[1.5] line-clamp-4 font-medium mb-1 select-none">
+              {displayedComment}
+            </p>
+            {shouldShowReadMore && (
+              <span className="text-zinc-400 text-xs font-bold hover:text-[#082B5B] cursor-pointer">
                 Read more...
               </span>
             )}
-          </p>
+          </div>
         </div>
 
-        {/* Profile Section */}
-        <div className="flex items-center gap-2 mt-auto pt-4 border-t border-zinc-50">
+        {/* Profile Footer Section */}
+        <div className="flex items-center gap-3 pt-3 shrink-0">
           <div 
-            className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-medium text-[14px]"
+            className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-inner"
             style={{ backgroundColor: avatarBg }}
           >
             {defaultAvatar ? (
@@ -220,7 +222,7 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
                 src={defaultAvatar} 
                 alt={rev.userName} 
                 cloudinaryWidth={80}
-                sizes="36px"
+                sizes="40px"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -228,8 +230,8 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
             )}
           </div>
           <div className="flex flex-col justify-center min-w-0">
-            <h4 className="text-[13px] font-bold text-[#222222] leading-tight truncate">{rev.userName}</h4>
-            <span className="text-[11px] text-[#888888] mt-0.5 truncate">
+            <h4 className="text-sm font-extrabold text-[#082B5B] leading-tight truncate select-none">{rev.userName}</h4>
+            <span className="text-xs text-zinc-400 font-medium mt-0.5 truncate select-none">
               {rev.tripName || rev.tripType || "Adventure Trip"}
             </span>
           </div>
