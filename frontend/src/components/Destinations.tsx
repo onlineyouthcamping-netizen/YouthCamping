@@ -264,7 +264,8 @@ export default function Destinations({
   };
 
   return (
-    <section className="section-wrapper bg-[#E0E2E5] overflow-hidden relative">
+    <section className="relative bg-gradient-to-b from-[#dedede] to-[#e2e2e2] rounded-lg md:rounded-[20px] lg:rounded-[32px] mx-4 md:mx-6 lg:mx-12 xl:mx-20 overflow-hidden">
+      <div className="relative section-wrapper bg-transparent overflow-hidden relative rounded-lg md:rounded-[20px] lg:rounded-[32px] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto">
         <div className="flex flex-row items-end justify-between mb-8">
