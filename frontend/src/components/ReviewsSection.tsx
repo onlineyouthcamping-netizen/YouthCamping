@@ -103,7 +103,7 @@ export default function ReviewsSection({
     setIsModalOpen(true);
   };
   return (
-    <div className="overflow-hidden relative section-wrapper reviews-section bg-transparent">
+    <div className="overflow-hidden relative section-wrapper reviews-section bg-white">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto relative">
         <div className="flex flex-row items-end justify-between mb-8">

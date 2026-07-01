@@ -184,7 +184,7 @@ export default function CommunityTrips({
   };
 
   return (
-    <div className="overflow-hidden section-wrapper bg-white relative">
+    <div className="overflow-hidden section-wrapper bg-transparent relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       
       <div className="max-w-[1440px] mx-auto relative px-2">

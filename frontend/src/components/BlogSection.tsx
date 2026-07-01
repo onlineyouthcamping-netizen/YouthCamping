@@ -90,7 +90,7 @@ export default function BlogSection({
   };
 
   return (
-    <section className="section-wrapper bg-transparent overflow-hidden relative">
+    <section className="section-wrapper bg-white overflow-hidden relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto relative">
         <div className="flex flex-col mb-8">
