@@ -55,7 +55,7 @@ export default function VideoSection({
   return (
     <>
       <section 
-        className="py-8 md:py-12 overflow-hidden relative"
+        className="py-12 overflow-hidden relative"
         style={{
           background: `linear-gradient(to bottom, ${topColor} 0%, ${topColor} 50%, ${bottomColor} 50%, ${bottomColor} 100%)`
         }}
@@ -88,7 +88,7 @@ export default function VideoSection({
                       hasSelfHosted ? "cursor-pointer group/video active:scale-[0.98]" : "cursor-default pointer-events-none"
                     )}
                   >
-                    <div className="relative aspect-video rounded-[20px] md:rounded-[32px] overflow-hidden mb-4 shadow-xl border border-zinc-100">
+                    <div className="relative aspect-video rounded-[20px] md:rounded-[32px] overflow-hidden mb-4 shadow-[0_15px_35px_rgba(0,0,0,0.18),0_5px_15px_rgba(0,0,0,0.08)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.3),0_10px_25px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500">
                       {posterImg && (
                         <OptimizedImage 
                           src={posterImg}

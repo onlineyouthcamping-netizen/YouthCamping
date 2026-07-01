@@ -104,6 +104,8 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
   const [imgError, setImgError] = useState(false);
   const imgSrc = imgError ? DESTINATION_FALLBACK : getDestinationPhoto(dest);
 
+  const isMaldives = dest.name.toLowerCase() === 'maldives';
+
   return (
     <motion.div
       key={index}
@@ -112,7 +114,7 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
       transition={reduceMotion ? { duration: 0 } : { delay: index * 0.1, duration: 0.6 }}
       viewport={{ once: true }}
       onClick={() => onClick()}
-      className="relative min-w-[280px] md:min-w-[340px] flex-1 aspect-[3/4.2] rounded-[32px] overflow-hidden group snap-start shadow-xl hover:shadow-2xl transition-all duration-700 cursor-pointer bg-zinc-800"
+      className="relative min-w-[280px] md:min-w-[340px] flex-1 aspect-[3/4.2] rounded-[32px] overflow-hidden group snap-start shadow-[0_15px_35px_rgba(0,0,0,0.18),0_5px_15px_rgba(0,0,0,0.08)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.3),0_10px_25px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 cursor-pointer bg-zinc-800"
     >
       <OptimizedImage
         src={imgSrc}
@@ -126,11 +128,20 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
         onError={() => setImgError(true)}
         className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
-      <div className="absolute inset-0 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/35" />
+      <div className="absolute top-12 left-0 right-0 flex flex-col items-center justify-start p-4 z-20">
         <h3
-          className="text-2xl md:text-3xl text-white tracking-tighter text-center capitalize drop-shadow-md"
-          style={{ fontWeight: 'var(--font-weight-card, 600)' }}
+          className={cn(
+            "text-white text-center drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] select-none transition-transform duration-700 group-hover:scale-105",
+            isMaldives 
+              ? "text-4xl md:text-5xl font-medium tracking-normal" 
+              : "text-[22px] md:text-[26px] font-extrabold uppercase tracking-[0.15em]"
+          )}
+          style={{
+            fontFamily: isMaldives 
+              ? "'Brush Script MT', 'Dancing Script', 'Playfair Display', 'Georgia', cursive" 
+              : "'Montserrat', 'Inter', sans-serif"
+          }}
         >
           {dest.name}
         </h3>

@@ -283,7 +283,7 @@ export default function Hero({
                 className="flex items-center justify-center font-extrabold hero-subheadline whitespace-nowrap"
                 style={{ 
                   marginTop: '6px', // Reduced gap between title and subtitle
-                  ['--subheadline-size-desktop' as any]: 'clamp(1rem, 2.5vw, 1.875rem)'
+                  ['--subheadline-size-desktop' as any]: 'clamp(1.2rem, 2.5vw, 1.875rem)'
                 }}
               >
                 <Typewriter phrases={typingPhrases} /><span className="inline-block w-[2px] h-[1em] bg-primary-orange animate-pulse ml-[2px] align-middle" style={{ verticalAlign: 'middle' }} />

@@ -176,9 +176,6 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
     return colors[charCode % colors.length];
   };
   const avatarBg = getAvatarColor(art.author);
-
-  // Strip HTML for snippet
-  const snippet = (art.excerpt || content.replace(/<[^>]*>/g, '')).slice(0, 80) + "...";
   const blogImageSrc = getBlogCover(art);
 
   return (
@@ -187,73 +184,64 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
       whileInView={{ opacity: 1, x: 0 }}
       transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
       viewport={{ once: true }}
-      className="flex-none snap-start bg-white border border-zinc-50 rounded-[32px] shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col overflow-hidden group/card"
-      style={{ width: '380px', height: '450px', minWidth: '380px', minHeight: '450px' }}
+      className="flex-none snap-start bg-white rounded-[32px] shadow-[0_15px_35px_rgba(0,0,0,0.06),0_5px_15px_rgba(0,0,0,0.03)] border border-zinc-100/80 hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 flex flex-col overflow-hidden group/card p-4"
+      style={{ width: '360px', height: '370px', minWidth: '360px', minHeight: '370px' }}
     >
-      <Link href={linkPath} prefetch={false} className="flex flex-col h-full w-full text-left">
+      <Link href={linkPath} prefetch={false} className="flex flex-col h-full w-full text-left justify-between">
         {/* Top Image Area */}
-        <div 
-          className="relative w-full bg-zinc-100 overflow-hidden group"
-          style={{ height: '220px', minHeight: '220px' }}
-        >
+        <div className="relative w-full aspect-[16/9.5] rounded-[24px] overflow-hidden shrink-0 bg-zinc-100">
           <OptimizedImage 
             src={blogImageSrc} 
             alt={art.title} 
             cloudinaryWidth={600}
             bunnyVariant="x540gt"
-            sizes="380px"
+            sizes="340px"
             width={600}
             height={340}
             priority={true}
-            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover/card:scale-105" 
           />
-          {/* Magazine Icon Overlay */}
-          <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md p-1.5 rounded-lg">
-             <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+          {/* Magazine/Video Icon Overlay */}
+          <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm p-1.5 rounded-lg">
+            {isVideo ? (
+              <svg className="w-3.5 h-3.5 text-white fill-current" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
-             </svg>
+              </svg>
+            )}
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="p-5 flex flex-col flex-1">
-          <div className="flex gap-3 items-start flex-1">
-             <div 
-              className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-[12px] shadow-sm mt-0.5"
-              style={{ backgroundColor: avatarBg }}
-            >
-              {art.authorImage ? (
-                <OptimizedImage 
-                  src={normalizeImageUrl(art.authorImage)} 
-                  alt={art.author} 
-                  width={40}
-                  height={40}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                initials
-              )}
-            </div>
+        <div className="flex gap-3.5 items-start mt-4 px-1 pb-1">
+          <div 
+            className="w-11 h-11 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-[13px] shadow-sm"
+            style={{ backgroundColor: avatarBg }}
+          >
+            {art.authorImage ? (
+              <OptimizedImage 
+                src={normalizeImageUrl(art.authorImage)} 
+                alt={art.author} 
+                width={44}
+                height={44}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              initials
+            )}
+          </div>
 
-            <div className="flex-1 min-w-0 flex flex-col h-full">
-              <h3 className="text-sm md:text-base font-bold text-navy leading-[1.4] mb-2 line-clamp-1 group-hover/card:text-primary transition-colors">
-                {art.title}
-              </h3>
-              
-              <p className="text-[12px] md:text-sm text-zinc-500 font-medium leading-relaxed line-clamp-2 mb-3">
-                {snippet} <span className="text-primary hover:underline">Read more...</span>
-              </p>
-              
-              <div className="mt-auto flex items-center justify-between gap-2 border-t border-zinc-50 pt-3">
-                <div className="flex flex-col">
-                   <span className="text-[9px] text-zinc-400 font-bold capitalize tracking-widest leading-none mb-0.5">Author</span>
-                   <span className="text-[10px] text-navy font-bold truncate">{art.author}</span>
-                </div>
-                <div className="flex flex-col items-end">
-                   <span className="text-[9px] text-zinc-400 font-bold capitalize tracking-widest leading-none mb-0.5">Time</span>
-                   <span className="text-[10px] text-navy font-bold shrink-0">{art.readTime}</span>
-                </div>
-              </div>
+          <div className="flex-1 min-w-0 flex flex-col justify-between h-[72px]">
+            <h3 className="text-[15px] font-extrabold text-[#082B5B] leading-[1.3] line-clamp-2 select-none group-hover/card:text-[#FF5B00] transition-colors">
+              {art.title}
+            </h3>
+            
+            <div className="flex items-center justify-between text-xs text-zinc-400 font-medium">
+              <span className="truncate">by {art.author || "Admin"}</span>
+              <span className="shrink-0">{art.readTime || "5 min read"}</span>
             </div>
           </div>
         </div>

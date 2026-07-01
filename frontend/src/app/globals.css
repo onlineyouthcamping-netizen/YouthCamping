@@ -227,7 +227,7 @@
 /* Tablet sizes (1024px) */
 @media (max-width: 1024px) {
   :root {
-    --section-spacing: 64px;
+    --section-spacing: var(--section-spacing-dynamic, 80px);
   }
 }
 
@@ -236,9 +236,9 @@
   :root {
     --hero-height: var(--mobile-hero-height, 100svh);
     --navbar-height: var(--mobile-navbar-height, 64px);
-    --section-spacing: 60px !important;
-    --card-width: 270px !important;
-    --card-height: 300px !important;
+    --section-spacing: var(--section-spacing-dynamic, 80px) !important;
+    --card-width: 285px !important;
+    --card-height: 335px !important;
     --title-size-multiplier: 0.78;
     --card-image-height: 60% !important;
     --card-content-height: 40% !important;
@@ -427,14 +427,16 @@
   }
 
   .hero-subheadline {
-    font-size: 0.8rem !important;
+    font-size: 1.25rem !important;
     font-weight: 800 !important;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.02em;
   }
   @media (min-width: 768px) {
     .hero-subheadline {
-      font-size: var(--subheadline-size-desktop, clamp(1rem, 2.5vw, 1.875rem)) !important;
+      font-size: var(--subheadline-size-desktop, clamp(1.2rem, 2.5vw, 1.875rem)) !important;
       font-weight: 800 !important;
+      letter-spacing: 0.05em;
     }
   }
 
@@ -515,15 +517,15 @@
 
   @media (max-width: 1024px) {
     .section-wrapper {
-      padding-top: 60px !important;
-      padding-bottom: 60px !important;
+      padding-top: 72px !important;
+      padding-bottom: 72px !important;
     }
   }
 
   @media (max-width: 768px) {
     .section-wrapper {
-      padding-top: 48px !important;
-      padding-bottom: 48px !important;
+      padding-top: 72px !important;
+      padding-bottom: 72px !important;
     }
   }
 
@@ -533,7 +535,7 @@
   }
   @media (max-width: 768px) {
     .page-section-wrapper + .page-section-wrapper .section-wrapper {
-      padding-top: 16px !important;
+      padding-top: 24px !important;
     }
   }
 
@@ -547,7 +549,7 @@
     .page-section-wrapper:first-child .section-wrapper,
     .page-section-wrapper:nth-child(2) .section-wrapper,
     .section-wrapper.first-section {
-      padding-top: 48px !important;
+      padding-top: 80px !important;
     }
   }
 
@@ -559,7 +561,7 @@
   @media (max-width: 768px) {
     .page-section-wrapper:last-child .section-wrapper,
     .section-wrapper.last-section {
-      padding-bottom: 48px !important;
+      padding-bottom: 80px !important;
     }
   }
 
