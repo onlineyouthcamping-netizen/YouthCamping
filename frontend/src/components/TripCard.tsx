@@ -85,7 +85,7 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
       transition={{ delay: index * 0.1 }}
       viewport={{ once: true }}
       className={cn(
-        "avian-card group relative bg-white rounded-[24px] overflow-hidden border border-zinc-100/50 shadow-md hover:shadow-xl hover:scale-[1.015] active:scale-[0.985] cursor-pointer transition-all duration-300 w-full h-[325px] md:h-[360px] lg:h-[380px] max-w-[var(--card-width)] mx-auto flex flex-col p-2.5 md:p-3",
+        "avian-card group relative bg-white rounded-[24px] overflow-hidden border border-zinc-100/50 shadow-md hover:shadow-xl hover:scale-[1.015] active:scale-[0.985] cursor-pointer transition-all duration-300 w-full h-[345px] md:h-[375px] lg:h-[405px] max-w-[var(--card-width)] mx-auto flex flex-col p-2.5 md:p-3",
         className
       )}
     >
@@ -99,7 +99,7 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
       />
 
       {/* Photo Container (Occupies 63% of the card height, large rounded corners) */}
-      <div className="relative w-full h-[190px] md:h-[215px] lg:h-[240px] rounded-[20px] md:rounded-[24px] overflow-hidden shrink-0">
+      <div className="relative w-full h-[185px] md:h-[205px] lg:h-[225px] rounded-[20px] md:rounded-[24px] overflow-hidden shrink-0">
         <OptimizedImage
           src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"}
           alt={trip.title}
