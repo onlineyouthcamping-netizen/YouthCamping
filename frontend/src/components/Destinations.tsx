@@ -104,7 +104,76 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
   const [imgError, setImgError] = useState(false);
   const imgSrc = imgError ? DESTINATION_FALLBACK : getDestinationPhoto(dest);
 
-  const isMaldives = dest.name.toLowerCase() === 'maldives';
+  // Dynamic styling mapping based on destination name to match SIKKIM, UTTARAKHAND, HIMACHAL, Ladakh, GOA, MALDIVES styles
+  const getDestinationStyle = (name: string) => {
+    const lower = name.toLowerCase();
+    
+    if (lower.includes('ladakh')) {
+      return {
+        fontFamily: "'Great Vibes', 'Dancing Script', 'Playball', cursive",
+        textTransform: 'none' as const,
+        fontSizeClass: 'text-[38px] md:text-[45px] font-medium leading-[1.1]',
+        letterSpacing: 'normal',
+        subtitle: 'Road Trip'
+      };
+    }
+    if (lower.includes('sikkim')) {
+      return {
+        fontFamily: "'Rubik Mono One', 'Impact', 'Montserrat', sans-serif",
+        textTransform: 'uppercase' as const,
+        fontSizeClass: 'text-[22px] md:text-[25px] font-bold',
+        letterSpacing: '0.08em',
+        subtitle: ''
+      };
+    }
+    if (lower.includes('uttarakhand')) {
+      return {
+        fontFamily: "'Cinzel Decorative', 'Cinzel', 'Playfair Display', serif",
+        textTransform: 'uppercase' as const,
+        fontSizeClass: 'text-[20px] md:text-[23px] font-bold',
+        letterSpacing: '0.12em',
+        subtitle: ''
+      };
+    }
+    if (lower.includes('himachal')) {
+      return {
+        fontFamily: "'Oswald', 'Montserrat', sans-serif",
+        textTransform: 'uppercase' as const,
+        fontSizeClass: 'text-[26px] md:text-[30px] font-bold tracking-tight',
+        letterSpacing: '0.06em',
+        subtitle: '⛰️'
+      };
+    }
+    if (lower.includes('goa')) {
+      return {
+        fontFamily: "'Pacifico', 'Satisfy', 'Caveat', cursive",
+        textTransform: 'none' as const,
+        fontSizeClass: 'text-[28px] md:text-[34px] font-normal',
+        letterSpacing: 'normal',
+        subtitle: '🌊'
+      };
+    }
+    if (lower.includes('maldives')) {
+      return {
+        fontFamily: "'Brush Script MT', 'Dancing Script', 'Great Vibes', cursive",
+        textTransform: 'none' as const,
+        fontSizeClass: 'text-[38px] md:text-[46px] font-medium',
+        letterSpacing: 'normal',
+        subtitle: ''
+      };
+    }
+    
+    // Default (e.g. Singapore, etc.)
+    return {
+      fontFamily: "'Montserrat', 'Inter', sans-serif",
+      textTransform: 'uppercase' as const,
+      fontSizeClass: 'text-[22px] md:text-[26px] font-extrabold',
+      letterSpacing: '0.15em',
+      subtitle: ''
+    };
+  };
+
+  const style = getDestinationStyle(dest.name);
 
   return (
     <motion.div
@@ -128,23 +197,36 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
         onError={() => setImgError(true)}
         className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/35" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/35" />
       <div className="absolute top-12 left-0 right-0 flex flex-col items-center justify-start p-4 z-20">
+        {/* Render graphic decorators like waves or mountain icons above specific names */}
+        {style.subtitle === '🌊' && (
+          <span className="text-white text-2xl mb-1.5 opacity-90 select-none animate-pulse">🌊</span>
+        )}
+        {style.subtitle === '⛰️' && (
+          <span className="text-white text-2xl mb-1.5 opacity-90 select-none">⛰️</span>
+        )}
+        
         <h3
           className={cn(
-            "text-white text-center drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] select-none transition-transform duration-700 group-hover:scale-105",
-            isMaldives 
-              ? "text-4xl md:text-5xl font-medium tracking-normal" 
-              : "text-[22px] md:text-[26px] font-extrabold uppercase tracking-[0.15em]"
+            "text-white text-center drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] select-none transition-transform duration-700 group-hover:scale-105",
+            style.fontSizeClass
           )}
           style={{
-            fontFamily: isMaldives 
-              ? "'Brush Script MT', 'Dancing Script', 'Playfair Display', 'Georgia', cursive" 
-              : "'Montserrat', 'Inter', sans-serif"
+            fontFamily: style.fontFamily,
+            textTransform: style.textTransform,
+            letterSpacing: style.letterSpacing
           }}
         >
           {dest.name}
         </h3>
+        
+        {/* Render text subheadings below, e.g., "Road Trip" for Ladakh */}
+        {style.subtitle && style.subtitle !== '🌊' && style.subtitle !== '⛰️' && (
+          <span className="text-white text-[10px] md:text-[11px] font-bold tracking-[0.2em] uppercase mt-1 drop-shadow-md opacity-80 select-none">
+            {style.subtitle}
+          </span>
+        )}
       </div>
     </motion.div>
   );

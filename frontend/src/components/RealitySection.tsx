@@ -156,7 +156,7 @@ export default function RealitySection({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-6xl aspect-video bg-black rounded-2xl md:rounded-[40px] overflow-hidden shadow-[0_0_100px_rgba(212,84,26,0.3)] border-2 md:border-4 border-white/10"
+              className="w-full max-w-6xl aspect-video bg-black rounded-2xl md:rounded-[40px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
             >
               <video 
                 src={normalizeImageUrl(activeVideo.url)} 
@@ -167,7 +167,7 @@ export default function RealitySection({
                 muted
                 preload="metadata"
                 poster={activeVideo.poster ? normalizeImageUrl(activeVideo.poster) : undefined}
-                className="w-full h-full" 
+                className="w-full h-full border-0 outline-none focus:outline-none" 
               />
             </motion.div>
           </motion.div>
