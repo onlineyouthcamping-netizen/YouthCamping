@@ -183,7 +183,7 @@ function DestinationCard({ dest, index, reduceMotion, onClick }: {
       transition={reduceMotion ? { duration: 0 } : { delay: index * 0.1, duration: 0.6 }}
       viewport={{ once: true }}
       onClick={() => onClick()}
-      className="relative min-w-[140px] w-[calc(50vw-24px)] md:min-w-[340px] md:w-auto flex-1 aspect-[3/4.2] rounded-[24px] md:rounded-[32px] overflow-hidden group snap-start shadow-[0_15px_35px_rgba(0,0,0,0.18),0_5px_15px_rgba(0,0,0,0.08)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.3),0_10px_25px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 cursor-pointer bg-zinc-800"
+      className="relative min-w-[140px] w-[calc(50vw-24px)] md:min-w-[340px] md:w-auto flex-1 aspect-[3/4.2] rounded-[24px] md:rounded-[32px] overflow-hidden group snap-start shadow-[0_10px_25px_rgba(0,0,0,0.08)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.12)] hover:-translate-y-1.5 transition-all duration-500 cursor-pointer bg-zinc-800"
     >
       <OptimizedImage
         src={imgSrc}
@@ -264,7 +264,7 @@ export default function Destinations({
   };
 
   return (
-    <section className="section-wrapper bg-transparent overflow-hidden relative">
+    <section className="section-wrapper bg-[#E5E7EB] overflow-hidden relative">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto">
         <div className="flex flex-row items-end justify-between mb-8">
