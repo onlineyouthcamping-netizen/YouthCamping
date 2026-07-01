@@ -318,6 +318,7 @@ export default function Destinations({
         destination={selectedDest}
       />
       {wavyEdges && <WavyEdges color={bottomColor} position="bottom" />}
+      </div>
     </section>
   );
 }
