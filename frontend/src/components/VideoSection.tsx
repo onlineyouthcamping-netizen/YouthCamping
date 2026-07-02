@@ -55,19 +55,21 @@ export default function VideoSection({
   return (
     <>
       <section 
-        className="py-12 overflow-hidden relative"
+        className="pt-2 pb-6 md:pt-4 md:pb-8 overflow-hidden relative"
         style={{
-          background: `linear-gradient(to bottom, ${topColor} 0%, ${topColor} 50%, ${bottomColor} 50%, ${bottomColor} 100%)`
+          background: `linear-gradient(to bottom, #ffffff 0%, #ffffff 50%, #D4D6D9 50%, #D4D6D9 100%)`
         }}
       >
         <div className="max-w-7xl mx-auto px-6">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter">{title}</h2>
-            <p className="text-zinc-500 font-bold mt-2 tracking-widest text-[10px] capitalize">{subtitle}</p>
-          </div>
+          {(title || subtitle) && (
+            <div className="mb-6">
+              {title && <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter">{title}</h2>}
+              {subtitle && <p className="text-zinc-600 font-bold mt-2 tracking-widest text-[10px] capitalize">{subtitle}</p>}
+            </div>
+          )}
 
           <div className="relative group">
-            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-10 no-scrollbar">
+            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 no-scrollbar">
               {activeVideos.map((video, i) => {
                 const hasSelfHosted = video.videoEnabled && video.videoUrl;
                 const posterImg = video.videoPosterUrl || (video.id ? `https://img.youtube.com/vi/${video.id}/maxresdefault.jpg` : "");
@@ -84,16 +86,17 @@ export default function VideoSection({
                       }
                     }}
                     className={cn(
-                      "flex-shrink-0 w-[80vw] max-w-[340px] md:w-[400px] transition-transform",
+                      "flex-shrink-0 transition-transform",
+                      activeVideos.length > 1 ? "w-[80vw] max-w-[340px] md:w-[400px]" : "w-full",
                       hasSelfHosted ? "cursor-pointer group/video active:scale-[0.98]" : "cursor-default pointer-events-none"
                     )}
                   >
-                    <div className="relative aspect-video rounded-[20px] md:rounded-[32px] overflow-hidden mb-4 shadow-[0_15px_35px_rgba(0,0,0,0.18),0_5px_15px_rgba(0,0,0,0.08)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.3),0_10px_25px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500">
+                    <div className="relative aspect-[16/8.5] md:aspect-[21/9] rounded-[20px] md:rounded-[32px] overflow-hidden mb-4 shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.18)] hover:-translate-y-1.5 transition-all duration-500 border-0">
                       {posterImg && (
                         <OptimizedImage 
                           src={posterImg}
                           alt={video.title} 
-                          className="object-cover transition-transform duration-700 group-hover/video:scale-110"
+                          className="object-cover transition-transform duration-700 scale-[1.02] group-hover/video:scale-110"
                         />
                       )}
                       <div className="absolute inset-0 bg-black/20 group-hover/video:bg-black/10 transition-colors" />

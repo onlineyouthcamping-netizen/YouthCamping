@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import { Star, ChevronRight, Quote, Camera } from "lucide-react";
@@ -98,15 +98,20 @@ export default function ReviewsSection({
   const isMobile = useIsMobile();
   const reduceMotion = prefersReducedMotion || isMobile;
 
+  useEffect(() => {
+    setIsModalOpen(false);
+    setSelectedReview(null);
+  }, []);
+
   const openReview = (rev: Review) => {
     setSelectedReview(rev);
     setIsModalOpen(true);
   };
   return (
-    <div className="overflow-hidden relative section-wrapper reviews-section bg-white">
+    <div className="overflow-hidden relative section-wrapper reviews-section bg-white max-md:!px-0">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
-      <div className="max-w-[1440px] mx-auto relative">
-        <div className="flex flex-row items-end justify-between mb-8">
+      <div className="max-w-[1440px] mx-auto relative max-md:px-0 px-4 md:px-0">
+        <div className="flex flex-row items-end justify-between mb-8 px-4 md:px-0">
           <div className="flex flex-col">
             {topLabel && (
               <span className="section-label">
@@ -117,13 +122,12 @@ export default function ReviewsSection({
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-navy"
+                className="section-heading text-[#082B5B] !font-extrabold"
                 style={{ 
-                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
-                  fontWeight: titleWeight ? titleWeight : undefined
+                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined
                 }}
               >
-                {title}
+                {title || "Reviews"}
               </h2>
             </div>
           </div>
@@ -133,7 +137,7 @@ export default function ReviewsSection({
           </Link>
         </div>
 
-        <div className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x">
+        <div className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x px-4 md:px-0 scroll-pl-4 md:scroll-pl-0">
           {displayReviews.map((rev, i) => (
             <ReviewCard key={rev._id || rev.id || i} rev={rev} i={i} onClick={() => openReview(rev)} reduceMotion={reduceMotion} />
           ))}
@@ -171,8 +175,7 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
 
   return (
     <div 
-      onClick={onClick}
-      className="flex-none w-[280px] md:w-[310px] min-h-[410px] snap-start bg-white border border-zinc-100 rounded-[28px] md:rounded-[32px] shadow-[0_15px_35px_rgba(0,0,0,0.06),0_5px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 flex flex-col overflow-hidden group cursor-pointer p-0"
+      className="flex-none w-[280px] md:w-[310px] min-h-[410px] snap-start bg-white border border-zinc-100 rounded-[28px] md:rounded-[32px] shadow-[0_15px_35px_rgba(0,0,0,0.06),0_5px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 flex flex-col overflow-hidden group p-0"
     >
       {/* Top Cover Image (Rounded top corners matching card) */}
       <div className="relative w-full h-[180px] shrink-0 bg-zinc-100 overflow-hidden">
@@ -204,7 +207,13 @@ function ReviewCard({ rev, i, onClick, reduceMotion }: { rev: Review, i: number,
               {displayedComment}
             </p>
             {shouldShowReadMore && (
-              <span className="text-zinc-400 text-xs font-bold hover:text-[#082B5B] cursor-pointer">
+              <span 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                className="text-zinc-400 text-xs font-bold hover:text-[#082B5B] cursor-pointer"
+              >
                 Read more...
               </span>
             )}

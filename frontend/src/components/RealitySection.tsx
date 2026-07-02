@@ -58,7 +58,7 @@ export default function RealitySection({
   const reduceMotion = prefersReducedMotion || isMobile;
   
   return (
-    <section className="section-wrapper bg-transparent overflow-hidden relative">
+    <section className="section-wrapper bg-transparent overflow-hidden relative !pb-2 md:!pb-3">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       <div className="max-w-[1440px] mx-auto">
         {topLabel && (
@@ -66,25 +66,29 @@ export default function RealitySection({
             {topLabel}
           </span>
         )}
-        <div className={cn(
-          "mb-4",
-          titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
-        )}>
-          <h2 
-            className="section-heading text-navy"
-            style={{ 
-              fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
-              fontWeight: titleWeight ? titleWeight : undefined
-            }}
-          >
-            {title}
-          </h2>
-        </div>
-        <p className="text-zinc-500 font-bold mb-12 tracking-widest text-[11px] md:text-sm capitalize">
-          {subtitle}
-        </p>
+        {title && (
+          <div className={cn(
+            "mb-4",
+            titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
+          )}>
+            <h2 
+              className="section-heading text-navy"
+              style={{ 
+                fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
+                fontWeight: titleWeight ? titleWeight : undefined
+              }}
+            >
+              {title}
+            </h2>
+          </div>
+        )}
+        {subtitle && (
+          <p className="text-zinc-500 font-bold mb-12 tracking-widest text-[11px] md:text-sm capitalize">
+            {subtitle}
+          </p>
+        )}
         
-        <div className="flex gap-6 overflow-x-auto pb-12 snap-x no-scrollbar">
+        <div className="flex gap-6 overflow-x-auto pb-4 snap-x no-scrollbar">
           {displayVideos.map((vid, i) => {
             const hasSelfHostedVideo = vid.videoEnabled && vid.videoUrl;
             return (
@@ -102,7 +106,8 @@ export default function RealitySection({
                 role="button"
                 aria-label={`Play review video for ${vid.title}`}
                 className={cn(
-                  "relative w-[85vw] max-w-[340px] md:min-w-[500px] aspect-video rounded-[24px] md:rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-2xl border-2 md:border-4 border-white ring-1 ring-black/5 shrink-0",
+                  "relative aspect-[16/8.5] md:aspect-[21/9] rounded-[20px] md:rounded-[32px] overflow-hidden group snap-start cursor-pointer shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.18)] hover:-translate-y-1.5 transition-all duration-500 shrink-0 border-0",
+                  displayVideos.length > 1 ? "w-[85vw] max-w-[340px] md:min-w-[500px]" : "w-full",
                   !hasSelfHostedVideo && "cursor-default pointer-events-none"
                 )}
               >
@@ -112,7 +117,7 @@ export default function RealitySection({
                   cloudinaryWidth={800}
                   bunnyVariant="x540gt"
                   sizes="(max-width: 768px) 85vw, 500px"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  className="w-full h-full object-cover transition-transform duration-700 scale-[1.02] group-hover:scale-110" 
                 />
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all flex flex-col items-center justify-center text-center p-6">
                   {hasSelfHostedVideo && (

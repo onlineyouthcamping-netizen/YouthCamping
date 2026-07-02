@@ -67,10 +67,15 @@ export default function CinematicBanner({
   const current = slides[index];
 
   return (
-    <section className="py-12 px-6 bg-white overflow-hidden">
+    <section 
+      className="pt-2 pb-6 md:pt-4 md:pb-8 px-6 overflow-hidden relative"
+      style={{
+        background: `linear-gradient(to bottom, #ffffff 0%, #ffffff 50%, #D4D6D9 50%, #D4D6D9 100%)`
+      }}
+    >
       <div className="max-w-7xl mx-auto">
-        {/* Large Banner Style with Responsive Height and 16px Radius */}
-        <div className="relative h-[320px] sm:h-[450px] md:h-[600px] w-full rounded-[16px] overflow-hidden group shadow-2xl bg-zinc-900 border border-zinc-100">
+        {/* Large Banner Style with Responsive Height and 32px Radius */}
+        <div className="relative h-[180px] sm:h-[280px] md:h-[380px] w-full rounded-[20px] md:rounded-[32px] overflow-hidden group shadow-[0_15px_30px_rgba(0,0,0,0.35)] bg-zinc-900">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={page}

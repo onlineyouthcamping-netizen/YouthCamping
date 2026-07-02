@@ -99,7 +99,7 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
       />
 
       {/* Photo Container (Occupies 63% of the card height, large rounded corners) */}
-      <div className="relative w-full h-[185px] md:h-[205px] lg:h-[225px] rounded-[20px] md:rounded-[24px] overflow-hidden shrink-0">
+      <div className="relative w-full h-[185px] md:h-[205px] lg:h-[225px] rounded-[20px] md:rounded-[24px] overflow-hidden shrink-0 avian-photo-container">
         <OptimizedImage
           src={normalizeImageUrl(trip.heroImage) || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070"}
           alt={trip.title}
@@ -146,14 +146,14 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
       </div>
 
       {/* Content Area (Matched to the Kashmir Tour Package layout) */}
-      <div className="flex-1 flex flex-col pt-2 md:pt-2.5 px-0.5">
+      <div className="flex-1 flex flex-col pt-2 md:pt-2.5 px-0.5 avian-content-container">
         {/* Duration */}
         <span className="text-xs md:text-sm text-zinc-400 font-medium mb-0.5 block">
           {getFormattedDuration(trip.duration)}
         </span>
 
         {/* Title */}
-        <h3 className="font-extrabold text-[15px] md:text-[17px] text-[#082B5B] leading-tight tracking-tight line-clamp-1 mb-0.5 select-none">
+        <h3 className="font-extrabold text-[14px] md:text-[16px] text-[#082B5B] leading-tight tracking-tight line-clamp-1 mb-0.5 select-none">
           {renderFormattedTitle(trip.title)}
         </h3>
 
@@ -175,9 +175,9 @@ export default function TripCard({ trip, index, className, onClick, activeMonth 
           </div>
         )}
 
-        {/* Pricing Row (Vibrant Red Price + Original Strikethrough) */}
+        {/* Pricing Row (Vibrant Orange Price + Original Strikethrough) */}
         <div className="flex items-baseline gap-2 mt-auto pb-0.5 pl-0.5 select-none w-full shrink-0">
-          <span className="text-[#DC2626] text-base md:text-lg lg:text-xl font-extrabold">
+          <span className="text-[#FF5B00] text-base md:text-lg lg:text-xl font-extrabold">
             ₹{Number(trip.price).toLocaleString('en-IN')}
           </span>
           {discount > 0 && (

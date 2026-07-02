@@ -209,15 +209,15 @@ export default function DestinationInquiryModal({
                     />
                   </div>
                   
-                  <div className="flex gap-2">
-                    <div className="px-3.5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-400 font-bold text-sm flex items-center shrink-0 h-11 md:h-12">
+                  <div className="flex items-center gap-2.5 px-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus-within:border-primary-orange focus-within:ring-0 transition-all h-11 md:h-12">
+                    <span className="text-zinc-400 font-bold text-sm select-none shrink-0 border-r border-zinc-200/80 pr-2.5">
                       +91
-                    </div>
+                    </span>
                     <input
                       required
                       type="tel"
                       placeholder="Mobile No."
-                      className="flex-1 px-5 py-3 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100 focus:border-primary-orange focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 h-11 md:h-12"
+                      className="flex-1 bg-transparent border-0 focus:ring-0 outline-none transition-all font-bold text-sm placeholder:text-zinc-300 p-0 h-full w-full"
                       value={formData.mobile}
                       onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                     />

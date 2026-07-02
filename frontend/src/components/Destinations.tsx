@@ -264,9 +264,9 @@ export default function Destinations({
   };
 
   return (
-    <section className="section-wrapper bg-[#E5E7EB] overflow-hidden relative">
-      {wavyEdges && <WavyEdges color={topColor} position="top" />}
-      <div className="max-w-[1440px] mx-auto">
+    <section className="section-wrapper bg-transparent overflow-hidden relative !pt-0 pb-8 md:!pt-0 md:pb-10 max-md:!px-0">
+      {wavyEdges && <WavyEdges color={topColor === '#ffffff' ? '#D4D6D9' : topColor} position="top" />}
+      <div className="max-w-[1440px] mx-auto px-4 md:px-0">
         <div className="flex flex-row items-end justify-between mb-8">
           <div className="flex flex-col">
             {topLabel && (
@@ -278,27 +278,26 @@ export default function Destinations({
               titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading text-navy capitalize"
+                className="section-heading text-[#082B5B] !font-extrabold capitalize"
                 style={{ 
-                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
-                  fontWeight: titleWeight ? titleWeight : undefined
+                  fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined
                 }}
               >
-                {title}
+                {title || "Popular Destinations"}
               </h2>
             </div>
           </div>
           <div className="hidden md:flex gap-3 pb-2">
-            <button onClick={() => scroll('left')} className="w-12 h-12 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-navy hover:text-white transition-all bg-white shadow-sm" aria-label="Scroll Left">
+            <button onClick={() => scroll('left')} className="w-12 h-12 rounded-full border border-zinc-200/50 flex items-center justify-center hover:bg-white hover:text-navy text-navy transition-all bg-white/95 shadow-sm" aria-label="Scroll Left">
               <ChevronRight className="w-6 h-6 rotate-180" />
             </button>
-            <button onClick={() => scroll('right')} className="w-12 h-12 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-navy hover:text-white transition-all bg-white shadow-sm" aria-label="Scroll Right">
+            <button onClick={() => scroll('right')} className="w-12 h-12 rounded-full border border-zinc-200/50 flex items-center justify-center hover:bg-white hover:text-navy text-navy transition-all bg-white/95 shadow-sm" aria-label="Scroll Right">
               <ChevronRight className="w-6 h-6" />
             </button>
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex gap-3 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x">
+        <div ref={scrollRef} className="flex gap-3 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x -mx-4 px-4 md:mx-0 md:px-0 scroll-pl-4 md:scroll-pl-0">
           {items.map((dest, i) => (
             <DestinationCard
               key={i}

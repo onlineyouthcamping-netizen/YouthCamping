@@ -184,10 +184,10 @@ export default function CommunityTrips({
   };
 
   return (
-    <div className="overflow-hidden section-wrapper bg-transparent relative">
+    <div className="overflow-hidden section-wrapper bg-transparent relative max-md:!px-0">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
       
-      <div className="max-w-[1440px] mx-auto relative px-2">
+      <div className="max-w-[1440px] mx-auto relative px-4 md:px-2">
         {/* Header Section */}
         <div className="flex flex-col mb-5">
           {topLabel && (
@@ -202,10 +202,10 @@ export default function CommunityTrips({
               titleStyle === 'boxed' && "p-4 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
             )}>
               <h2 
-                className="section-heading force-single-line truncate whitespace-nowrap max-md:!text-[16px] max-md:!leading-none"
+                className="section-heading force-single-line truncate whitespace-nowrap max-md:!text-[3.8vw] max-md:!leading-none"
                 style={{ 
                   fontSize: isMobile 
-                    ? '16px' 
+                    ? undefined 
                     : (titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined),
                   fontWeight: titleWeight ? titleWeight : undefined
                 }}
@@ -254,11 +254,11 @@ export default function CommunityTrips({
         </div>
 
         {/* Trips Slider Wrapper */}
-        <div className="relative group/slider">
+        <div className="relative group/slider px-0 md:px-4">
           {/* Left Arrow Button */}
           <button 
             onClick={() => scroll('left')}
-            className="hidden md:flex absolute -left-3 md:-left-6 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-white hover:bg-zinc-50 text-navy items-center justify-center shadow-lg border border-zinc-200/80 pointer-events-auto cursor-pointer transition-all hover:scale-105"
+            className="hidden md:flex absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-white hover:bg-zinc-50 text-navy items-center justify-center shadow-lg border border-zinc-200/80 pointer-events-auto cursor-pointer transition-all hover:scale-105"
             aria-label="Scroll Left"
           >
             <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
@@ -268,7 +268,7 @@ export default function CommunityTrips({
           <div 
             ref={scrollRef}
             className={cn(
-              "flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 select-none",
+              "flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 select-none -mx-4 px-4 md:mx-0 md:px-10 scroll-pl-4 md:scroll-pl-0",
               isMouseDown ? "cursor-grabbing scroll-auto" : "cursor-grab snap-x snap-mandatory scroll-smooth"
             )}
             onMouseDown={handleMouseDown}
@@ -316,7 +316,7 @@ export default function CommunityTrips({
           {/* Right Arrow Button */}
           <button 
             onClick={() => scroll('right')}
-            className="hidden md:flex absolute -right-3 md:-right-6 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-navy hover:bg-[#1E3A8A] text-white items-center justify-center shadow-lg pointer-events-auto cursor-pointer transition-all hover:scale-105"
+            className="hidden md:flex absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-navy hover:bg-[#1E3A8A] text-white items-center justify-center shadow-lg pointer-events-auto cursor-pointer transition-all hover:scale-105"
             aria-label="Scroll Right"
           >
             <ChevronRight className="w-5 h-5 stroke-[2.5]" />

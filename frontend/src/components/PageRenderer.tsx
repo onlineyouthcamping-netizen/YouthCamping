@@ -82,11 +82,11 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
           if (!s) return '#ffffff';
           
           // Map exact backgrounds for components with custom/hardcoded styling
-          if (s.type === 'destinations') return '#f3f4f6';
+          if (['destinations'].includes(s.type)) return '#D4D6D9';
+          if (['trips', 'upcoming_trips', 'featured_trips', 'trending_trips', 'blogs', 'journal'].includes(s.type)) return '#ffffff';
           if (s.type === 'bestie') return '#BDD5D5';
-          if (s.type === 'video_section') return '#f3f4f6';
           
-          if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner'].includes(s.type)) return 'transparent';
+          if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner', 'video_section', 'reality'].includes(s.type)) return 'transparent';
           
           const patterns = ['#ffffff', '#f6f6f6'];
           return patterns[idx % patterns.length];
@@ -165,7 +165,11 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
         };
 
         const getBackgroundClass = (idx: number) => {
-          if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner'].includes(type)) return 'bg-transparent';
+          const s = visibleSections[idx];
+          if (!s) return 'bg-transparent';
+          if (['destinations'].includes(s.type)) return 'bg-[#D4D6D9]';
+          if (['trips', 'upcoming_trips', 'featured_trips', 'trending_trips', 'blogs', 'journal'].includes(s.type)) return 'bg-white';
+          if (['hero', 'cta_banner', 'cta_slider', 'cinematic_banner', 'video_section', 'reality'].includes(s.type)) return 'bg-transparent';
           
           const patterns = ['bg-[#ffffff]', 'bg-[#f6f6f6]'];
           return patterns[idx % patterns.length];
@@ -175,7 +179,6 @@ export default function PageRenderer({ sections = [], trips = [], reviews = [], 
           <div
             key={index}
             className={`page-section-wrapper ${getBackgroundClass(index)} transition-colors duration-500`}
-            style={index > 1 ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 600px' } : undefined}
           >
             {renderSection()}
           </div>

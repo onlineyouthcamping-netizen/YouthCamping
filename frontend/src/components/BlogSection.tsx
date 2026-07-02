@@ -90,10 +90,10 @@ export default function BlogSection({
   };
 
   return (
-    <section className="section-wrapper bg-white overflow-hidden relative">
+    <section className="section-wrapper bg-white overflow-hidden relative max-md:!px-0">
       {wavyEdges && <WavyEdges color={topColor} position="top" />}
-      <div className="max-w-[1440px] mx-auto relative">
-        <div className="flex flex-col mb-8">
+      <div className="max-w-[1440px] mx-auto relative max-md:px-0 px-4 md:px-0">
+        <div className="flex flex-col mb-8 px-4 md:px-0">
           {topLabel && (
             <span className="section-label">
               {topLabel}
@@ -103,13 +103,12 @@ export default function BlogSection({
             titleStyle === 'boxed' && "p-6 md:px-10 md:py-8 rounded-[20px] md:rounded-[32px] border border-slate-200 bg-white shadow-sm max-w-fit"
           )}>
             <h2 
-              className="section-heading text-navy capitalize"
+              className="section-heading text-[#082B5B] !font-extrabold capitalize"
               style={{ 
-                fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined,
-                fontWeight: titleWeight ? titleWeight : undefined
+                fontSize: titleSize ? (isNaN(Number(titleSize)) ? titleSize : `${titleSize}px`) : undefined
               }}
             >
-              {title}
+              {title || "New Journal"}
             </h2>
           </div>
         </div>
@@ -117,7 +116,7 @@ export default function BlogSection({
         <div className="relative group">
           <div 
             id="blog-slider-container"
-            className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x scroll-smooth"
+            className="flex gap-4 md:gap-[28px] overflow-x-auto no-scrollbar pb-6 snap-x scroll-smooth px-4 md:px-0 scroll-pl-4 md:scroll-pl-0"
           >
             {displayBlogs.map((art, i) => (
               <BlogCard key={art.slug || i} art={art} i={i} reduceMotion={reduceMotion} />
@@ -184,12 +183,11 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
       whileInView={{ opacity: 1, x: 0 }}
       transition={reduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
       viewport={{ once: true }}
-      className="flex-none snap-start bg-white rounded-[32px] shadow-[0_15px_35px_rgba(0,0,0,0.06),0_5px_15px_rgba(0,0,0,0.03)] border border-zinc-100/80 hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 flex flex-col overflow-hidden group/card p-4"
-      style={{ width: '360px', height: '370px', minWidth: '360px', minHeight: '370px' }}
+      className="flex-none snap-start bg-white rounded-[32px] shadow-[0_15px_35px_rgba(0,0,0,0.06),0_5px_15px_rgba(0,0,0,0.03)] border border-zinc-100/80 hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] hover:-translate-y-1.5 transition-all duration-500 flex flex-col overflow-hidden group/card w-[280px] min-w-[280px] h-[275px] min-h-[275px] md:w-[340px] md:min-w-[340px] md:h-[310px] md:min-h-[310px]"
     >
-      <Link href={linkPath} prefetch={false} className="flex flex-col h-full w-full text-left justify-between">
+      <Link href={linkPath} prefetch={false} className="flex flex-col h-full w-full text-left justify-start">
         {/* Top Image Area */}
-        <div className="relative w-full aspect-[16/9.5] rounded-[24px] overflow-hidden shrink-0 bg-zinc-100">
+        <div className="relative w-full aspect-[16/9.5] rounded-t-[32px] rounded-b-[24px] overflow-hidden shrink-0 bg-zinc-100">
           <OptimizedImage 
             src={blogImageSrc} 
             alt={art.title} 
@@ -197,7 +195,7 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
             bunnyVariant="x540gt"
             sizes="340px"
             width={600}
-            height={340}
+            height={356}
             priority={true}
             className="w-full h-full object-cover transition-transform duration-1000 group-hover/card:scale-105" 
           />
@@ -216,7 +214,7 @@ function BlogCard({ art, i, reduceMotion }: { art: BlogItem, i: number, reduceMo
         </div>
 
         {/* Content Area */}
-        <div className="flex gap-3.5 items-start mt-4 px-1 pb-1">
+        <div className="flex gap-3.5 items-center px-4 pb-4 pt-3.5 w-full">
           <div 
             className="w-11 h-11 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-white font-bold text-[13px] shadow-sm"
             style={{ backgroundColor: avatarBg }}

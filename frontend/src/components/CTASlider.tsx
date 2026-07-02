@@ -63,15 +63,15 @@ export default function CTASlider({
 
   return (
     <section className="relative overflow-hidden">
-      {/* Background split - clean hard split */}
-      <div className="absolute inset-0 flex flex-col pointer-events-none">
-        <div className="h-1/2" style={{ backgroundColor: bgTop }} />
-        <div className="h-1/2" style={{ backgroundColor: bgBottom }} />
+      {/* Background split - clean hard split with vertical bleed to prevent bottom border gap */}
+      <div className="absolute -inset-y-1 inset-x-0 flex flex-col pointer-events-none">
+        <div className="h-[51%] -mb-[1%]" style={{ backgroundColor: bgTop }} />
+        <div className="h-[51%]" style={{ backgroundColor: bgBottom }} />
       </div>
 
-      <div className="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-8 md:px-16 lg:px-24 py-16 md:py-24">
+      <div className="relative z-10 px-3 md:px-14 py-4 md:py-24">
         {showTitle && title && (
-          <div className="max-w-[1440px] mx-auto px-4 md:px-20 mb-6 md:mb-10 text-center">
+          <div className="max-w-[1440px] mx-auto px-2 mb-6 md:mb-10 text-center">
             <h2 className="section-heading text-navy capitalize">
               {title}
             </h2>
@@ -80,9 +80,9 @@ export default function CTASlider({
         <div 
           ref={containerRef}
           className={cn(
-            "relative w-full aspect-[16/7] overflow-hidden bg-zinc-900 mx-auto",
+            "relative w-full md:w-[80%] h-[175px] sm:h-[225px] md:h-[295px] lg:h-[440px] overflow-hidden bg-zinc-900 mx-auto",
             "shadow-[0_20px_50px_rgba(0,0,0,0.15),0_4px_20px_rgba(0,0,0,0.08)]",
-            "border border-zinc-100/30",
+            "border-0",
             radiusClass
           )}
         >
@@ -95,7 +95,7 @@ export default function CTASlider({
               playsInline
               preload="none"
               poster={posterSrc}
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover object-center scale-[1.02]"
             />
           ) : (
             posterSrc && (
@@ -103,8 +103,8 @@ export default function CTASlider({
                 src={posterSrc}
                 alt={title || "Cinematic Travel Video"}
                 cloudinaryWidth={1200}
-                sizes="(max-width: 1440px) calc(100vw - 64px), 1248px"
-                className="w-full h-full object-cover object-center"
+                sizes="100vw"
+                className="w-full h-full object-cover object-center scale-[1.02]"
               />
             )
           )}

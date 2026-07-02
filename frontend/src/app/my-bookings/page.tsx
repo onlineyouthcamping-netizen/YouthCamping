@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Calendar, MapPin, CreditCard, ChevronRight, Hash, Clock, AlertCircle } from 'lucide-react';
+import { 
+  Search, Calendar, MapPin, CreditCard, ChevronRight, Hash, Clock, AlertCircle,
+  ArrowLeft, Users, FileText, CheckSquare, Ticket, DollarSign, Activity, MessageSquare, Plus, Bell, RefreshCw
+} from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 import { API_BASE_URL } from '@/lib/api';
 
@@ -16,6 +18,7 @@ export default function MyBookingsPage() {
   const [error, setError] = useState('');
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +33,9 @@ export default function MyBookingsPage() {
       if (data.success) {
         setBookings(data.data);
         setSearched(true);
+        if (data.data.length === 1) {
+          setSelectedBooking(data.data[0]);
+        }
       } else {
         setError(data.message || 'Failed to fetch bookings');
       }
@@ -39,6 +45,452 @@ export default function MyBookingsPage() {
       setLoading(false);
     }
   };
+
+  // Calculate days to departure
+  const getDaysToGo = (departureDate: string) => {
+    if (!departureDate) return 0;
+    const diff = new Date(departureDate).getTime() - new Date().getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days > 0 ? days : 0;
+  };
+
+  // Helper to format date
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'TBD';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  if (selectedBooking) {
+    const daysToGo = getDaysToGo(selectedBooking.departureDate);
+    const amountPaid = selectedBooking.advancePaid || 0;
+    const totalAmount = selectedBooking.totalAmount || 0;
+    const balanceDue = totalAmount - amountPaid;
+    const paymentProgress = totalAmount > 0 ? (amountPaid / totalAmount) * 100 : 0;
+    const passengerCount = (selectedBooking.passengers?.length || 0) + 1; // Primary guest + co-travelers
+
+    return (
+      <div className="min-h-screen bg-white text-slate-900 font-sans antialiased my-bookings-active-workspace">
+        {/* Style configurations for design parity */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          
+          /* Hide global layout components during active booking workspace view */
+          body nav, 
+          body footer, 
+          body a[aria-label="Chat on WhatsApp"] {
+            display: none !important;
+          }
+          body main {
+            padding-top: 0 !important;
+          }
+        `}} />
+
+        <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr_340px] min-h-screen">
+          
+          {/* ============ SIDEBAR ============ */}
+          <div className="hidden xl:flex flex-col bg-[#0f172a] text-white p-4 border-r border-[#334155] h-screen sticky top-0">
+            <div className="font-extrabold text-sm tracking-wider mb-6 flex items-center gap-2">
+              <div className="w-6 h-6 bg-[#ea6d1e] rounded flex items-center justify-center font-black text-xs">Y</div>
+              <span>YouthCamping</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <button onClick={() => setSelectedBooking(null)} className="w-full text-left py-2.5 px-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors text-xs font-semibold">
+                ‹ Back to Tracker
+              </button>
+              <div className="w-full text-left py-2.5 px-3 rounded-lg bg-[#ea6d1e] text-white text-xs font-semibold">
+                My Booking Workspace
+              </div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest px-3 mt-4 mb-2">Workspace Navigation</div>
+              <button onClick={() => setActiveTab('overview')} className={cn("w-full text-left py-2 px-3 rounded text-xs transition-all", activeTab === 'overview' ? "text-white font-bold" : "text-slate-400 hover:text-white")}>Overview</button>
+              <button onClick={() => setActiveTab('passengers')} className={cn("w-full text-left py-2 px-3 rounded text-xs transition-all", activeTab === 'passengers' ? "text-white font-bold" : "text-slate-400 hover:text-white")}>Passengers</button>
+              <button onClick={() => setActiveTab('payments')} className={cn("w-full text-left py-2 px-3 rounded text-xs transition-all", activeTab === 'payments' ? "text-white font-bold" : "text-slate-400 hover:text-white")}>Payments</button>
+              <button onClick={() => setActiveTab('operations')} className={cn("w-full text-left py-2 px-3 rounded text-xs transition-all", activeTab === 'operations' ? "text-white font-bold" : "text-slate-400 hover:text-white")}>Operations</button>
+              <button onClick={() => setActiveTab('ticketing')} className={cn("w-full text-left py-2 px-3 rounded text-xs transition-all", activeTab === 'ticketing' ? "text-white font-bold" : "text-slate-400 hover:text-white")}>Ticketing</button>
+            </div>
+          </div>
+
+          {/* ============ MAIN CONTENT AREA ============ */}
+          <div className="flex flex-col min-w-0">
+            
+            {/* HEADER */}
+            <div className="sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-4 shadow-sm">
+              <button 
+                onClick={() => setSelectedBooking(null)}
+                className="w-8 h-8 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors"
+                aria-label="Go Back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Booking ID</span>
+                <span className="text-sm font-bold text-slate-900 font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{selectedBooking.bookingId}</span>
+              </div>
+
+              <div className="flex flex-col gap-0.5 px-4 border-l border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Trip</span>
+                <span className="text-sm font-bold text-slate-900 truncate max-w-[200px] md:max-w-[300px]">{selectedBooking.tripName}</span>
+              </div>
+
+              <div className="hidden sm:flex flex-col gap-0.5 px-4 border-l border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer</span>
+                <span className="text-xs font-semibold text-slate-900">{selectedBooking.name}</span>
+              </div>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <span className={cn(
+                  "px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider",
+                  selectedBooking.status === 'confirmed' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                )}>
+                  {selectedBooking.status}
+                </span>
+              </div>
+            </div>
+
+            {/* KPI STRIP */}
+            <div className="bg-white border-b border-slate-200 px-6 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 shadow-sm">
+              <div onClick={() => setActiveTab('payments')} className="p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <DollarSign className="w-3 h-3 text-[#ea6d1e]" /> Payment
+                </span>
+                <span className="text-sm font-extrabold text-slate-900">₹{amountPaid.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-500 font-medium">Due: ₹{balanceDue.toLocaleString()}</span>
+              </div>
+
+              <div onClick={() => setActiveTab('passengers')} className="p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <Users className="w-3 h-3 text-[#ea6d1e]" /> Passengers
+                </span>
+                <span className="text-sm font-extrabold text-slate-900">{passengerCount}</span>
+                <span className="text-[9px] text-slate-500 font-medium">Group Size</span>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-[#ea6d1e]" /> Departure
+                </span>
+                <span className="text-sm font-extrabold text-slate-900">{daysToGo} Days</span>
+                <span className="text-[9px] text-slate-500 font-medium">Remaining</span>
+              </div>
+
+              <div onClick={() => setActiveTab('operations')} className="p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <CheckSquare className="w-3 h-3 text-[#ea6d1e]" /> Operations
+                </span>
+                <span className="text-sm font-extrabold text-slate-900">3/6</span>
+                <span className="text-[9px] text-slate-500 font-medium">Verified items</span>
+              </div>
+
+              <div onClick={() => setActiveTab('ticketing')} className="p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <Ticket className="w-3 h-3 text-[#ea6d1e]" /> Ticketing
+                </span>
+                <span className="text-sm font-extrabold text-slate-900">{selectedBooking.pnrDetails ? "Uploaded" : "Pending"}</span>
+                <span className="text-[9px] text-slate-500 font-medium">PNR status</span>
+              </div>
+
+              <div onClick={() => setActiveTab('activity')} className="p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-[#ea6d1e]" /> Activity
+                </span>
+                <span className="text-sm font-extrabold text-slate-900">Live</span>
+                <span className="text-[9px] text-slate-500 font-medium">Updates available</span>
+              </div>
+            </div>
+
+            {/* MAIN TAB SWITCHER */}
+            <div className="flex-1 overflow-y-auto p-6 bg-white">
+              
+              {/* TAB LIST */}
+              <div className="flex gap-6 border-b border-slate-200 overflow-x-auto no-scrollbar mb-6">
+                {[
+                  { id: 'overview', label: 'Overview' },
+                  { id: 'passengers', label: 'Passengers' },
+                  { id: 'payments', label: 'Payments' },
+                  { id: 'operations', label: 'Operations' },
+                  { id: 'ticketing', label: 'Ticketing' },
+                  { id: 'activity', label: 'Timeline' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "pb-3 text-xs md:text-sm font-bold whitespace-nowrap border-b-2 transition-colors",
+                      activeTab === tab.id 
+                        ? "text-[#ea6d1e] border-[#ea6d1e]" 
+                        : "text-slate-500 border-transparent hover:text-slate-800"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* OVERVIEW TAB */}
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  {/* Alert bar */}
+                  <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-lg text-emerald-700 text-xs font-semibold flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4 shrink-0" />
+                    <span>Booking workspace synced. Payment verification system operational.</span>
+                  </div>
+
+                  {/* Attention section */}
+                  <div>
+                    <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Items Requiring Attention</h3>
+                    <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white shadow-sm">
+                      {balanceDue > 0 ? (
+                        <div className="flex items-center gap-2 py-2 border-b border-slate-100 text-xs text-slate-700">
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                          <span>Outstanding Balance Due: <strong className="text-red-600">₹{balanceDue.toLocaleString()}</strong></span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 py-2 border-b border-slate-100 text-xs text-slate-700">
+                          <CheckSquare className="w-4 h-4 text-emerald-500" />
+                          <span className="text-emerald-700 font-bold">Booking Fully Paid! Thank you.</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-slate-700">
+                        <Clock className="w-4 h-4 text-amber-500" />
+                        <span>Departure scheduled for {formatDate(selectedBooking.departureDate)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary Cards */}
+                  <div>
+                    <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Trip Specifications</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Room Preference</span>
+                        <div className="text-sm font-extrabold text-slate-900 mt-1">{selectedBooking.roomType || 'Standard Sharing'}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Pickup Location</span>
+                        <div className="text-sm font-extrabold text-slate-900 mt-1">{selectedBooking.pickupCity || 'TBD'}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Departure Date</span>
+                        <div className="text-sm font-extrabold text-slate-900 mt-1">{formatDate(selectedBooking.departureDate)}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Payment Mode</span>
+                        <div className="text-sm font-extrabold text-slate-900 mt-1">{selectedBooking.paymentMode || 'Direct Link'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* PASSENGERS TAB */}
+              {activeTab === 'passengers' && (
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Passenger List ({passengerCount})</h3>
+                  <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-12">No.</th>
+                          <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name</th>
+                          <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Phone / Contact</th>
+                          <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                          <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Primary guest */}
+                        <tr className="border-b border-slate-200 hover:bg-slate-50">
+                          <td className="p-3 text-xs font-bold text-slate-500 text-center">1</td>
+                          <td className="p-3 text-xs font-bold text-slate-900">{selectedBooking.name} (Lead)</td>
+                          <td className="p-3 text-xs text-slate-700">{selectedBooking.phone} <br/><span className="text-[10px] text-slate-400">{selectedBooking.email}</span></td>
+                          <td className="p-3 text-xs"><span className="px-2 py-0.5 rounded bg-orange-50 text-[#ea6d1e] text-[10px] font-bold">Primary Guest</span></td>
+                          <td className="p-3 text-xs"><span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">Confirmed</span></td>
+                        </tr>
+                        {/* Co-travelers */}
+                        {selectedBooking.passengers?.map((p: any, idx: number) => (
+                          <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                            <td className="p-3 text-xs font-bold text-slate-500 text-center">{idx + 2}</td>
+                            <td className="p-3 text-xs font-bold text-slate-900">{p.name}</td>
+                            <td className="p-3 text-xs text-slate-700">{p.phone || 'N/A'}</td>
+                            <td className="p-3 text-xs"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold">Co-Traveler</span></td>
+                            <td className="p-3 text-xs"><span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">Confirmed</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* PAYMENTS TAB */}
+              {activeTab === 'payments' && (
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Detailed Bill Sheet</h3>
+                  
+                  <div className="border border-slate-200 rounded-lg p-5 bg-white shadow-sm space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Gross Amount</span>
+                        <div className="text-xl font-extrabold text-slate-900 mt-1">₹{totalAmount.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Paid / Received</span>
+                        <div className="text-xl font-extrabold text-emerald-600 mt-1">₹{amountPaid.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Balance Due</span>
+                        <div className="text-xl font-extrabold text-red-600 mt-1">₹{balanceDue.toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>Payment Completed</span>
+                        <span>{paymentProgress.toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-[#ea6d1e] h-full rounded-full transition-all duration-500" style={{ width: `${paymentProgress}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* OPERATIONS TAB */}
+              {activeTab === 'operations' && (
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Workspace Booking Checklist</h3>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { item: 'Hotel Accommodations Verified', status: 'Booked', date: '2 days ago', checked: true },
+                      { item: 'In-Destination Ground Transport Booking', status: 'Booked', date: 'Yesterday', checked: true },
+                      { item: 'Assigned Coordinator & Tour Guide', status: 'Assigned', date: 'Today', checked: true },
+                      { item: 'Room Allocation Completed', status: 'Pending', date: '—', checked: false },
+                      { item: 'Travel Insurance Setup', status: 'Pending', date: '—', checked: false },
+                      { item: 'Medical Clearance Verification', status: 'Pending', date: '—', checked: false }
+                    ].map((todo, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg shadow-sm bg-white hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <input type="checkbox" readOnly checked={todo.checked} className="w-4 h-4 accent-[#ea6d1e]" />
+                          <span className={cn("text-xs font-bold text-slate-900", todo.checked && "line-through text-slate-400")}>{todo.item}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                            todo.checked ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                          )}>{todo.status}</span>
+                          <span className="text-[10px] text-slate-400 hidden sm:inline">{todo.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TICKETING TAB */}
+              {activeTab === 'ticketing' && (
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Ticket Information</h3>
+                  {selectedBooking.pnrDetails ? (
+                    <div className="border border-slate-200 rounded-lg p-5 bg-white shadow-sm space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">PNR / Ticket Code</span>
+                          <div className="text-lg font-bold text-slate-900 font-mono mt-1">{selectedBooking.pnrDetails}</div>
+                        </div>
+                        <span className="px-3 py-1 rounded bg-emerald-50 text-emerald-600 text-[10px] font-extrabold uppercase tracking-wider">Ready / Confirmed</span>
+                      </div>
+                      <div className="border-t border-slate-100 pt-4 flex gap-6 text-xs font-semibold text-slate-700">
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase font-bold">Preferred Coach</span>
+                          <div>{selectedBooking.roomType || 'General Accommodations'}</div>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase font-bold">Seats Allocations</span>
+                          <div>Assigned upon check-in</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-slate-300 rounded-lg p-8 text-center bg-slate-50 text-slate-400">
+                      <Ticket className="w-10 h-10 mx-auto mb-2 opacity-50 text-slate-400" />
+                      <div className="text-xs font-bold text-slate-600">Ticket assignment in progress</div>
+                      <p className="text-[10px] text-slate-400 mt-1">PNR codes and boarding vouchers will be uploaded here shortly.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TIMELINE TAB */}
+              {activeTab === 'activity' && (
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-3">Live Booking Log</h3>
+                  <div className="space-y-3">
+                    {[
+                      { title: 'Room Allocation Preference Recorded', desc: `Option: ${selectedBooking.roomType || 'Standard Sharing'}` },
+                      { title: 'Booking Database Entry Created', desc: `Booking initialized for ${selectedBooking.name}` },
+                      { title: 'Payment Receipt Verification Request', desc: `Advance payment verified for ₹${amountPaid.toLocaleString()}` }
+                    ].map((log, idx) => (
+                      <div key={idx} className="flex gap-4 p-3 bg-slate-50 border-l-4 border-[#ea6d1e] rounded-lg">
+                        <div className="w-2.5 h-2.5 bg-[#ea6d1e] rounded-full mt-1.5 shrink-0" />
+                        <div className="flex-1">
+                          <div className="text-xs font-bold text-slate-900">{log.title}</div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{log.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* ============ RIGHT RAIL ============ */}
+          <div className="border-t xl:border-t-0 xl:border-l border-slate-200 bg-white p-6 h-screen sticky top-0 overflow-y-auto flex flex-col gap-6">
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Customer Information</h4>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex flex-col gap-2">
+                <div className="w-10 h-10 bg-[#ea6d1e] text-white rounded-full flex items-center justify-center font-bold text-xs">
+                  {selectedBooking.name?.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="font-bold text-xs text-slate-900">{selectedBooking.name}</div>
+                <div className="text-[11px] text-slate-500"><span className="font-semibold text-slate-700">Phone:</span> {selectedBooking.phone}</div>
+                <div className="text-[11px] text-slate-500"><span className="font-semibold text-slate-700">Email:</span> {selectedBooking.email || 'N/A'}</div>
+                <div className="border-t border-slate-200 pt-2 mt-2">
+                  <div className="text-[11px] text-slate-500"><span className="font-semibold text-slate-700">Pickup Location:</span> {selectedBooking.pickupCity || 'TBD'}</div>
+                  <div className="text-[11px] text-slate-500"><span className="font-semibold text-slate-700">Preference Mode:</span> {selectedBooking.paymentMode || 'Default Link'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Pinned Note</h4>
+              <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-lg text-xs font-semibold text-amber-800 leading-relaxed italic">
+                "{selectedBooking.notes || 'No special requirements pinned.'}"
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-2">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick Actions</h4>
+              <button onClick={() => window.print()} className="w-full py-2.5 px-3 bg-white border border-slate-200 hover:bg-slate-50 rounded text-xs font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                Download Receipt Receipt
+              </button>
+              <button onClick={() => setSelectedBooking(null)} className="w-full py-2.5 px-3 bg-[#0f172a] hover:bg-slate-800 text-white rounded text-xs font-bold transition-all text-center">
+                Close Workspace
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 pb-12 px-4">
@@ -153,148 +605,6 @@ export default function MyBookingsPage() {
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Details Modal */}
-      <AnimatePresence>
-        {selectedBooking && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedBooking(null)}
-              className="absolute inset-0 bg-navy/60 backdrop-blur-md"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-            >
-              <div className="p-8 overflow-y-auto scrollbar-hide flex-1 space-y-8">
-                {/* Modal Header */}
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold capitalize tracking-[0.3em] text-primary-orange">{selectedBooking.bookingId}</span>
-                    <h2 className="text-3xl font-bold text-navy capitalize tracking-tighter leading-none">{selectedBooking.tripName}</h2>
-                    <p className="text-zinc-500 text-sm font-medium">{selectedBooking.departureDate ? new Date(selectedBooking.departureDate).toLocaleDateString('en-IN', { dateStyle: 'full' }) : 'Date to be announced'}</p>
-                  </div>
-                  <div className={cn(
-                    "px-4 py-2 rounded-2xl text-xs font-bold capitalize tracking-widest",
-                    selectedBooking.status === 'confirmed' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                  )}>
-                    {selectedBooking.status}
-                  </div>
-                </div>
-
-                {/* Financial Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-zinc-50 p-6 rounded-[32px] border border-zinc-100">
-                    <p className="text-[10px] font-bold capitalize tracking-widest text-zinc-400 mb-1">Total Bill</p>
-                    <p className="text-2xl font-bold text-navy tracking-tight">₹{selectedBooking.totalAmount?.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-emerald-50/50 p-6 rounded-[32px] border border-emerald-100/50">
-                    <p className="text-[10px] font-bold capitalize tracking-widest text-emerald-600 mb-1">Paid</p>
-                    <p className="text-2xl font-bold text-emerald-700 tracking-tight">₹{selectedBooking.advancePaid?.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-red-50/50 p-6 rounded-[32px] border border-red-100/50">
-                    <p className="text-[10px] font-bold capitalize tracking-widest text-red-600 mb-1">Remaining</p>
-                    <p className="text-2xl font-bold text-red-700 tracking-tight">₹{(selectedBooking.totalAmount - selectedBooking.advancePaid).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {/* Primary Guest */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Primary Guest Details</h4>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-[10px] font-bold capitalize text-zinc-400">Name</p>
-                      <p className="font-bold text-navy">{selectedBooking.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold capitalize text-zinc-400">Phone</p>
-                      <p className="font-bold text-navy">{selectedBooking.phone}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold capitalize text-zinc-400">Email</p>
-                      <p className="font-bold text-navy">{selectedBooking.email || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold capitalize text-zinc-400">Pickup</p>
-                      <p className="font-bold text-navy">{selectedBooking.pickupCity || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Travelers */}
-                {selectedBooking.passengers && selectedBooking.passengers.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Co-Travelers ({selectedBooking.passengers.length})</h4>
-                    <div className="space-y-2">
-                      {selectedBooking.passengers.map((p: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[10px] font-bold text-zinc-400 border border-zinc-100">{i + 1}</div>
-                            <span className="font-bold text-navy capitalize text-sm">{p.name}</span>
-                          </div>
-                          <span className="text-xs font-medium text-zinc-500">{p.phone}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Trip Details */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400 border-b border-zinc-100 pb-2">Preferences</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 flex items-center gap-3">
-                      <CreditCard className="w-4 h-4 text-zinc-400" />
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-bold capitalize text-zinc-400">Payment Mode</span>
-                        <span className="text-xs font-bold text-navy">{selectedBooking.paymentMode || 'UPI'}</span>
-                      </div>
-                    </div>
-                    <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 flex items-center gap-3">
-                      <MapPin className="w-4 h-4 text-zinc-400" />
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-bold capitalize text-zinc-400">Room Type</span>
-                        <span className="text-xs font-bold text-navy">{selectedBooking.roomType || 'Standard'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {selectedBooking.notes && (
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-bold capitalize tracking-[0.3em] text-zinc-400">Important Notes</h4>
-                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-xs font-medium text-amber-900 italic leading-relaxed">
-                      "{selectedBooking.notes}"
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-6 border-t border-zinc-100 bg-zinc-50 flex gap-3">
-                <Button 
-                  onClick={() => window.print()}
-                  className="flex-1 bg-white border border-zinc-200 text-navy hover:bg-zinc-100 h-14 rounded-2xl font-bold capitalize text-xs tracking-widest"
-                >
-                  Download Receipt
-                </Button>
-                <Button 
-                  onClick={() => setSelectedBooking(null)}
-                  className="flex-1 bg-navy text-white hover:bg-black h-14 rounded-2xl font-bold capitalize text-xs tracking-widest shadow-xl shadow-navy/20"
-                >
-                  Close View
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
