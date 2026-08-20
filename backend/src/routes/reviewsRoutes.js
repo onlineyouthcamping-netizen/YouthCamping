@@ -62,15 +62,15 @@ router.get("/", async (req, res, next) => {
       });
     }
 
-    const where = {};
+    const fallbackWhere = {};
     if (featuredVal.value !== undefined) {
-      where.featured = featuredVal.value;
+      fallbackWhere.featured = featuredVal.value;
     } else {
-      where.featured = true;
+      fallbackWhere.featured = true;
     }
 
     const fetchReviews = prisma.reviewItem.findMany({
-      where,
+      where: fallbackWhere,
       include: {
         trip: {
           select: {
