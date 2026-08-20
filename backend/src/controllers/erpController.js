@@ -182,7 +182,7 @@ exports.searchAll = async (req, res, next) => {
       if (admins.length > 0) {
         results["Employees"] = admins.map((a) => ({
           title: `${a.name} (${a.role})`,
-          path: `/admin/settings/users/${a.id}`,
+          path: `/admin/staff-profiles/${a.id}`,
         }));
       }
     }
