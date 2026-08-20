@@ -774,6 +774,7 @@ enum AdminRole {
   operations
   finance
   finance_controller
+  FINANCE_CONTROLLER // legacy DB enum label; UI/RBAC canonical remains finance_controller
   guide
   viewer
   BOOKING_VERIFIER
@@ -2255,14 +2256,14 @@ model BookingTask {
   description  String    @db.Text
   status       String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
   dueDate      DateTime?
-  assignedById String?
-  assignedToId String?
+  assignedById String
+  assignedToId String
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  assignedBy Admin?  @relation("TaskAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
-  assignedTo Admin?  @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedBy Admin   @relation("TaskAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  assignedTo Admin   @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
 
   @@index([bookingId])
   @@index([assignedById])
@@ -5251,16 +5252,16 @@ model TaskAllotment {
   tripId       String?
   vendorId     String?
   serviceId    String?
-  assignedToId String?
-  assignedById String?
+  assignedToId String
+  assignedById String
   deadline     DateTime?
   completedAt  DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   booking    Booking?      @relation(fields: [bookingId], references: [bookingId], onDelete: SetNull)
-  assignedTo Admin?        @relation("TaskAssignedToAdmin", fields: [assignedToId], references: [id], onDelete: SetNull)
-  assignedBy Admin?        @relation("TaskCreatedByAdmin", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedTo Admin         @relation("TaskAssignedToAdmin", fields: [assignedToId], references: [id], onDelete: Restrict)
+  assignedBy Admin         @relation("TaskCreatedByAdmin", fields: [assignedById], references: [id], onDelete: Restrict)
   comments   TaskComment[]
 
   @@index([tenantId])
