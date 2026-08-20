@@ -1,0 +1,132 @@
+const express = require("express");
+const router = express.Router();
+console.log("   [Routes] Loading tripRoutes.js");
+const {
+  getTrips,
+  getCompactTrips,
+  getPublicTripCards,
+  getPublicTripDetail,
+  getPublicTripLookup,
+  getTrip,
+  getTripBySlug,
+  createTrip,
+  updateTrip,
+  deleteTrip,
+  shuffleTrips,
+  bulkUpdateTripOrder,
+  seedLiveData,
+  getTripDepartures,
+  getTripTrainTicketTemplate,
+  updateTripTrainTicketTemplate,
+} = require("../controllers/tripController");
+const {
+  authenticate,
+  optionalAuthenticate,
+  requirePermission,
+  enforceOwnership,
+} = require("../middleware/auth");
+const {
+  stripFinancialFieldsForGuides,
+} = require("../middleware/financialStripper");
+
+// Public routes
+router.get("/public/cards", getPublicTripCards);
+router.get("/public/slug/:slug", getPublicTripDetail);
+router.get("/public/lookup/:identifier", getPublicTripLookup);
+
+router.get("/", optionalAuthenticate, stripFinancialFieldsForGuides, getTrips);
+router.get(
+  "/compact",
+  optionalAuthenticate,
+  stripFinancialFieldsForGuides,
+  getCompactTrips,
+);
+
+router.get(
+  "/seed/live-data",
+  authenticate,
+  requirePermission("trips.edit"),
+  seedLiveData,
+);
+
+router.get(
+  "/slug/:slug",
+  optionalAuthenticate,
+  stripFinancialFieldsForGuides,
+  getTripBySlug,
+);
+
+router.get("/:id/departures", authenticate, getTripDepartures);
+router.get("/:id/train-template", authenticate, getTripTrainTicketTemplate);
+router.put(
+  "/:id/train-template",
+  authenticate,
+  requirePermission("trips.edit"),
+  updateTripTrainTicketTemplate,
+);
+router.get(
+  "/:id",
+  optionalAuthenticate,
+  stripFinancialFieldsForGuides,
+  getTrip,
+);
+
+// ── Trip-Scoped Vendor Directory Endpoints ──
+const dirCtrl = require("../controllers/directoryVendorController");
+const routePricingCtrl = require("../controllers/routePricingController");
+
+router.get(
+  "/:tripId/vendor-directory",
+  authenticate,
+  requirePermission("vendors.view"),
+  dirCtrl.getTripScopedVendorDirectory,
+);
+router.get(
+  "/:tripId/vendor-directory/destinations",
+  authenticate,
+  requirePermission("vendors.view"),
+  dirCtrl.getTripDestinations,
+);
+router.get(
+  "/:tripId/vendor-directory/transport/:vendorId/vehicles",
+  authenticate,
+  requirePermission("vendors.view"),
+  routePricingCtrl.getVendorVehicles,
+);
+router.get(
+  "/:tripId/vendor-directory/transport/:vendorId/routes",
+  authenticate,
+  requirePermission("vendors.view"),
+  routePricingCtrl.getRoutePricingGroups,
+);
+
+// Admin routes
+router.post("/", authenticate, requirePermission("trips.create"), createTrip);
+router.post(
+  "/shuffle",
+  authenticate,
+  requirePermission("trips.edit"),
+  shuffleTrips,
+);
+router.post(
+  "/bulk-order",
+  authenticate,
+  requirePermission("trips.edit"),
+  bulkUpdateTripOrder,
+);
+router.put(
+  "/:id",
+  authenticate,
+  requirePermission("trips.edit"),
+  enforceOwnership("trip"),
+  updateTrip,
+);
+router.delete(
+  "/:id",
+  authenticate,
+  requirePermission("trips.delete"),
+  enforceOwnership("trip"),
+  deleteTrip,
+);
+
+module.exports = router;

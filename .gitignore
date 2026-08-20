@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+.env
+.env.local
+.env.local.backup
+.env.prod
+.env.production
+.env.*
+.DS_Store
+*.log
+.agents/
+scratch/
+*.zip
+*.archive/
+/uploads/
+/public/

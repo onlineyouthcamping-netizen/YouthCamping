@@ -1,0 +1,2519 @@
+const { prisma } = require("../lib/prisma");
+const { Prisma } = require("@prisma/client");
+const { logBookingActivity } = require("../utils/bookingActivityLogger");
+const ticketCountCache = new Map();
+
+// Helper to check ownership of booking for sales role
+const checkBookingOwnership = async (bookingId, user) => {
+  if (!user) return false;
+  return true;
+};
+
+// Helper to check ownership of ticket for sales role
+const checkTicketOwnership = async (ticketId, user) => {
+  if (!user) return false;
+  return true;
+};
+
+// Helper to log ticket history
+const logHistory = async (ticketId, action, req, extra = {}) => {
+  const ticket = await prisma.trainTicket.findUnique({
+    where: { id: ticketId },
+    include: { booking: true },
+  });
+  await prisma.trainTicketHistory.create({
+    data: {
+      ticketId,
+      action,
+      fromStatus: extra.fromStatus || null,
+      toStatus: extra.toStatus || ticket?.ticketStatus || null,
+      fromApproval: extra.fromApproval || null,
+      toApproval: extra.toApproval || ticket?.approvalStatus || null,
+      notes: extra.notes || null,
+      performedById: req.user.id,
+    },
+  });
+
+  if (ticket) {
+    let details = `Train ticket for ${ticket.travelerName || "unknown"}: ${action}`;
+    if (extra.notes) details += ` (${extra.notes})`;
+    await logBookingActivity({
+      bookingId: ticket.booking?.id || ticket.bookingId,
+      action: "TRAIN_TICKET",
+      details,
+      performedByAdminId: req.user.id,
+    });
+  }
+};
+
+/**
+ * GET /api/train-tickets/booking/:bookingId
+ */
+exports.getTicketsByBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const tenantId = req.user?.tenantId || "default";
+
+    // 1. Resolve booking record by id OR custom bookingId
+    const booking = await prisma.booking.findFirst({
+      where: {
+        OR: [{ id: String(bookingId) }, { bookingId: String(bookingId) }],
+        ...(tenantId && tenantId !== "all" ? { tenantId } : {}),
+      },
+      select: { id: true, bookingId: true },
+    });
+
+    if (!booking) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // 2. Fetch train tickets matching custom bookingId OR CUID id
+    const tickets = await prisma.trainTicket.findMany({
+      where: {
+        OR: [{ bookingId: booking.bookingId }, { bookingId: booking.id }],
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return res.json({ success: true, data: tickets });
+  } catch (err) {
+    console.error("getTicketsByBooking error:", err);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to fetch tickets",
+        details: err.message,
+      });
+  }
+};
+
+/**
+ * GET /api/train-tickets/:ticketId/history
+ * Loaded only when the existing ticket History control is opened.
+ */
+exports.getTicketHistory = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden: You do not own this ticket",
+        });
+    }
+
+    const history = await prisma.trainTicketHistory.findMany({
+      where: { ticketId },
+      select: {
+        id: true,
+        action: true,
+        fromStatus: true,
+        toStatus: true,
+        fromApproval: true,
+        toApproval: true,
+        notes: true,
+        createdAt: true,
+        performedBy: { select: { id: true, name: true, role: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return res.json({ success: true, data: history });
+  } catch (err) {
+    console.error("getTicketHistory error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch ticket history" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/booking/:bookingId
+ */
+exports.createTicket = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const tenantId = req.user?.tenantId || "default";
+
+    const booking = await prisma.booking.findFirst({
+      where: {
+        OR: [{ id: String(bookingId) }, { bookingId: String(bookingId) }],
+        ...(tenantId && tenantId !== "all" ? { tenantId } : {}),
+      },
+      select: {
+        id: true,
+        bookingId: true,
+        tenantId: true,
+        tripId: true,
+        tripRef: {
+          select: { id: true, trainTicketTemplate: true },
+        },
+      },
+    });
+
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    }
+
+    const targetBookingId = booking.bookingId;
+    const targetTenantId = booking.tenantId || tenantId;
+
+    const {
+      travelerName,
+      passengerReference,
+      pnr,
+      trainName,
+      trainNumber,
+      journeyDate,
+      sourceStation,
+      destinationStation,
+      coach,
+      seatNumber,
+      berthType,
+      ticketAmount,
+      expectedTicketAmount: inputExpected,
+      paidBy,
+      fareBreakdown,
+      amountMode,
+      internalNote,
+      ticketBookingPerson,
+    } = req.body;
+
+    if (!travelerName) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Traveler name is required" });
+    }
+
+    // Resolve Expected Cost from Trip Train Ticket Template if not provided explicitly
+    let expectedCost = Number(inputExpected) || 0;
+    if (!expectedCost && booking.tripRef?.trainTicketTemplate) {
+      let tpl = booking.tripRef.trainTicketTemplate;
+      if (typeof tpl === "string") {
+        try {
+          tpl = JSON.parse(tpl);
+        } catch (_) {}
+      }
+
+      // Determine matching tier (e.g. 3A, SL, 2A, etc.)
+      let selectedTier = tpl;
+      const targetClass = (coach || req.body.class || req.body.travelClass || "").toUpperCase();
+      if (Array.isArray(tpl?.tiers) && tpl.tiers.length > 0) {
+        if (targetClass) {
+          selectedTier =
+            tpl.tiers.find(
+              (t) =>
+                t.classCode?.toUpperCase() === targetClass ||
+                (targetClass.includes("SLEEP") && t.classCode === "SL") ||
+                (targetClass.includes("3A") && t.classCode === "3A") ||
+                (targetClass.includes("2A") && t.classCode === "2A") ||
+                (targetClass.includes("3E") && t.classCode === "3E") ||
+                t.name?.toUpperCase().includes(targetClass),
+            ) || tpl.tiers[0];
+        } else {
+          selectedTier = tpl.tiers[0];
+        }
+      }
+
+      const isReturn =
+        (destinationStation &&
+          selectedTier?.returnJourney?.destination &&
+          destinationStation
+            .toLowerCase()
+            .includes(selectedTier.returnJourney.destination.toLowerCase())) ||
+        (sourceStation &&
+          selectedTier?.returnJourney?.boardingStation &&
+          sourceStation
+            .toLowerCase()
+            .includes(selectedTier.returnJourney.boardingStation.toLowerCase()));
+
+      if (isReturn && selectedTier?.returnJourney?.expectedCost) {
+        expectedCost = Number(selectedTier.returnJourney.expectedCost) || 0;
+      } else if (selectedTier?.departureJourney?.expectedCost) {
+        expectedCost = Number(selectedTier.departureJourney.expectedCost) || 0;
+      } else if (selectedTier?.totalExpectedCostPerPassenger) {
+        expectedCost = Number(selectedTier.totalExpectedCostPerPassenger) / 2;
+      }
+    }
+    const actualCost = Number(ticketAmount) || 0;
+    const variance = actualCost - expectedCost;
+
+    // Check for duplicate ticket for the same booking and traveler/PNR
+    if (pnr || travelerName) {
+      const existing = await prisma.trainTicket.findFirst({
+        where: {
+          tenantId: targetTenantId,
+          bookingId: targetBookingId,
+          travelerName,
+          ...(pnr ? { pnr } : {}),
+          passengerReference: passengerReference || null,
+          ticketStatus: { not: "CANCELLED" },
+        },
+      });
+      if (existing) {
+        return res
+          .status(200)
+          .json({
+            success: true,
+            data: existing,
+            message: "Ticket already exists for this traveler",
+          });
+      }
+    }
+
+    const ticket = await prisma.trainTicket.create({
+      data: {
+        tenantId: targetTenantId,
+        bookingId: targetBookingId,
+        travelerName,
+        passengerReference: passengerReference || null,
+        pnr: pnr || null,
+        trainName: trainName || null,
+        trainNumber: trainNumber || null,
+        journeyDate: journeyDate ? new Date(journeyDate) : null,
+        sourceStation: sourceStation || null,
+        destinationStation: destinationStation || null,
+        coach: coach || null,
+        seatNumber: seatNumber || null,
+        berthType: berthType || null,
+        ticketStatus: req.body.ticketStatus || "PENDING",
+        approvalStatus: "DRAFT",
+        isLocked: false,
+        ticketAmount: new Prisma.Decimal(actualCost),
+        expectedTicketAmount: new Prisma.Decimal(expectedCost),
+        varianceAmount: new Prisma.Decimal(variance),
+        financeStatus: req.body.financeStatus || "PENDING_VERIFICATION",
+        paidBy: paidBy || "COMPANY",
+        fareBreakdown: fareBreakdown || null,
+        amountMode: amountMode || null,
+        refundAmount: new Prisma.Decimal(0),
+        internalNote: internalNote || null,
+        ticketBookingPerson: ticketBookingPerson || null,
+      },
+    });
+
+    await logHistory(ticket.id, "CREATE", req);
+
+    return res
+      .status(201)
+      .json({
+        success: true,
+        data: ticket,
+        message: "Ticket created successfully",
+      });
+  } catch (err) {
+    console.error("createTicket error:", err);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to create ticket",
+        details: err.message,
+      });
+  }
+};
+
+/**
+ * POST /api/train-tickets/booking/:bookingId/auto-generate
+ * Auto-generates departure + return tickets for all passengers in a booking.
+ * Reads passenger name/age/gender from booking.passengers JSON.
+ * Reads train details from active templates matched to the booking's trip + departureDate.
+ * Sales person only needs to fill PNR and status afterwards.
+ */
+exports.autoGenerateTickets = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const isOwner = await checkBookingOwnership(bookingId, req.user);
+    if (!isOwner) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden: You do not own this booking",
+        });
+    }
+
+    // Fetch the booking with passengers and Trip's trainTicketTemplate
+    const booking = await prisma.booking.findFirst({
+      where: {
+        OR: [{ id: String(bookingId) }, { bookingId: String(bookingId) }],
+        tenantId: req.user.tenantId,
+      },
+      include: {
+        tripRef: {
+          select: {
+            id: true,
+            title: true,
+            trainTicketTemplate: true,
+          },
+        },
+      },
+    });
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    }
+
+    const targetBookingId = booking.bookingId;
+
+    // Resolve Trip Train Ticket Template
+    let tripTpl = booking.tripRef?.trainTicketTemplate;
+    if (typeof tripTpl === "string") {
+      try {
+        tripTpl = JSON.parse(tripTpl);
+      } catch (_) {}
+    }
+
+    // Resolve matching class tier (e.g. SL vs 3A)
+    let selectedTier = tripTpl;
+    const targetClass = (booking.packageType || booking.travelClass || "").toUpperCase();
+    if (Array.isArray(tripTpl?.tiers) && tripTpl.tiers.length > 0) {
+      if (targetClass) {
+        selectedTier =
+          tripTpl.tiers.find(
+            (t) =>
+              t.classCode?.toUpperCase() === targetClass ||
+              (targetClass.includes("SLEEP") && t.classCode === "SL") ||
+              (targetClass.includes("3A") && t.classCode === "3A") ||
+              (targetClass.includes("2A") && t.classCode === "2A") ||
+              (targetClass.includes("3E") && t.classCode === "3E") ||
+              t.name?.toUpperCase().includes(targetClass),
+          ) || tripTpl.tiers[0];
+      } else {
+        selectedTier = tripTpl.tiers[0];
+      }
+    }
+
+    const depTmpl = selectedTier?.departureJourney;
+    const retTmpl = selectedTier?.returnJourney;
+
+    // Parse passengers list safely
+    let passengers = [];
+    if (booking.passengers) {
+      if (Array.isArray(booking.passengers)) {
+        passengers = booking.passengers;
+      } else if (
+        typeof booking.passengers === "object" &&
+        Array.isArray(booking.passengers.persons)
+      ) {
+        passengers = booking.passengers.persons;
+      } else if (typeof booking.passengers === "string") {
+        try {
+          const parsed = JSON.parse(booking.passengers);
+          passengers = Array.isArray(parsed)
+            ? parsed
+            : parsed.persons || [];
+        } catch (e) {}
+      }
+    }
+
+    if (!passengers || passengers.length === 0) {
+      // Fallback to main booker
+      passengers = [
+        {
+          name: booking.fullName || booking.name,
+          age: booking.age,
+          gender: booking.gender,
+          phone: booking.mobile || booking.phone,
+        },
+      ];
+    }
+
+    if (passengers.length === 0) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "No passengers found in this booking",
+        });
+    }
+
+    // Check for already-existing tickets to avoid duplicates
+    const existingTickets = await prisma.trainTicket.findMany({
+      where: { bookingId: targetBookingId, tenantId: req.user.tenantId },
+      select: {
+        travelerName: true,
+        sourceStation: true,
+        destinationStation: true,
+        passengerReference: true,
+      },
+    });
+    const existingKey = (name, src, dst, ref) =>
+      `${(name || "").trim().toLowerCase()}|${(src || "").toLowerCase()}|${(dst || "").toLowerCase()}|${(ref || "").toLowerCase()}`;
+    const existingSet = new Set(
+      existingTickets.map((t) =>
+        existingKey(t.travelerName, t.sourceStation, t.destinationStation, t.passengerReference),
+      ),
+    );
+
+    const createdTickets = [];
+    const skippedCount = { value: 0 };
+
+    for (const passenger of passengers) {
+      const pName = (passenger.name || passenger.fullName || "").trim();
+      if (!pName) continue;
+
+      const pAge = passenger.age ? String(passenger.age) : null;
+      const pGender = passenger.gender || null;
+      const passengerRef =
+        pAge && pGender
+          ? `${pGender}, Age ${pAge}`
+          : pAge
+            ? `Age ${pAge}`
+            : pGender || null;
+
+      // 1. DEPARTURE TICKET
+      const depKey = existingKey(
+        pName,
+        depTmpl?.boardingStation || "Departure",
+        depTmpl?.destination || "",
+        "DEPARTURE",
+      );
+      if (!existingSet.has(depKey)) {
+        const depCost = depTmpl?.expectedCost ? Number(depTmpl.expectedCost) : 0;
+        const ticket = await prisma.trainTicket.create({
+          data: {
+            tenantId: req.user.tenantId,
+            bookingId: targetBookingId,
+            travelerName: pName,
+            passengerReference: "DEPARTURE",
+            trainName: depTmpl?.trainName || null,
+            trainNumber: depTmpl?.trainNumber || null,
+            journeyDate: booking.departureDate ? new Date(booking.departureDate) : null,
+            sourceStation: depTmpl?.boardingStation || null,
+            destinationStation: depTmpl?.destination || null,
+            coach: depTmpl?.class || null,
+            berthType: depTmpl?.quota || null,
+            ticketStatus: "PENDING",
+            approvalStatus: "DRAFT",
+            isLocked: false,
+            ticketAmount: new Prisma.Decimal(depCost),
+            expectedTicketAmount: new Prisma.Decimal(depCost),
+            varianceAmount: new Prisma.Decimal(0),
+            financeStatus: "PENDING_VERIFICATION",
+            paidBy: "COMPANY",
+            refundAmount: new Prisma.Decimal(0),
+            internalNote: depTmpl
+              ? `Auto-generated from Trip Template: ${depTmpl.trainName || depTmpl.trainNumber || "Train"}. Class: ${depTmpl.class || "SL"}`
+              : `DEPARTURE ticket — auto-generated. Passenger: ${passengerRef || "N/A"}`,
+          },
+        });
+        await logHistory(ticket.id, "CREATE", req, {
+          notes: `Auto-generated departure ticket from Trip Template. Expected: ₹${depCost}`,
+        });
+        createdTickets.push(ticket);
+        existingSet.add(depKey);
+      } else {
+        skippedCount.value++;
+      }
+
+      // 2. RETURN TICKET
+      const retKey = existingKey(
+        pName,
+        retTmpl?.boardingStation || "Return",
+        retTmpl?.destination || "",
+        "RETURN",
+      );
+      if (!existingSet.has(retKey)) {
+        const retCost = retTmpl?.expectedCost ? Number(retTmpl.expectedCost) : 0;
+        const ticket = await prisma.trainTicket.create({
+          data: {
+            tenantId: req.user.tenantId,
+            bookingId: targetBookingId,
+            travelerName: pName,
+            passengerReference: "RETURN",
+            trainName: retTmpl?.trainName || null,
+            trainNumber: retTmpl?.trainNumber || null,
+            journeyDate: booking.returnDate ? new Date(booking.returnDate) : null,
+            sourceStation: retTmpl?.boardingStation || null,
+            destinationStation: retTmpl?.destination || null,
+            coach: retTmpl?.class || null,
+            berthType: retTmpl?.quota || null,
+            ticketStatus: "PENDING",
+            approvalStatus: "DRAFT",
+            isLocked: false,
+            ticketAmount: new Prisma.Decimal(retCost),
+            expectedTicketAmount: new Prisma.Decimal(retCost),
+            varianceAmount: new Prisma.Decimal(0),
+            financeStatus: "PENDING_VERIFICATION",
+            paidBy: "COMPANY",
+            refundAmount: new Prisma.Decimal(0),
+            internalNote: retTmpl
+              ? `Auto-generated from Trip Template: ${retTmpl.trainName || retTmpl.trainNumber || "Train"}. Class: ${retTmpl.class || "SL"}`
+              : `RETURN ticket — auto-generated. Passenger: ${passengerRef || "N/A"}`,
+          },
+        });
+        await logHistory(ticket.id, "CREATE", req, {
+          notes: `Auto-generated return ticket from Trip Template. Expected: ₹${retCost}`,
+        });
+        createdTickets.push(ticket);
+        existingSet.add(retKey);
+      } else {
+        skippedCount.value++;
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `Generated ${createdTickets.length} tickets from Trip Template (${skippedCount.value} existing skipped)`,
+      data: {
+        created: createdTickets.length,
+        skipped: skippedCount.value,
+        tickets: createdTickets,
+      },
+    });
+  } catch (err) {
+    console.error("autoGenerateTickets error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to auto-generate tickets",
+      details: err.message,
+    });
+  }
+};
+
+/**
+ * POST /api/train-tickets/booking/:bookingId/sync-template
+ * Synchronizes existing tickets of a booking with the Trip's configured Train Ticket Template.
+ * Updates blank stations, train names, numbers, travel classes, and expected costs.
+ */
+exports.syncBookingTicketsWithTemplate = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await prisma.booking.findFirst({
+      where: {
+        OR: [{ id: String(bookingId) }, { bookingId: String(bookingId) }],
+        tenantId: req.user.tenantId,
+      },
+      include: {
+        tripRef: {
+          select: {
+            id: true,
+            title: true,
+            trainTicketTemplate: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    let tripTpl = booking.tripRef?.trainTicketTemplate;
+    if (!tripTpl) {
+      return res.status(400).json({
+        success: false,
+        message: "No Train Ticket Template configured for this trip",
+      });
+    }
+
+    if (typeof tripTpl === "string") {
+      try {
+        tripTpl = JSON.parse(tripTpl);
+      } catch (_) {}
+    }
+
+    // Resolve matching tier
+    let selectedTier = tripTpl;
+    const targetClass = (booking.packageType || booking.travelClass || "").toUpperCase();
+    if (Array.isArray(tripTpl?.tiers) && tripTpl.tiers.length > 0) {
+      if (targetClass) {
+        selectedTier =
+          tripTpl.tiers.find(
+            (t) =>
+              t.classCode?.toUpperCase() === targetClass ||
+              (targetClass.includes("SLEEP") && t.classCode === "SL") ||
+              (targetClass.includes("3A") && t.classCode === "3A") ||
+              (targetClass.includes("2A") && t.classCode === "2A") ||
+              (targetClass.includes("3E") && t.classCode === "3E") ||
+              t.name?.toUpperCase().includes(targetClass),
+          ) || tripTpl.tiers[0];
+      } else {
+        selectedTier = tripTpl.tiers[0];
+      }
+    }
+
+    const depTmpl = selectedTier?.departureJourney;
+    const retTmpl = selectedTier?.returnJourney;
+
+    // Fetch existing tickets
+    const existingTickets = await prisma.trainTicket.findMany({
+      where: {
+        bookingId: booking.bookingId,
+        tenantId: req.user.tenantId,
+        ticketStatus: { not: "CANCELLED" },
+      },
+    });
+
+    let updatedCount = 0;
+    for (const t of existingTickets) {
+      const isReturn = t.passengerReference === "RETURN";
+      const tmpl = isReturn ? retTmpl : depTmpl;
+      if (!tmpl) continue;
+
+      const expCost = Number(tmpl.expectedCost) || 0;
+      const currentActual = Number(t.ticketAmount) || 0;
+      const newActual = currentActual > 0 ? currentActual : expCost;
+      const variance = newActual - expCost;
+
+      await prisma.trainTicket.update({
+        where: { id: t.id },
+        data: {
+          sourceStation: t.sourceStation || tmpl.boardingStation || null,
+          destinationStation: t.destinationStation || tmpl.destination || null,
+          trainName: t.trainName || tmpl.trainName || null,
+          trainNumber: t.trainNumber || tmpl.trainNumber || null,
+          coach: t.coach || tmpl.class || null,
+          ticketAmount: new Prisma.Decimal(newActual),
+          expectedTicketAmount: new Prisma.Decimal(expCost),
+          varianceAmount: new Prisma.Decimal(variance),
+        },
+      });
+      updatedCount++;
+    }
+
+    return res.json({
+      success: true,
+      message: `Successfully synchronized ${updatedCount} tickets with "${booking.tripRef?.title || "Trip"}" template!`,
+      data: { updatedCount },
+    });
+  } catch (err) {
+    console.error("syncBookingTicketsWithTemplate error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to sync tickets with template",
+      details: err.message,
+    });
+  }
+};
+
+/**
+ * PATCH /api/train-tickets/:ticketId
+ */
+exports.updateTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden: You do not own this ticket",
+        });
+    }
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId, tenantId: req.user.tenantId },
+    });
+
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    if (ticket.isLocked) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Locked: Approved tickets cannot be edited",
+        });
+    }
+
+    const {
+      travelerName,
+      passengerReference,
+      pnr,
+      trainName,
+      trainNumber,
+      journeyDate,
+      sourceStation,
+      destinationStation,
+      coach,
+      seatNumber,
+      berthType,
+      ticketAmount,
+      paidBy,
+      fareBreakdown,
+      amountMode,
+      internalNote,
+      ticketBookingPerson,
+      ticketStatus,
+      railwayCancellationCharge,
+      ycCancellationCharge,
+      refundStatus,
+      refundAmount,
+    } = req.body;
+
+    const updateData = {};
+    if (travelerName !== undefined) updateData.travelerName = travelerName;
+    if (passengerReference !== undefined)
+      updateData.passengerReference = passengerReference;
+    if (pnr !== undefined) updateData.pnr = pnr;
+    if (trainName !== undefined) updateData.trainName = trainName;
+    if (trainNumber !== undefined) updateData.trainNumber = trainNumber;
+    if (journeyDate !== undefined)
+      updateData.journeyDate = journeyDate ? new Date(journeyDate) : null;
+    if (sourceStation !== undefined) updateData.sourceStation = sourceStation;
+    if (destinationStation !== undefined)
+      updateData.destinationStation = destinationStation;
+    if (coach !== undefined) updateData.coach = coach;
+    if (seatNumber !== undefined) updateData.seatNumber = seatNumber;
+    if (berthType !== undefined) updateData.berthType = berthType;
+    if (ticketAmount !== undefined)
+      updateData.ticketAmount = new Prisma.Decimal(ticketAmount || 0);
+    if (paidBy !== undefined) updateData.paidBy = paidBy;
+    if (fareBreakdown !== undefined) updateData.fareBreakdown = fareBreakdown;
+    if (railwayCancellationCharge !== undefined)
+      updateData.railwayCancellationCharge = new Prisma.Decimal(railwayCancellationCharge || 0);
+    if (ycCancellationCharge !== undefined)
+      updateData.ycCancellationCharge = new Prisma.Decimal(ycCancellationCharge || 0);
+    if (refundStatus !== undefined) updateData.refundStatus = refundStatus;
+    if (refundAmount !== undefined)
+      updateData.refundAmount = new Prisma.Decimal(refundAmount || 0);
+    if (amountMode !== undefined) updateData.amountMode = amountMode;
+    if (internalNote !== undefined) updateData.internalNote = internalNote;
+    if (ticketBookingPerson !== undefined)
+      updateData.ticketBookingPerson = ticketBookingPerson;
+    if (ticketStatus !== undefined) updateData.ticketStatus = ticketStatus;
+
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: updateData,
+    });
+
+    await logHistory(ticketId, "EDIT", req, {
+      fromStatus: ticket.ticketStatus,
+      toStatus: updated.ticketStatus,
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket updated successfully",
+    });
+  } catch (err) {
+    console.error("updateTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/submit
+ */
+exports.submitTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    if (ticket.isLocked) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Locked: Approved tickets cannot be submitted",
+        });
+    }
+
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: {
+        approvalStatus: "SUBMITTED",
+        submittedByAdminId: req.user.id,
+      },
+    });
+
+    await logHistory(ticketId, "SUBMIT", req, {
+      fromApproval: ticket.approvalStatus,
+      toApproval: "SUBMITTED",
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket submitted for approval",
+    });
+  } catch (err) {
+    console.error("submitTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to submit ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/approve
+ */
+exports.approveTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    // Check permission to approve tickets
+    if (!req.hasPermission("tickets.approve")) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden: Insufficient permissions to approve tickets",
+        });
+    }
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    // Submitter cannot approve own ticket
+    if (ticket.submittedByAdminId === req.user.id) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Double Approver Violation: Submitter cannot approve their own ticket",
+        });
+    }
+
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: {
+        approvalStatus: "APPROVED",
+        isLocked: true,
+      },
+    });
+
+    await logHistory(ticketId, "APPROVE", req, {
+      fromApproval: ticket.approvalStatus,
+      toApproval: "APPROVED",
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket approved and locked",
+    });
+  } catch (err) {
+    console.error("approveTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to approve ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/reject
+ */
+exports.rejectTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    // Check permission to reject tickets
+    if (!req.hasPermission("tickets.approve")) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden: Insufficient permissions to reject tickets",
+        });
+    }
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    // Submitter cannot reject own ticket
+    if (ticket.submittedByAdminId === req.user.id) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Double Approver Violation: Submitter cannot reject their own ticket",
+        });
+    }
+
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: {
+        approvalStatus: "REJECTED",
+      },
+    });
+
+    await logHistory(ticketId, "REJECT", req, {
+      fromApproval: ticket.approvalStatus,
+      toApproval: "REJECTED",
+      notes: req.body.notes || null,
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket rejected",
+    });
+  } catch (err) {
+    console.error("rejectTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to reject ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/reopen
+ */
+exports.reopenTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { reason } = req.body;
+
+    if (!reason || reason.trim() === "") {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Reopen requires a mandatory reason",
+        });
+    }
+
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    // Check permission to reopen tickets
+    if (
+      !req.hasPermission("tickets.reopen") &&
+      !req.hasPermission("tickets.approve")
+    ) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden: Insufficient permissions to reopen tickets",
+        });
+    }
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: {
+        approvalStatus: "REOPENED",
+        isLocked: false,
+        reopenReason: reason,
+      },
+    });
+
+    await logHistory(ticketId, "REOPEN", req, {
+      fromApproval: ticket.approvalStatus,
+      toApproval: "REOPENED",
+      notes: reason,
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket reopened successfully",
+    });
+  } catch (err) {
+    console.error("reopenTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to reopen ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/cancel
+ */
+exports.cancelTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const {
+      reason,
+      railwayCancellationCharge,
+      ycCancellationCharge,
+      refundAmount,
+      notes,
+    } = req.body;
+
+    if (!reason || reason.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancel requires a cancellation reason",
+      });
+    }
+
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    const rCharge = Number(railwayCancellationCharge || 0);
+    const yCharge = Number(ycCancellationCharge || 0);
+    const origAmount = Number(ticket.ticketAmount || 0);
+    const calculatedRefund =
+      refundAmount !== undefined
+        ? Number(refundAmount)
+        : Math.max(0, origAmount - rCharge - yCharge);
+
+    // Cancelled ticket is never deleted. All fields and historical numbers are preserved.
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: {
+        ticketStatus: "CANCELLED",
+        cancellationReason: reason,
+        railwayCancellationCharge: new Prisma.Decimal(rCharge),
+        ycCancellationCharge: new Prisma.Decimal(yCharge),
+        refundAmount: new Prisma.Decimal(calculatedRefund),
+        refundStatus: calculatedRefund > 0 ? "PENDING" : "NONE",
+        internalNote: notes
+          ? `${ticket.internalNote ? ticket.internalNote + " | " : ""}${notes}`
+          : ticket.internalNote,
+      },
+    });
+
+    await logHistory(ticketId, "CANCEL", req, {
+      fromStatus: ticket.ticketStatus,
+      toStatus: "CANCELLED",
+      notes: `Reason: ${reason}. Railway Charge: ₹${rCharge}, YC Charge: ₹${yCharge}, Refund Due: ₹${calculatedRefund}`,
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket cancelled successfully",
+    });
+  } catch (err) {
+    console.error("cancelTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to cancel ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/rebook
+ */
+exports.rebookTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const isOwner = await checkTicketOwnership(ticketId, req.user);
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    const oldTicket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!oldTicket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    const {
+      reason,
+      newTrainName,
+      newTrainNumber,
+      newJourneyDate,
+      newSource,
+      newDestination,
+      newCoach,
+      newSeat,
+      newClass,
+      newTicketAmount,
+      railwayCancellationCharge,
+      ycCancellationCharge,
+      notes,
+    } = req.body;
+
+    const rCharge = Number(railwayCancellationCharge || 0);
+    const yCharge = Number(ycCancellationCharge || 0);
+    const oldCost = Number(oldTicket.ticketAmount || 0);
+    const oldRefund = Math.max(0, oldCost - rCharge - yCharge);
+
+    const newCost = Number(newTicketAmount !== undefined ? newTicketAmount : oldCost);
+    // Net additional cost on reticketing = newCost - oldRefund
+    const netAdjustment = newCost - oldRefund;
+
+    // 1. Mark old ticket as CANCELLED with deduction parameters if not already
+    await prisma.trainTicket.update({
+      where: { id: oldTicket.id },
+      data: {
+        ticketStatus: "CANCELLED",
+        cancellationReason: reason || "Reticketed to new schedule/train",
+        railwayCancellationCharge: new Prisma.Decimal(rCharge),
+        ycCancellationCharge: new Prisma.Decimal(yCharge),
+        refundAmount: new Prisma.Decimal(oldRefund),
+        refundStatus: oldRefund > 0 ? "PENDING" : "NONE",
+      },
+    });
+
+    // 2. Rebook creates a new ticket row linked to oldTicket
+    const newTicket = await prisma.trainTicket.create({
+      data: {
+        tenantId: req.user.tenantId,
+        bookingId: oldTicket.bookingId,
+        travelerName: oldTicket.travelerName,
+        passengerReference: oldTicket.passengerReference,
+        pnr: null,
+        trainName: newTrainName || oldTicket.trainName,
+        trainNumber: newTrainNumber || oldTicket.trainNumber,
+        journeyDate: newJourneyDate ? new Date(newJourneyDate) : oldTicket.journeyDate,
+        sourceStation: newSource || oldTicket.sourceStation,
+        destinationStation: newDestination || oldTicket.destinationStation,
+        coach: newCoach || null,
+        seatNumber: newSeat || null,
+        berthType: newClass || oldTicket.berthType,
+        ticketStatus: "PENDING",
+        approvalStatus: "DRAFT",
+        isLocked: false,
+        ticketAmount: new Prisma.Decimal(newCost),
+        paidBy: oldTicket.paidBy || "COMPANY",
+        amountMode: oldTicket.amountMode,
+        refundAmount: new Prisma.Decimal(0),
+        reticketAdjustment: new Prisma.Decimal(netAdjustment),
+        supersedesTicketId: oldTicket.id,
+        internalNote: `Reticketed from Ticket ${oldTicket.id.slice(-6)}. Net Adjustment: ₹${netAdjustment}. ${notes || ""}`,
+      },
+    });
+
+    // 3. Link old ticket to new ticket
+    await prisma.trainTicket.update({
+      where: { id: oldTicket.id },
+      data: {
+        supersededByTicketId: newTicket.id,
+      },
+    });
+
+    await logHistory(oldTicket.id, "RETICKETED", req, {
+      fromStatus: oldTicket.ticketStatus,
+      toStatus: "CANCELLED",
+      notes: `Superseded by ticket: ${newTicket.id}. Railway Charge: ₹${rCharge}, YC Charge: ₹${yCharge}, Old Refund: ₹${oldRefund}`,
+    });
+    await logHistory(newTicket.id, "CREATE", req, {
+      notes: `Supersedes ticket: ${oldTicket.id}. New Cost: ₹${newCost}, Net Adjustment: ₹${netAdjustment}`,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        oldTicketId: oldTicket.id,
+        newTicket,
+        financials: {
+          originalCost: oldCost,
+          railwayCancellationCharge: rCharge,
+          ycCancellationCharge: yCharge,
+          refundDue: oldRefund,
+          newCost,
+          netAdjustment,
+        },
+      },
+      message: "Ticket reticketed successfully",
+    });
+  } catch (err) {
+    console.error("rebookTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to rebook ticket" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/:ticketId/record-refund
+ */
+exports.recordRefund = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { refundStatus, transactionRef, amount, notes } = req.body;
+
+    const ticket = await prisma.trainTicket.findUnique({
+      where: { id: ticketId },
+      include: { booking: true },
+    });
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    const updated = await prisma.trainTicket.update({
+      where: { id: ticketId },
+      data: {
+        refundStatus: refundStatus || "COMPLETED",
+        refundCompletedAt: refundStatus === "COMPLETED" ? new Date() : null,
+        refundTransactionRef: transactionRef || null,
+        refundAmount: amount !== undefined ? new Prisma.Decimal(amount) : ticket.refundAmount,
+      },
+    });
+
+    await logHistory(ticketId, "REFUND_UPDATE", req, {
+      notes: `Refund status updated to ${refundStatus}. Ref: ${transactionRef || "N/A"}. Amount: ₹${Number(updated.refundAmount)}. ${notes || ""}`,
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Ticket refund recorded successfully",
+    });
+  } catch (err) {
+    console.error("recordRefund error:", err);
+    return res.status(500).json({ success: false, message: "Failed to record ticket refund" });
+  }
+};
+
+/**
+ * GET /api/train-tickets/finance-summary
+ */
+exports.getFinanceSummary = async (req, res) => {
+  try {
+    const { tripId, departureDate, status, paidBy } = req.query;
+    const tenantId = req.user?.tenantId || "default";
+
+    const where = {
+      tenantId,
+      ...(paidBy ? { paidBy } : {}),
+      ...(status ? { ticketStatus: status } : {}),
+    };
+
+    if (tripId || departureDate) {
+      let tripIds = [];
+      if (tripId) {
+        const trip = await prisma.trip.findFirst({
+          where: {
+            OR: [
+              { id: tripId },
+              { slug: tripId },
+              { shortName: tripId },
+            ],
+          },
+          select: { id: true, slug: true },
+        });
+        tripIds = [tripId, trip?.id, trip?.slug].filter(Boolean);
+      }
+
+      let dateFilter = undefined;
+      if (departureDate) {
+        const dateStr = String(departureDate).substring(0, 10);
+        const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
+        const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
+        dateFilter = { gte: startOfDay, lte: endOfDay };
+      }
+
+      where.booking = {
+        ...(tripIds.length > 0 ? { tripId: { in: tripIds } } : {}),
+        ...(dateFilter ? { departureDate: dateFilter } : {}),
+      };
+    }
+
+    const tickets = await prisma.trainTicket.findMany({
+      where,
+      include: {
+        booking: {
+          select: {
+            id: true,
+            bookingId: true,
+            tripId: true,
+            tripName: true,
+            departureDate: true,
+            fullName: true,
+            name: true,
+            totalAmount: true,
+            advancePaid: true,
+            remainingAmount: true,
+          },
+        },
+        supersedes: {
+          select: {
+            id: true,
+            pnr: true,
+            ticketAmount: true,
+            ticketStatus: true,
+          },
+        },
+        supersededBy: {
+          select: {
+            id: true,
+            pnr: true,
+            ticketAmount: true,
+            ticketStatus: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Financial Aggregations
+    let totalCost = 0;
+    let confirmedCost = 0;
+    let pendingCost = 0;
+    let cancelledCost = 0;
+    let railwayCancellationCharges = 0;
+    let ycCancellationCharges = 0;
+    let refundsPending = 0;
+    let refundsCompleted = 0;
+    let companyPaidCost = 0;
+    let customerPaidCost = 0;
+
+    (tickets || []).forEach((t) => {
+      const amt = Number(t.ticketAmount || 0);
+      const rCharge = Number(t.railwayCancellationCharge || 0);
+      const yCharge = Number(t.ycCancellationCharge || 0);
+      const refAmt = Number(t.refundAmount || 0);
+      const isCompany = t.paidBy !== "CUSTOMER";
+
+      totalCost += amt;
+      if (isCompany) companyPaidCost += amt;
+      else customerPaidCost += amt;
+
+      if (t.ticketStatus === "CONFIRMED" || t.ticketStatus === "BOOKED") {
+        confirmedCost += amt;
+      } else if (t.ticketStatus === "CANCELLED") {
+        cancelledCost += amt;
+        railwayCancellationCharges += rCharge;
+        ycCancellationCharges += yCharge;
+        if (t.refundStatus === "COMPLETED") {
+          refundsCompleted += refAmt;
+        } else if (t.refundStatus === "PENDING" || t.refundStatus === "INITIATED") {
+          refundsPending += refAmt;
+        }
+      } else {
+        pendingCost += amt;
+      }
+    });
+
+    const netCompanyCost = confirmedCost + railwayCancellationCharges + ycCancellationCharges - refundsCompleted;
+
+    return res.json({
+      success: true,
+      data: {
+        summary: {
+          totalTickets: (tickets || []).length,
+          totalCost,
+          confirmedCost,
+          pendingCost,
+          cancelledCost,
+          railwayCancellationCharges,
+          ycCancellationCharges,
+          refundsPending,
+          refundsCompleted,
+          companyPaidCost,
+          customerPaidCost,
+          netCompanyCost,
+        },
+        tickets: tickets || [],
+      },
+    });
+  } catch (err) {
+    console.error("getFinanceSummary error:", err);
+    return res.status(500).json({ success: false, message: "Failed to fetch ticketing finance summary" });
+  }
+};
+
+/**
+ * POST /api/train-tickets/bulk-update
+ */
+exports.bulkUpdateTickets = async (req, res) => {
+  try {
+    const {
+      ticketIds = [],
+      status,
+      trainNumber,
+      journeyDate,
+      pnr,
+      coach,
+      seatNumber,
+      berthType,
+      notes,
+    } = req.body;
+
+    if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "ticketIds is required and must not be empty",
+        });
+    }
+
+    const uniqueTicketIds = [...new Set(ticketIds)];
+    const eligibleWhere = {
+      id: { in: uniqueTicketIds },
+      tenantId: req.user.tenantId,
+      isLocked: false,
+    };
+    if (
+      !req.hasPermission("tickets.bulk") &&
+      !req.hasPermission("tickets.approve") &&
+      !req.hasPermission("tickets.edit")
+    ) {
+      return res.json({
+        success: true,
+        data: { updatedCount: 0, tickets: [] },
+        message: "0 tickets updated successfully",
+      });
+    }
+
+    const eligibleTickets = await prisma.trainTicket.findMany({
+      where: eligibleWhere,
+      select: {
+        id: true,
+        ticketStatus: true,
+        approvalStatus: true,
+        bookingId: true,
+        travelerName: true,
+      },
+    });
+    const eligibleIds = eligibleTickets.map((ticket) => ticket.id);
+
+    const updateData = {};
+    if (status !== undefined) updateData.ticketStatus = status;
+    if (trainNumber !== undefined) updateData.trainNumber = trainNumber;
+    if (journeyDate !== undefined)
+      updateData.journeyDate = journeyDate ? new Date(journeyDate) : null;
+    if (pnr !== undefined) updateData.pnr = pnr;
+    if (coach !== undefined) updateData.coach = coach;
+    if (seatNumber !== undefined) updateData.seatNumber = seatNumber;
+    if (berthType !== undefined) updateData.berthType = berthType;
+
+    let updatedTickets = [];
+    if (eligibleIds.length > 0) {
+      updatedTickets = await prisma.$transaction(async (tx) => {
+        await tx.trainTicket.updateMany({
+          where: { id: { in: eligibleIds } },
+          data: updateData,
+        });
+        await tx.trainTicketHistory.createMany({
+          data: eligibleTickets.map((ticket) => ({
+            ticketId: ticket.id,
+            action: "BULK_UPDATE",
+            fromStatus: ticket.ticketStatus,
+            toStatus: status || ticket.ticketStatus,
+            toApproval: ticket.approvalStatus,
+            notes: notes || "Bulk updated fields",
+            performedById: req.user.id,
+          })),
+        });
+        return tx.trainTicket.findMany({ where: { id: { in: eligibleIds } } });
+      });
+
+      // Log to Booking Activity Log
+      const bookingsAffected = [
+        ...new Set(eligibleTickets.map((t) => t.bookingId)),
+      ];
+      const dbBookings = await prisma.booking.findMany({
+        where: {
+          bookingId: { in: bookingsAffected },
+          tenantId: req.user.tenantId,
+        },
+        select: { id: true, bookingId: true },
+      });
+      const bMap = new Map(dbBookings.map((b) => [b.bookingId, b.id]));
+
+      for (const bId of bookingsAffected) {
+        const tNames = eligibleTickets
+          .filter((t) => t.bookingId === bId)
+          .map((t) => t.travelerName)
+          .join(", ");
+        const cuid = bMap.get(bId);
+        if (cuid) {
+          await logBookingActivity({
+            bookingId: cuid,
+            action: "TRAIN_TICKET",
+            details: `Bulk updated train tickets for passengers: ${tNames} (${notes || "Bulk updated fields"})`,
+            performedByAdminId: req.user.id,
+          });
+        }
+      }
+
+      const inputOrder = new Map(
+        uniqueTicketIds.map((id, index) => [id, index]),
+      );
+      updatedTickets.sort(
+        (a, b) => inputOrder.get(a.id) - inputOrder.get(b.id),
+      );
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        updatedCount: updatedTickets.length,
+        tickets: updatedTickets,
+      },
+      message: `${updatedTickets.length} tickets updated successfully`,
+    });
+  } catch (err) {
+    console.error("bulkUpdateTickets error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to bulk update tickets" });
+  }
+};
+
+/**
+ * GET /api/train-tickets/approvals
+ */
+exports.getApprovalsQueue = async (req, res) => {
+  const start = Date.now();
+  try {
+    const authStart = Date.now();
+    const role = req.user.role;
+    const userId = req.user.id;
+    const authDuration = Date.now() - authStart;
+
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = [25, 50, 100].includes(requestedLimit) ? requestedLimit : 25;
+    const where = {
+      tenantId: req.user.tenantId,
+      approvalStatus:
+        req.query.approvalStatus && req.query.approvalStatus !== "ALL"
+          ? req.query.approvalStatus
+          : "SUBMITTED",
+    };
+
+    if (req.query.ticketStatus && req.query.ticketStatus !== "ALL") {
+      where.ticketStatus = req.query.ticketStatus;
+    }
+    if (req.query.urgent === "true") {
+      where.journeyDate = {
+        gte: new Date(),
+        lte: new Date(Date.now() + 10 * 86400000),
+      };
+      where.ticketStatus = { in: ["PENDING", "WAITLISTED", "RAC"] };
+    }
+    if (req.query.search) {
+      where.OR = [
+        { travelerName: { contains: req.query.search, mode: "insensitive" } },
+        { trainName: { contains: req.query.search, mode: "insensitive" } },
+        { trainNumber: { contains: req.query.search, mode: "insensitive" } },
+        {
+          booking: {
+            bookingId: { contains: req.query.search, mode: "insensitive" },
+          },
+        },
+        {
+          booking: {
+            tripName: { contains: req.query.search, mode: "insensitive" },
+          },
+        },
+      ];
+    }
+
+    // Sales can only view their own booking tickets
+    if (role === "sales") {
+      where.booking = { salesAdminId: userId };
+    }
+
+    const cacheKey = `ticket_count_${JSON.stringify(where)}`;
+    let totalPromise;
+    const cachedCount = ticketCountCache.get(cacheKey);
+    if (cachedCount && Date.now() < cachedCount.expiresAt) {
+      totalPromise = Promise.resolve(cachedCount.count);
+    } else {
+      totalPromise = prisma.trainTicket.count({ where }).then((c) => {
+        ticketCountCache.set(cacheKey, {
+          count: c,
+          expiresAt: Date.now() + 30000,
+        });
+        return c;
+      });
+    }
+
+    const queryStart = Date.now();
+    const [totalCount, tickets] = await Promise.all([
+      totalPromise,
+      prisma.trainTicket.findMany({
+        where,
+        select: {
+          id: true,
+          travelerName: true,
+          ticketStatus: true,
+          approvalStatus: true,
+          trainName: true,
+          trainNumber: true,
+          journeyDate: true,
+          sourceStation: true,
+          destinationStation: true,
+          submittedByAdminId: true,
+          updatedAt: true,
+          createdAt: true,
+          booking: {
+            select: {
+              bookingId: true,
+              name: true,
+              fullName: true,
+              tripName: true,
+              salesAdminId: true,
+            },
+          },
+          submittedBy: { select: { id: true, name: true } },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { updatedAt: "desc" },
+      }),
+    ]);
+    const queryDuration = Date.now() - queryStart;
+
+    const resBody = {
+      success: true,
+      data: tickets,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+      },
+    };
+
+    return res.json(resBody);
+  } catch (err) {
+    console.error("getApprovalsQueue error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch approvals queue" });
+  }
+};
+
+/**
+ * GET /api/train-tickets/alerts
+ */
+exports.getAlerts = async (req, res) => {
+  try {
+    // Run alert scanner logic before serving
+    await runAlertScanner(req.user.tenantId);
+
+    const where = { tenantId: req.user.tenantId };
+    if (req.user.role === "sales") {
+      where.bookingId = {
+        in: await prisma.booking
+          .findMany({
+            where: { salesAdminId: req.user.id },
+            select: { bookingId: true },
+          })
+          .then((list) => list.map((b) => b.bookingId)),
+      };
+    }
+
+    const alerts = await prisma.trainTicketAlert.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({ success: true, data: alerts });
+  } catch (err) {
+    console.error("getAlerts error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch alerts" });
+  }
+};
+// Alert scanner logic
+async function runAlertScanner(tenantId) {
+  try {
+    const now = new Date();
+
+    // 1. Pending for 2 days
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const pendingTickets = await prisma.trainTicket.findMany({
+      where: {
+        tenantId,
+        ticketStatus: "PENDING",
+        createdAt: { lte: twoDaysAgo },
+      },
+      include: { booking: true },
+    });
+
+    for (const ticket of pendingTickets) {
+      const dedupeKey = `${ticket.id}`;
+      // Check if dedupe record already exists
+      const existing = await prisma.trainTicketAlert.findUnique({
+        where: {
+          alertType_dedupeKey: {
+            alertType: "PENDING_2_DAYS",
+            dedupeKey,
+          },
+        },
+      });
+
+      if (!existing) {
+        await prisma.trainTicketAlert.create({
+          data: {
+            tenantId,
+            alertType: "PENDING_2_DAYS",
+            dedupeKey,
+            bookingId: ticket.bookingId,
+            ticketId: ticket.id,
+          },
+        });
+      }
+    }
+
+    // 2. Urgent within 10 days
+    const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+    const urgentTickets = await prisma.trainTicket.findMany({
+      where: {
+        tenantId,
+        ticketStatus: { in: ["PENDING", "WAITLISTED", "RAC"] },
+        journeyDate: { gte: now, lte: tenDaysFromNow },
+      },
+    });
+
+    for (const ticket of urgentTickets) {
+      const dedupeKey = `${ticket.id}`;
+      const existing = await prisma.trainTicketAlert.findUnique({
+        where: {
+          alertType_dedupeKey: {
+            alertType: "URGENT_10_DAYS",
+            dedupeKey,
+          },
+        },
+      });
+
+      if (!existing) {
+        await prisma.trainTicketAlert.create({
+          data: {
+            tenantId,
+            alertType: "URGENT_10_DAYS",
+            dedupeKey,
+            bookingId: ticket.bookingId,
+            ticketId: ticket.id,
+          },
+        });
+      }
+    }
+  } catch (err) {
+    console.error("runAlertScanner error:", err);
+  }
+}
+
+/**
+ * Train Templates Management CRUD
+ */
+exports.getTemplates = async (req, res) => {
+  try {
+    const { tripId, departureDate } = req.query;
+    let whereClause = { tenantId: req.user.tenantId, isActive: true };
+
+    if (tripId) {
+      whereClause.tripId = tripId;
+    }
+
+    if (departureDate) {
+      // If departureDate is provided, fetch both TRIP defaults (null) and DEPARTURE overrides (exact date)
+      whereClause.departureDate = { in: [null, new Date(departureDate)] };
+    }
+
+    const templates = await prisma.trainTemplate.findMany({
+      where: whereClause,
+      include: { trip: { select: { id: true, title: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json({ success: true, data: templates });
+  } catch (err) {
+    console.error("getTemplates error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch templates" });
+  }
+};
+
+exports.getEffectiveTemplates = async (req, res) => {
+  try {
+    const { tripId, departureDate } = req.query;
+    if (!tripId) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const tenantId = req.user?.tenantId || "default";
+
+    const parsedDate =
+      departureDate && departureDate !== "undefined" && departureDate !== "null"
+        ? new Date(departureDate)
+        : null;
+
+    const isValidDate = parsedDate && !isNaN(parsedDate.getTime());
+
+    const templates = await prisma.trainTemplate
+      .findMany({
+        where: {
+          tenantId,
+          OR: [{ tripId }, { tripId: null }],
+          isActive: true,
+          ...(isValidDate
+            ? { departureDate: { in: [null, parsedDate] } }
+            : { departureDate: null }),
+        },
+      })
+      .catch((err) => {
+        console.warn("prisma.trainTemplate.findMany fallback:", err);
+        return [];
+      });
+
+    const effectiveTemplates = [];
+    const groups = {};
+    for (const t of templates) {
+      const key = `${t.transportMode}-${(t.source || t.flightOrigin || "").toLowerCase()}-${(t.destination || t.flightDestination || "").toLowerCase()}`;
+      if (!groups[key]) groups[key] = { tripDefaults: [], overrides: [] };
+      if (t.scope === "DEPARTURE") {
+        groups[key].overrides.push(t);
+      } else {
+        groups[key].tripDefaults.push(t);
+      }
+    }
+
+    for (const key in groups) {
+      const { tripDefaults, overrides } = groups[key];
+      if (overrides.length > 0) {
+        effectiveTemplates.push({
+          effectiveTemplate: overrides[0],
+          source: "DEPARTURE_OVERRIDE",
+          tripDefault: tripDefaults[0] || null,
+        });
+      } else if (tripDefaults.length > 0) {
+        effectiveTemplates.push({
+          effectiveTemplate: tripDefaults[0],
+          source: "TRIP_DEFAULT",
+          tripDefault: tripDefaults[0],
+        });
+      }
+    }
+
+    return res.json({ success: true, data: effectiveTemplates });
+  } catch (err) {
+    console.error("getEffectiveTemplates error:", err);
+    return res.json({ success: true, data: [] });
+  }
+};
+
+const validateTransportMode = (body) => {
+  const { transportMode } = body;
+
+  // Clone body to mutate
+  const data = { ...body };
+
+  if (transportMode === "FLIGHT") {
+    if (!data.flightAirline || !data.flightNumber) {
+      throw new Error(
+        "Flight templates require flightAirline and flightNumber",
+      );
+    }
+    // Nullify train fields
+    data.trainName = null;
+    data.trainNumber = null;
+    data.source = null;
+    data.destination = null;
+  } else if (transportMode === "TRAIN") {
+    if (!data.trainName || !data.trainNumber) {
+      throw new Error("Train templates require trainName and trainNumber");
+    }
+    // Nullify flight fields
+    data.flightAirline = null;
+    data.flightNumber = null;
+    data.flightOrigin = null;
+    data.flightDestination = null;
+    data.flightTerminal = null;
+  } else if (transportMode === "BUS") {
+    if (!data.trainName || !data.trainNumber) {
+      throw new Error(
+        "Bus templates require operator (trainName) and route (trainNumber)",
+      );
+    }
+    data.flightAirline = null;
+    data.flightNumber = null;
+    data.flightOrigin = null;
+    data.flightDestination = null;
+    data.flightTerminal = null;
+  }
+
+  return data;
+};
+
+const checkUniqueness = async (
+  tenantId,
+  scope,
+  tripId,
+  departureDate,
+  transportMode,
+  sourceOrOrigin,
+  destOrDest,
+  excludeId = null,
+) => {
+  const where = {
+    tenantId,
+    tripId: tripId || null,
+    scope,
+    transportMode,
+    isActive: true,
+  };
+
+  if (scope === "DEPARTURE") {
+    where.departureDate = new Date(departureDate);
+  }
+
+  if (excludeId) {
+    where.id = { not: excludeId };
+  }
+
+  const existing = await prisma.trainTemplate.findMany({ where });
+
+  // Filter by source/dest loosely since they are split between fields
+  for (const t of existing) {
+    const tSrc = (t.source || t.flightOrigin || "").toLowerCase();
+    const tDest = (t.destination || t.flightDestination || "").toLowerCase();
+    const mSrc = (sourceOrOrigin || "").toLowerCase();
+    const mDest = (destOrDest || "").toLowerCase();
+
+    if (tSrc === mSrc && tDest === mDest) {
+      return true; // Duplicate found
+    }
+  }
+
+  return false;
+};
+
+exports.createTemplate = async (req, res) => {
+  try {
+    const {
+      tripId,
+      departureDate,
+      scope,
+      transportMode,
+      trainName,
+      trainNumber,
+      source,
+      destination,
+      defaultClass,
+      defaultCoach,
+      journeyDate,
+      boardingPoint,
+      droppingPoint,
+      flightAirline,
+      flightNumber,
+      flightOrigin,
+      flightDestination,
+      flightTerminal,
+      baggageGuidance,
+      reportingTime,
+      arrivalTime,
+      waitlistDisclaimer,
+      isActive,
+    } = req.body;
+
+    let actualScope = scope || (departureDate ? "DEPARTURE" : "TRIP");
+    if (actualScope === "TRIP" && departureDate) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "TRIP scope templates cannot have a departure date",
+        });
+    }
+    if (actualScope === "DEPARTURE" && !departureDate) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "DEPARTURE scope templates must specify a departure date",
+        });
+    }
+
+    let sanitizedData;
+    try {
+      sanitizedData = validateTransportMode(req.body);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
+    // Never trust frontend tripTitle. Fetch it.
+    let tripTitle = null;
+    if (tripId) {
+      const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+      if (!trip)
+        return res
+          .status(404)
+          .json({ success: false, message: "Trip not found" });
+      tripTitle = trip.title;
+    }
+
+    const tMode = sanitizedData.transportMode || "TRAIN";
+    const src = sanitizedData.source || sanitizedData.flightOrigin;
+    const dest = sanitizedData.destination || sanitizedData.flightDestination;
+
+    const isDuplicate = await checkUniqueness(
+      req.user.tenantId,
+      actualScope,
+      tripId,
+      departureDate,
+      tMode,
+      src,
+      dest,
+    );
+
+    if (isDuplicate) {
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "A template for this route and scope already exists",
+        });
+    }
+
+    const template = await prisma.trainTemplate.create({
+      data: {
+        tenantId: req.user.tenantId,
+        tripId: tripId || null,
+        tripTitle,
+        departureDate: departureDate ? new Date(departureDate) : null,
+        scope: actualScope,
+        transportMode: tMode,
+        trainName: sanitizedData.trainName || null,
+        trainNumber: sanitizedData.trainNumber || null,
+        source: sanitizedData.source || null,
+        destination: sanitizedData.destination || null,
+        defaultClass: sanitizedData.defaultClass || null,
+        defaultCoach: sanitizedData.defaultCoach || null,
+        journeyDate: sanitizedData.journeyDate
+          ? new Date(sanitizedData.journeyDate)
+          : null,
+        boardingPoint: sanitizedData.boardingPoint || null,
+        droppingPoint: sanitizedData.droppingPoint || null,
+        estimatedTicketCost:
+          sanitizedData.estimatedTicketCost !== undefined &&
+          sanitizedData.estimatedTicketCost !== null &&
+          sanitizedData.estimatedTicketCost !== ""
+            ? new Prisma.Decimal(sanitizedData.estimatedTicketCost)
+            : null,
+        flightAirline: sanitizedData.flightAirline || null,
+        flightNumber: sanitizedData.flightNumber || null,
+        flightOrigin: sanitizedData.flightOrigin || null,
+        flightDestination: sanitizedData.flightDestination || null,
+        flightTerminal: sanitizedData.flightTerminal || null,
+        baggageGuidance: sanitizedData.baggageGuidance || null,
+        reportingTime: sanitizedData.reportingTime
+          ? new Date(sanitizedData.reportingTime)
+          : null,
+        arrivalTime: sanitizedData.arrivalTime
+          ? new Date(sanitizedData.arrivalTime)
+          : null,
+        waitlistDisclaimer: sanitizedData.waitlistDisclaimer || null,
+        isActive:
+          sanitizedData.isActive !== undefined ? sanitizedData.isActive : true,
+      },
+    });
+
+    return res
+      .status(201)
+      .json({
+        success: true,
+        data: template,
+        message: "Template created successfully",
+      });
+  } catch (err) {
+    console.error("createTemplate error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to create template" });
+  }
+};
+
+exports.updateTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const template = await prisma.trainTemplate.findFirst({
+      where: { id, tenantId: req.user.tenantId },
+    });
+
+    if (!template) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Template not found" });
+    }
+
+    let sanitizedData;
+    try {
+      // Merge with existing to validate properly
+      const mergedBody = { ...template, ...req.body };
+      sanitizedData = validateTransportMode(mergedBody);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
+    const {
+      tripId,
+      departureDate,
+      scope,
+      transportMode,
+      trainName,
+      trainNumber,
+      source,
+      destination,
+      defaultClass,
+      defaultCoach,
+      journeyDate,
+      boardingPoint,
+      droppingPoint,
+      estimatedTicketCost,
+      flightAirline,
+      flightNumber,
+      flightOrigin,
+      flightDestination,
+      flightTerminal,
+      baggageGuidance,
+      reportingTime,
+      arrivalTime,
+      waitlistDisclaimer,
+      isActive,
+    } = sanitizedData;
+
+    let tripTitle = template.tripTitle;
+    if (tripId && tripId !== template.tripId) {
+      const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+      if (trip) tripTitle = trip.title;
+    }
+
+    let updatedDepartureDate =
+      departureDate !== undefined
+        ? departureDate
+          ? new Date(departureDate)
+          : null
+        : template.departureDate;
+    let actualScope = scope !== undefined ? scope : template.scope;
+
+    if (actualScope === "TRIP" && updatedDepartureDate) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "TRIP scope templates cannot have a departure date",
+        });
+    }
+    if (actualScope === "DEPARTURE" && !updatedDepartureDate) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "DEPARTURE scope templates must specify a departure date",
+        });
+    }
+
+    const tMode =
+      transportMode !== undefined ? transportMode : template.transportMode;
+    const src =
+      source !== undefined
+        ? source
+        : flightOrigin !== undefined
+          ? flightOrigin
+          : template.source || template.flightOrigin;
+    const dest =
+      destination !== undefined
+        ? destination
+        : flightDestination !== undefined
+          ? flightDestination
+          : template.destination || template.flightDestination;
+    const tTripId = tripId !== undefined ? tripId : template.tripId;
+
+    const isDuplicate = await checkUniqueness(
+      req.user.tenantId,
+      actualScope,
+      tTripId,
+      updatedDepartureDate,
+      tMode,
+      src,
+      dest,
+      id,
+    );
+
+    if (isDuplicate) {
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "A template for this route and scope already exists",
+        });
+    }
+
+    const updated = await prisma.trainTemplate.update({
+      where: { id },
+      data: {
+        tripId: tTripId,
+        tripTitle,
+        departureDate: updatedDepartureDate,
+        scope: actualScope,
+        transportMode: tMode,
+        trainName: trainName !== undefined ? trainName : null,
+        trainNumber: trainNumber !== undefined ? trainNumber : null,
+        source: source !== undefined ? source : null,
+        destination: destination !== undefined ? destination : null,
+        defaultClass:
+          defaultClass !== undefined ? defaultClass : template.defaultClass,
+        defaultCoach:
+          defaultCoach !== undefined ? defaultCoach : template.defaultCoach,
+        journeyDate:
+          journeyDate !== undefined
+            ? journeyDate
+              ? new Date(journeyDate)
+              : null
+            : template.journeyDate,
+        boardingPoint:
+          boardingPoint !== undefined ? boardingPoint : template.boardingPoint,
+        droppingPoint:
+          droppingPoint !== undefined ? droppingPoint : template.droppingPoint,
+        estimatedTicketCost:
+          estimatedTicketCost !== undefined
+            ? estimatedTicketCost !== null && estimatedTicketCost !== ""
+              ? new Prisma.Decimal(estimatedTicketCost)
+              : null
+            : template.estimatedTicketCost,
+        flightAirline: flightAirline !== undefined ? flightAirline : null,
+        flightNumber: flightNumber !== undefined ? flightNumber : null,
+        flightOrigin: flightOrigin !== undefined ? flightOrigin : null,
+        flightDestination:
+          flightDestination !== undefined ? flightDestination : null,
+        flightTerminal:
+          flightTerminal !== undefined
+            ? flightTerminal
+            : template.flightTerminal,
+        baggageGuidance:
+          baggageGuidance !== undefined
+            ? baggageGuidance
+            : template.baggageGuidance,
+        reportingTime:
+          reportingTime !== undefined
+            ? reportingTime
+              ? new Date(reportingTime)
+              : null
+            : template.reportingTime,
+        arrivalTime:
+          arrivalTime !== undefined
+            ? arrivalTime
+              ? new Date(arrivalTime)
+              : null
+            : template.arrivalTime,
+        waitlistDisclaimer:
+          waitlistDisclaimer !== undefined
+            ? waitlistDisclaimer
+            : template.waitlistDisclaimer,
+        isActive: isActive !== undefined ? isActive : template.isActive,
+      },
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Template updated successfully",
+    });
+  } catch (err) {
+    console.error("updateTemplate error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update template" });
+  }
+};
+
+exports.deleteTemplate = async (req, res) => {
+  return exports.archiveTemplate(req, res);
+};
+
+exports.archiveTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const template = await prisma.trainTemplate.findFirst({
+      where: { id, tenantId: req.user.tenantId },
+    });
+
+    if (!template) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Template not found" });
+    }
+
+    await prisma.trainTemplate.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    return res.json({
+      success: true,
+      message: "Template archived successfully",
+    });
+  } catch (err) {
+    console.error("archiveTemplate error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to archive template" });
+  }
+};
+
+exports.restoreTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const template = await prisma.trainTemplate.findFirst({
+      where: { id, tenantId: req.user.tenantId },
+    });
+
+    if (!template) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Template not found" });
+    }
+
+    const src = template.source || template.flightOrigin;
+    const dest = template.destination || template.flightDestination;
+
+    const isDuplicate = await checkUniqueness(
+      req.user.tenantId,
+      template.scope,
+      template.tripId,
+      template.departureDate,
+      template.transportMode,
+      src,
+      dest,
+      id,
+    );
+
+    if (isDuplicate) {
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message:
+            "Cannot restore: an active template for this route and scope already exists",
+        });
+    }
+
+    const updated = await prisma.trainTemplate.update({
+      where: { id },
+      data: { isActive: true },
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: "Template restored successfully",
+    });
+  } catch (err) {
+    console.error("restoreTemplate error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to restore template" });
+  }
+};
+
+/**
+ * PATCH /api/train-tickets/:id/finance-verify
+ * Verify or Reject train ticket cost in Finance Controller
+ */
+exports.verifyFinanceTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, rejectionReason } = req.body;
+    const tenantId = req.user?.tenantId || "default";
+
+    const ticket = await prisma.trainTicket.findFirst({
+      where: {
+        id,
+        ...(tenantId && tenantId !== "all" ? { tenantId } : {}),
+      },
+    });
+
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Train ticket not found" });
+    }
+
+    const isVerify =
+      status === "VERIFIED" || status === "Verified" || status === "Approved";
+    const financeStatus = isVerify ? "VERIFIED" : "REJECTED";
+
+    const updated = await prisma.trainTicket.update({
+      where: { id },
+      data: {
+        financeStatus,
+        financeVerifiedAt: new Date(),
+        financeVerifiedByAdminId: req.user?.id || null,
+        financeRejectionReason: !isVerify ? rejectionReason || null : null,
+      },
+    });
+
+    await logHistory(
+      ticket.id,
+      isVerify ? "FINANCE_VERIFIED" : "FINANCE_REJECTED",
+      req,
+      rejectionReason || "Finance Controller action",
+    );
+
+    return res.json({
+      success: true,
+      data: updated,
+      message: `Train ticket ${isVerify ? "verified & reconciled" : "rejected"} in Finance`,
+    });
+  } catch (err) {
+    console.error("verifyFinanceTicket error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to verify train ticket in finance" });
+  }
+};
+
