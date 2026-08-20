@@ -493,13 +493,17 @@ exports.upsertTripExpense = async (req, res) => {
         });
         return res.json({ success: true, data: result });
       }
+
+      // Persisted-looking id that resolves to neither model — do not create or
+      // return success with undefined (silent data loss).
+      return res.status(404).json({
+        success: false,
+        message: "Expense record not found or no longer exists.",
+      });
     }
 
-    // Reached when there is no id, when the client sent a synthetic MISC-/ADJ-/TEMP-
-    // id, or when the id no longer resolves to a row in this tenant (deleted in
-    // another session, or belonging to a different tenant). The last case previously
-    // fell through with result undefined and reported a successful save that wrote
-    // nothing, silently discarding the edit.
+    // Create fallback for genuinely new expenses (no id, or synthetic
+    // MISC-/ADJ-/TEMP- client ids).
     result = await prisma.opsTripExpense.create({
       data: {
         tenantId: ctx.tenantId,
