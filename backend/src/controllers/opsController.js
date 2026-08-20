@@ -448,7 +448,13 @@ exports.upsertTripExpense = async (req, res) => {
       due <= 0 ? "Paid" : paid > 0 ? "Partially Paid" : "Due";
 
     let result;
-    if (id && !id.startsWith("MISC-") && !id.startsWith("ADJ-") && !id.startsWith("TEMP-")) {
+    const isPersistedId =
+      id &&
+      !id.startsWith("MISC-") &&
+      !id.startsWith("ADJ-") &&
+      !id.startsWith("TEMP-");
+
+    if (isPersistedId) {
       const existingExpense = await prisma.opsTripExpense.findFirst({
         where: { id, tenantId: ctx.tenantId },
       });
@@ -481,30 +487,34 @@ exports.upsertTripExpense = async (req, res) => {
             advancePaid: paid,
             remainingPayable: due,
             status: due <= 0 ? "Paid" : paid > 0 ? "Advance Paid" : "Pending",
-            paymentStatus: due <= 0 ? "Paid" : paid > 0 ? "Advance Paid" : "Pending",
             approvalStatus: due <= 0 || (remarks && remarks.includes("APPROVED")) ? "APPROVED" : existingVp.approvalStatus,
             remarks: remarks !== undefined ? remarks : existingVp.remarks,
           },
         });
         return res.json({ success: true, data: result });
       }
-    } else {
-      result = await prisma.opsTripExpense.create({
-        data: {
-          tenantId: ctx.tenantId,
-          tripId: ctx.tripId,
-          departureDate: ctx.departureDate,
-          serviceDate: serviceDate ? new Date(serviceDate) : null,
-          activity: activity || "Miscellaneous Expense",
-          paymentDate: paymentDate ? new Date(paymentDate) : null,
-          totalAmount: tot,
-          amountPaid: paid,
-          dueAmount: due,
-          paymentStatus,
-          remarks,
-        },
-      });
     }
+
+    // Reached when there is no id, when the client sent a synthetic MISC-/ADJ-/TEMP-
+    // id, or when the id no longer resolves to a row in this tenant (deleted in
+    // another session, or belonging to a different tenant). The last case previously
+    // fell through with result undefined and reported a successful save that wrote
+    // nothing, silently discarding the edit.
+    result = await prisma.opsTripExpense.create({
+      data: {
+        tenantId: ctx.tenantId,
+        tripId: ctx.tripId,
+        departureDate: ctx.departureDate,
+        serviceDate: serviceDate ? new Date(serviceDate) : null,
+        activity: activity || "Miscellaneous Expense",
+        paymentDate: paymentDate ? new Date(paymentDate) : null,
+        totalAmount: tot,
+        amountPaid: paid,
+        dueAmount: due,
+        paymentStatus,
+        remarks,
+      },
+    });
     return res.json({ success: true, data: result });
   } catch (err) {
     console.error("upsertTripExpense error:", err);
