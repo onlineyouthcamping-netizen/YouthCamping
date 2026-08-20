@@ -592,13 +592,13 @@ exports.getStats = async (req, res, next) => {
                 count: payVerifyCount,
                 color: "bg-[#E23D4D]",
                 urgent: true,
-                path: "/admin/approvals-hub?tab=booking-verification",
+                path: "/admin/approvals-hub?tab=payment-approvals",
               },
               {
                 label: "Aadhaar pending",
                 count: aadhaarPendingCount,
                 color: "bg-[#D97706]",
-                path: "/admin/approvals-hub?tab=booking-verification",
+                path: "/admin/bookings",
               },
               {
                 label: "Hotels pending confirmation",
@@ -611,7 +611,7 @@ exports.getStats = async (req, res, next) => {
                 count: vendorDueCount,
                 color: "bg-[#E23D4D]",
                 urgent: true,
-                path: "/admin/accounting?tab=vendor_payments",
+                path: "/admin/finance?tab=expenses",
               },
               {
                 label: "Rooming pending",
@@ -638,7 +638,7 @@ exports.getStats = async (req, res, next) => {
                 count: missingTicketsCount,
                 color: "bg-[#E23D4D]",
                 urgent: true,
-                path: "/admin/approvals-hub?tab=ticket-approvals",
+                path: "/admin/travel-desk",
               },
               {
                 label: "Missing tempo confirmation",
