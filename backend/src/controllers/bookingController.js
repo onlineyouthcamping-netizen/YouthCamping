@@ -2247,6 +2247,8 @@ exports.confirmBooking = async (req, res, next) => {
         },
       });
 
+      // Finance workflow: confirm records the advance as RECEIVED + PENDING approval.
+      // Never auto-set Verified / APPROVED_FOUNDER on booking confirm.
       if (!existingClientPayment) {
         await prisma.opsClientPayment.create({
           data: {
@@ -2257,8 +2259,8 @@ exports.confirmBooking = async (req, res, next) => {
             collectionAccountId: targetAccountId,
             transactionId: transactionId || `PAY-${Date.now()}`,
             paymentDate: new Date(),
-            status: "Verified",
-            approvalStatus: "APPROVED_FOUNDER",
+            status: "Pending Verification",
+            approvalStatus: "PENDING",
             collectedBy: req.user?.name || req.user?.email || "Admin",
             recordedByUserId: req.user?.id || null,
             remarks: notes || `Advance payment on booking confirmation via ${paymentMode || "UPI"}`,
@@ -2267,11 +2269,11 @@ exports.confirmBooking = async (req, res, next) => {
       } else if (!existingClientPayment.collectionAccountId && targetAccountId) {
         await prisma.opsClientPayment.update({
           where: { id: existingClientPayment.id },
-          data: { collectionAccountId: targetAccountId, approvalStatus: "APPROVED_FOUNDER" },
+          data: { collectionAccountId: targetAccountId },
         });
       }
 
-      // 3. Auto-sync into AccountingEntry for full accounting / treasury ledger visibility
+      // 3. Mirror into AccountingEntry as PENDING for Finance → Incoming queue
       try {
         const rawMode = String(paymentMode || "UPI").toUpperCase();
         const normalizedMode = rawMode.includes("CASH")
@@ -2298,9 +2300,8 @@ exports.confirmBooking = async (req, res, next) => {
               collectionAccountId: targetAccountId,
               referenceNumber: transactionId || `PAY-${Date.now()}`,
               notes: notes || `Advance payment on booking confirmation via ${paymentMode || "UPI"}`,
-              status: "APPROVED",
+              status: "PENDING",
               salespersonId: req.user?.id || beforeBooking.salesAdminId,
-              actionedById: req.user?.id,
             },
           });
         } else if (!existingEntry.collectionAccountId && targetAccountId) {
