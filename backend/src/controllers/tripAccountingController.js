@@ -1,5 +1,6 @@
 const { prisma } = require("../lib/prisma");
 const { logAction } = require("../utils/auditLogger");
+const { canViewProfit } = require("../utils/profitVisibility");
 
 function isGuideExpenseType(assignmentType) {
   return (
@@ -254,52 +255,58 @@ async function getTripPnL(req, res) {
         ? Math.round((grossProfit / netRevenue) * 100 * 10) / 10
         : 0;
 
+    const data = {
+      tripId: trip.id,
+      tripTitle: trip.title,
+      departureDate: departureDate || "All Departures",
+      passengerSummary: {
+        totalBookings: bookings.length,
+        totalPax,
+      },
+      revenue: {
+        grossSellingPrice,
+        totalCouponDiscounts,
+        totalCashRefunds,
+        totalCreditsIssued,
+        netRevenue,
+        totalCollected,
+        totalDue,
+      },
+      trainTicketing: {
+        expectedTrainCost,
+        actualTrainCost,
+        trainCostVariance,
+        expectedCostPerPax: templateExpectedPerPax,
+      },
+      directCosts: {
+        vendorContractCost,
+        vendorPaid,
+        guideCost,
+        guidePaid,
+        guideExpenseCost,
+        guideExpensePaid,
+        miscCost,
+        tripActivityCost,
+        expectedTrainCost,
+        actualTrainCost,
+        trainCostVariance,
+        ticketingCost,
+        totalDirectCost,
+      },
+    };
+
+    // Profitability block is Founder/Superadmin only
+    if (canViewProfit(req.user || req.admin)) {
+      data.profitability = {
+        grossProfit,
+        profitMarginPercent: profitMargin,
+        isProfitable: grossProfit >= 0,
+      };
+    }
+
     return res.json({
       success: true,
-      data: {
-        tripId: trip.id,
-        tripTitle: trip.title,
-        departureDate: departureDate || "All Departures",
-        passengerSummary: {
-          totalBookings: bookings.length,
-          totalPax,
-        },
-        revenue: {
-          grossSellingPrice,
-          totalCouponDiscounts,
-          totalCashRefunds,
-          totalCreditsIssued,
-          netRevenue,
-          totalCollected,
-          totalDue,
-        },
-        trainTicketing: {
-          expectedTrainCost,
-          actualTrainCost,
-          trainCostVariance,
-          expectedCostPerPax: templateExpectedPerPax,
-        },
-        directCosts: {
-          vendorContractCost,
-          vendorPaid,
-          guideCost,
-          guidePaid,
-          guideExpenseCost,
-          guideExpensePaid,
-          miscCost,
-          tripActivityCost,
-          expectedTrainCost,
-          actualTrainCost,
-          trainCostVariance,
-          ticketingCost,
-          totalDirectCost,
-        },
-        profitability: {
-          grossProfit,
-          profitMarginPercent: profitMargin,
-          isProfitable: grossProfit >= 0,
-        },
-      },
+      data,
     });
   } catch (error) {
     console.error("❌ Error calculating Trip P&L:", error);
