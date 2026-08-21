@@ -164,8 +164,8 @@ exports.reviewCollectionFC = async (req, res) => {
         throw { statusCode: 404, message: "Collection payment not found or access denied" };
       }
 
-      // Check current state machine status
-      if (payment.approvalStatus === "APPROVED_FOUNDER" || payment.status === "Verified") {
+      // Check current state machine status (approvalStatus is source of truth)
+      if (payment.approvalStatus === "APPROVED_FOUNDER") {
         throw {
           statusCode: 400,
           message: "Payment is already approved by Founder and verified. Cannot re-review.",
@@ -183,7 +183,6 @@ exports.reviewCollectionFC = async (req, res) => {
           id: payment.id,
           tenantId,
           approvalStatus: { in: ["PENDING", "REJECTED"] },
-          status: { not: "Verified" },
         },
         data: {
           approvalStatus: "REVIEWED_FINANCE_CONTROLLER",
@@ -272,7 +271,7 @@ exports.approveCollectionFounder = async (req, res) => {
         user.role === "owner" ||
         req.user?.isSuperuser;
 
-      if (payment.approvalStatus === "APPROVED_FOUNDER" || payment.status === "Verified") {
+      if (payment.approvalStatus === "APPROVED_FOUNDER") {
         return payment;
       }
 
@@ -467,7 +466,7 @@ exports.rejectCollection = async (req, res) => {
         throw { statusCode: 404, message: "Collection payment not found or access denied" };
       }
 
-      if (payment.approvalStatus === "APPROVED_FOUNDER" || payment.status === "Verified") {
+      if (payment.approvalStatus === "APPROVED_FOUNDER") {
         throw {
           statusCode: 400,
           message: "Cannot reject an already approved and verified payment.",
@@ -485,7 +484,6 @@ exports.rejectCollection = async (req, res) => {
           id: payment.id,
           tenantId,
           approvalStatus: { not: "APPROVED_FOUNDER" },
-          status: { not: "Verified" },
         },
         data: {
           approvalStatus: "REJECTED",

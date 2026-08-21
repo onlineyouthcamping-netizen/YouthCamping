@@ -200,6 +200,10 @@ exports.addClientPayment = async (req, res) => {
       }
     }
 
+    // Finance workflow: new receipts start recorded + PENDING approval.
+    // Never auto-verify/approve on create (mode/amount/proof/booking accepted).
+    const receiptStatus = status || "Pending Verification";
+
     const receipt = await prisma.opsClientPayment.create({
       data: {
         tenantId,
@@ -210,7 +214,8 @@ exports.addClientPayment = async (req, res) => {
         transactionId,
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
         proofUrl,
-        status: status || "Verified",
+        status: receiptStatus,
+        // approvalStatus omitted → Prisma default "PENDING"
         collectedBy: req.user?.name || req.user?.email || "Staff",
         recordedByUserId: req.user?.id || null,
         remarks,
@@ -222,71 +227,77 @@ exports.addClientPayment = async (req, res) => {
       },
     });
 
-    // Automatically recalculate booking advancePaid and remainingAmount if status is Verified
-    const allVerified = await prisma.opsClientPayment.findMany({
-      where: { bookingId: targetBookingId, status: "Verified" },
-    });
-    const totalVerified = allVerified.reduce((s, r) => s + r.amount, 0);
-    const remaining = Math.max(0, booking.totalAmount - totalVerified);
-
-    const updateData = {
-      advancePaid: totalVerified,
-      remainingAmount: remaining,
-      paymentStatus:
-        remaining === 0 && totalVerified > 0
-          ? PAYMENT_STATUS.PAID
-          : totalVerified > 0
-            ? PAYMENT_STATUS.PARTIAL
-            : PAYMENT_STATUS.UNPAID,
-      payment_status:
-        remaining === 0 && totalVerified > 0
-          ? "paid"
-          : totalVerified > 0
-            ? "partial"
-            : "unpaid",
-    };
-
-    // Auto-confirm booking if not already confirmed or cancelled upon receiving verified payment
-    if (booking.status !== "confirmed" && booking.status !== "cancelled" && totalVerified > 0) {
-      updateData.status = "confirmed";
-    }
-
-    const updatedBooking = await prisma.booking.update({
-      where: { id: booking.id },
-      data: updateData,
-    });
-
-    // Auto-sync into AccountingEntry for full accounting ledger visibility
+    // Operational booking balance only moves on finance-verified receipts.
+    // Pending approvals must not be treated as cleared collections.
+    let updatedBooking = booking;
     if (receipt.status === "Verified") {
-      try {
-        const rawMode = String(paymentMode || "UPI").toUpperCase();
-        const normalizedMode = rawMode.includes("CASH")
-          ? "CASH"
-          : rawMode.includes("BANK") || rawMode.includes("NEFT") || rawMode.includes("IMPS")
-            ? "BANK_TRANSFER"
-            : "UPI";
+      const allVerified = await prisma.opsClientPayment.findMany({
+        where: { bookingId: targetBookingId, status: "Verified" },
+      });
+      const totalVerified = allVerified.reduce((s, r) => s + r.amount, 0);
+      const remaining = Math.max(0, booking.totalAmount - totalVerified);
 
-        await prisma.accountingEntry.create({
-          data: {
-            tenantId,
-            bookingId: targetBookingId,
-            amount: parseFloat(amount) || 0,
-            paymentMode: normalizedMode,
-            collectionAccountId: targetAccountId,
-            referenceNumber: transactionId || `PAY-${receipt.id}`,
-            notes: remarks || "Recorded via Booking Workspace",
-            status: "APPROVED",
-            salespersonId: req.user?.id || booking.salesAdminId,
-            actionedById: req.user?.id,
-          },
-        });
-      } catch (entryErr) {
-        console.warn("AccountingEntry auto-sync skipped:", entryErr.message);
+      const updateData = {
+        advancePaid: totalVerified,
+        remainingAmount: remaining,
+        paymentStatus:
+          remaining === 0 && totalVerified > 0
+            ? PAYMENT_STATUS.PAID
+            : totalVerified > 0
+              ? PAYMENT_STATUS.PARTIAL
+              : PAYMENT_STATUS.UNPAID,
+        payment_status:
+          remaining === 0 && totalVerified > 0
+            ? "paid"
+            : totalVerified > 0
+              ? "partial"
+              : "unpaid",
+      };
+
+      if (booking.status !== "confirmed" && booking.status !== "cancelled" && totalVerified > 0) {
+        updateData.status = "confirmed";
       }
+
+      updatedBooking = await prisma.booking.update({
+        where: { id: booking.id },
+        data: updateData,
+      });
     }
 
-    // Auto-log confirmation email if booking just became confirmed
-    if (updateData.status === "confirmed" && booking.status !== "confirmed") {
+    // Mirror into ledger as PENDING so Finance → Incoming queue can clear it.
+    // Do not create APPROVED entries on record.
+    try {
+      const rawMode = String(paymentMode || "UPI").toUpperCase();
+      const normalizedMode = rawMode.includes("CASH")
+        ? "CASH"
+        : rawMode.includes("BANK") || rawMode.includes("NEFT") || rawMode.includes("IMPS")
+          ? "BANK_TRANSFER"
+          : "UPI";
+
+      await prisma.accountingEntry.create({
+        data: {
+          tenantId,
+          bookingId: targetBookingId,
+          amount: parseFloat(amount) || 0,
+          paymentMode: normalizedMode,
+          collectionAccountId: targetAccountId,
+          referenceNumber: transactionId || `PAY-${receipt.id}`,
+          notes: remarks || "Recorded via Booking Workspace",
+          status: receipt.status === "Verified" ? "APPROVED" : "PENDING",
+          salespersonId: req.user?.id || booking.salesAdminId,
+          actionedById: receipt.status === "Verified" ? req.user?.id : null,
+        },
+      });
+    } catch (entryErr) {
+      console.warn("AccountingEntry auto-sync skipped:", entryErr.message);
+    }
+
+    // Auto-log confirmation email if booking just became confirmed via verified payment
+    if (
+      receipt.status === "Verified" &&
+      updatedBooking.status === "confirmed" &&
+      booking.status !== "confirmed"
+    ) {
       try {
         const templates = require("../lib/email");
         if (templates && templates.confirmation) {
