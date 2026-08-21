@@ -1487,7 +1487,11 @@ exports.updateVendorPayment = async (req, res) => {
           invoiceFileUrl: invoiceProof || "",
           advanceProofUrl: invoiceProof || "",
           status: computedStatus,
-          paidBy: req.user?.name || req.user?.email || "Operations",
+          ...(approvalStatus !== undefined ? { approvalStatus } : {}),
+          paidBy:
+            paidBy !== undefined
+              ? paidBy
+              : req.user?.name || req.user?.email || "Operations",
           remarks: remarks || "",
         },
         include: {
