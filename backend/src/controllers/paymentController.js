@@ -1214,19 +1214,14 @@ exports.createVendorPayment = async (req, res) => {
     let advance = parseFloat(advancePaid) || 0;
     const catUpper = String(category || "").toUpperCase();
     const isMisc = catUpper === "MISCELLANEOUS" || catUpper === "MISC";
-    const approvalUpper = String(approvalStatus || "PENDING").toUpperCase();
-    const remarksUpper = String(remarks || "").toUpperCase();
-    const miscApproved =
-      approvalUpper === "APPROVED" ||
-      approvalUpper === "APPROVED_FOUNDER" ||
-      approvalUpper.startsWith("APPROVED") ||
-      remarksUpper.includes("STATUS: APPROVED");
 
     const targetAccountId = await resolveTargetAccountId(tenantId, paymentMode, collectionAccountId);
 
-    // Check if an existing OpsVendorPayment matches this trip + departureDate + vendorName
+    // Hotels/guides/etc. upsert by trip + departure + vendorName.
+    // Miscellaneous must NEVER upsert that way: empty/shared payees (e.g. "Ad-Hoc Expense")
+    // would overwrite a prior approved row and inherit APPROVED + paidBy (looks like auto-approve).
     let payment = null;
-    if (depDate && vendorName) {
+    if (!isMisc && depDate && vendorName) {
       payment = await prisma.opsVendorPayment.findFirst({
         where: {
           tenantId,
@@ -1237,42 +1232,23 @@ exports.createVendorPayment = async (req, res) => {
       });
     }
 
-    const existingApproval = String(payment?.approvalStatus || "").toUpperCase();
-    const existingRemarks = String(payment?.remarks || "").toUpperCase();
-    const existingAlreadyApproved =
-      existingApproval === "APPROVED" ||
-      existingApproval === "APPROVED_FOUNDER" ||
-      existingApproval.startsWith("APPROVED") ||
-      existingRemarks.includes("STATUS: APPROVED");
-
-    // Misc expenses require explicit approval before counting as paid.
+    // Misc: always create as PENDING / unpaid. Approval only via update after Approve click.
     // Guard against older clients that still POST advancePaid === agreedAmount on create.
-    // Do not clobber an already-approved row matched by vendor-name upsert.
-    if (isMisc && !miscApproved && !existingAlreadyApproved) {
+    if (isMisc) {
       advance = 0;
-    } else if (isMisc && !miscApproved && existingAlreadyApproved && payment) {
-      advance = Number(payment.advancePaid) || 0;
     }
     const remaining = Math.max(0, agreed - advance);
-    const resolvedApproval =
-      isMisc && !miscApproved && !existingAlreadyApproved
-        ? "PENDING"
-        : miscApproved
-          ? approvalStatus || "APPROVED"
-          : existingAlreadyApproved
-            ? payment.approvalStatus
-            : approvalStatus || payment?.approvalStatus || "PENDING";
-    const resolvedStatus =
-      isMisc && !miscApproved && !existingAlreadyApproved
-        ? "Pending"
-        : existingAlreadyApproved && !miscApproved && payment
-          ? payment.status
-          : status ||
-            (advance >= agreed && agreed > 0
-              ? "Paid"
-              : advance > 0
-                ? "Advance Paid"
-                : "Pending");
+    const resolvedApproval = isMisc
+      ? "PENDING"
+      : approvalStatus || payment?.approvalStatus || "PENDING";
+    const resolvedStatus = isMisc
+      ? "Pending"
+      : status ||
+        (advance >= agreed && agreed > 0
+          ? "Paid"
+          : advance > 0
+            ? "Advance Paid"
+            : "Pending");
 
     if (payment) {
       payment = await prisma.opsVendorPayment.update({
@@ -1291,9 +1267,6 @@ exports.createVendorPayment = async (req, res) => {
           invoiceProof: invoiceProof !== undefined ? invoiceProof : payment.invoiceProof,
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
-          ...(isMisc && !miscApproved && !existingAlreadyApproved
-            ? { paidBy: null }
-            : {}),
           remarks: remarks !== undefined ? remarks : payment.remarks,
         },
         include: {
@@ -1323,10 +1296,7 @@ exports.createVendorPayment = async (req, res) => {
           approvalStatus: resolvedApproval,
           // For pending misc, leave paidBy empty — creator is not the approver.
           // Approver is written to paidBy only when approvalStatus becomes APPROVED.
-          paidBy:
-            isMisc && !miscApproved
-              ? null
-              : req.user?.name || req.user?.email || "Operations",
+          paidBy: isMisc ? null : req.user?.name || req.user?.email || "Operations",
           remarks: remarks || "",
         },
         include: {
@@ -1403,7 +1373,8 @@ exports.updateVendorPayment = async (req, res) => {
       });
     }
 
-    // 2. If not found by ID, look up by tripId, departureDate, vendorName
+    // 2. If not found by ID, look up by tripId, departureDate, vendorName.
+    // Never vendor-name-match Miscellaneous rows — shared payees must update by id only.
     if (!existing && vendorName) {
       const searchWhere = {
         tenantId,
@@ -1412,9 +1383,13 @@ exports.updateVendorPayment = async (req, res) => {
       if (tripId) searchWhere.tripId = tripId;
       if (depDate) searchWhere.departureDate = depDate;
 
-      existing = await prisma.opsVendorPayment.findFirst({
+      const candidate = await prisma.opsVendorPayment.findFirst({
         where: searchWhere,
       });
+      const candidateCat = String(candidate?.category || "").toUpperCase();
+      if (candidate && candidateCat !== "MISCELLANEOUS" && candidateCat !== "MISC") {
+        existing = candidate;
+      }
     }
 
     let updated = null;
