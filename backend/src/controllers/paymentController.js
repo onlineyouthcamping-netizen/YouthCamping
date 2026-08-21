@@ -1191,6 +1191,7 @@ exports.createVendorPayment = async (req, res) => {
       transactionId,
       invoiceProof,
       status,
+      approvalStatus,
       remarks,
     } = req.body;
     const tenantId = req.user?.tenantId || "default";
@@ -1210,8 +1211,16 @@ exports.createVendorPayment = async (req, res) => {
 
     const depDate = normalizeDepartureDateIndia(departureDate);
     const agreed = parseFloat(agreedAmount) || 0;
-    const advance = parseFloat(advancePaid) || 0;
-    const remaining = Math.max(0, agreed - advance);
+    let advance = parseFloat(advancePaid) || 0;
+    const catUpper = String(category || "").toUpperCase();
+    const isMisc = catUpper === "MISCELLANEOUS" || catUpper === "MISC";
+    const approvalUpper = String(approvalStatus || "PENDING").toUpperCase();
+    const remarksUpper = String(remarks || "").toUpperCase();
+    const miscApproved =
+      approvalUpper === "APPROVED" ||
+      approvalUpper === "APPROVED_FOUNDER" ||
+      approvalUpper.startsWith("APPROVED") ||
+      remarksUpper.includes("STATUS: APPROVED");
 
     const targetAccountId = await resolveTargetAccountId(tenantId, paymentMode, collectionAccountId);
 
@@ -1228,6 +1237,43 @@ exports.createVendorPayment = async (req, res) => {
       });
     }
 
+    const existingApproval = String(payment?.approvalStatus || "").toUpperCase();
+    const existingRemarks = String(payment?.remarks || "").toUpperCase();
+    const existingAlreadyApproved =
+      existingApproval === "APPROVED" ||
+      existingApproval === "APPROVED_FOUNDER" ||
+      existingApproval.startsWith("APPROVED") ||
+      existingRemarks.includes("STATUS: APPROVED");
+
+    // Misc expenses require explicit approval before counting as paid.
+    // Guard against older clients that still POST advancePaid === agreedAmount on create.
+    // Do not clobber an already-approved row matched by vendor-name upsert.
+    if (isMisc && !miscApproved && !existingAlreadyApproved) {
+      advance = 0;
+    } else if (isMisc && !miscApproved && existingAlreadyApproved && payment) {
+      advance = Number(payment.advancePaid) || 0;
+    }
+    const remaining = Math.max(0, agreed - advance);
+    const resolvedApproval =
+      isMisc && !miscApproved && !existingAlreadyApproved
+        ? "PENDING"
+        : miscApproved
+          ? approvalStatus || "APPROVED"
+          : existingAlreadyApproved
+            ? payment.approvalStatus
+            : approvalStatus || payment?.approvalStatus || "PENDING";
+    const resolvedStatus =
+      isMisc && !miscApproved && !existingAlreadyApproved
+        ? "Pending"
+        : existingAlreadyApproved && !miscApproved && payment
+          ? payment.status
+          : status ||
+            (advance >= agreed && agreed > 0
+              ? "Paid"
+              : advance > 0
+                ? "Advance Paid"
+                : "Pending");
+
     if (payment) {
       payment = await prisma.opsVendorPayment.update({
         where: { id: payment.id },
@@ -1243,7 +1289,8 @@ exports.createVendorPayment = async (req, res) => {
           collectionAccountId: targetAccountId !== undefined ? targetAccountId : payment.collectionAccountId,
           transactionId: transactionId || payment.transactionId,
           invoiceProof: invoiceProof !== undefined ? invoiceProof : payment.invoiceProof,
-          status: status || (advance >= agreed && agreed > 0 ? "Paid" : advance > 0 ? "Advance Paid" : "Pending"),
+          status: resolvedStatus,
+          approvalStatus: resolvedApproval,
           remarks: remarks !== undefined ? remarks : payment.remarks,
         },
         include: {
@@ -1269,7 +1316,8 @@ exports.createVendorPayment = async (req, res) => {
           invoiceProof: invoiceProof || "",
           invoiceFileUrl: invoiceProof || "",
           advanceProofUrl: invoiceProof || "",
-          status: status || (advance >= agreed && agreed > 0 ? "Paid" : advance > 0 ? "Advance Paid" : "Pending"),
+          status: resolvedStatus,
+          approvalStatus: resolvedApproval,
           paidBy: req.user?.name || req.user?.email || "Operations",
           remarks: remarks || "",
         },
@@ -1307,6 +1355,7 @@ exports.updateVendorPayment = async (req, res) => {
       transactionId,
       invoiceProof,
       status,
+      approvalStatus,
       remarks,
     } = req.body;
     const tenantId = req.user?.tenantId || "default";
@@ -1401,6 +1450,9 @@ exports.updateVendorPayment = async (req, res) => {
           advanceProofUrl:
             invoiceProof !== undefined ? invoiceProof : existing.advanceProofUrl,
           status: computedStatus,
+          ...(approvalStatus !== undefined
+            ? { approvalStatus }
+            : {}),
           remarks: remarks !== undefined ? remarks : existing.remarks,
         },
         include: {
