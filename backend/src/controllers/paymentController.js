@@ -1291,6 +1291,9 @@ exports.createVendorPayment = async (req, res) => {
           invoiceProof: invoiceProof !== undefined ? invoiceProof : payment.invoiceProof,
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
+          ...(isMisc && !miscApproved && !existingAlreadyApproved
+            ? { paidBy: null }
+            : {}),
           remarks: remarks !== undefined ? remarks : payment.remarks,
         },
         include: {
@@ -1318,7 +1321,12 @@ exports.createVendorPayment = async (req, res) => {
           advanceProofUrl: invoiceProof || "",
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
-          paidBy: req.user?.name || req.user?.email || "Operations",
+          // For pending misc, leave paidBy empty — creator is not the approver.
+          // Approver is written to paidBy only when approvalStatus becomes APPROVED.
+          paidBy:
+            isMisc && !miscApproved
+              ? null
+              : req.user?.name || req.user?.email || "Operations",
           remarks: remarks || "",
         },
         include: {
@@ -1357,6 +1365,7 @@ exports.updateVendorPayment = async (req, res) => {
       status,
       approvalStatus,
       remarks,
+      paidBy,
     } = req.body;
     const tenantId = req.user?.tenantId || "default";
 
@@ -1453,6 +1462,7 @@ exports.updateVendorPayment = async (req, res) => {
           ...(approvalStatus !== undefined
             ? { approvalStatus }
             : {}),
+          ...(paidBy !== undefined ? { paidBy } : {}),
           remarks: remarks !== undefined ? remarks : existing.remarks,
         },
         include: {
