@@ -1,6 +1,7 @@
 const { prisma } = require("../lib/prisma");
 const { PAYMENT_STATUS } = require("../utils/paymentStatus");
 const { resolveTenantId } = require("../utils/tenantContext");
+const { withProfitFields } = require("../utils/profitVisibility");
 
 function normalizeDepartureDateIndia(dateInput) {
   if (!dateInput) return null;
@@ -1932,22 +1933,27 @@ exports.getPaymentsDashboardStats = async (req, res) => {
       0,
     );
 
-    // Profits
+    // Profits — Founder/Superadmin only (operational revenue/cost fields remain)
     const estProfit = totalClientRevenue - totalVendorPayable;
     const actProfit = clientAmountReceived - vendorAmountPaid;
 
     return res.json({
       success: true,
-      data: {
-        totalClientRevenue,
-        clientAmountReceived,
-        clientOutstandingBalance,
-        totalVendorPayable,
-        vendorAmountPaid,
-        vendorOutstandingBalance,
-        estimatedProfit: estProfit,
-        actualProfit: actProfit,
-      },
+      data: withProfitFields(
+        req.user,
+        {
+          totalClientRevenue,
+          clientAmountReceived,
+          clientOutstandingBalance,
+          totalVendorPayable,
+          vendorAmountPaid,
+          vendorOutstandingBalance,
+        },
+        {
+          estimatedProfit: estProfit,
+          actualProfit: actProfit,
+        },
+      ),
     });
   } catch (err) {
     console.error("getPaymentsDashboardStats error:", err);

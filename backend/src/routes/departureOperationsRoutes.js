@@ -11,6 +11,7 @@ const express = require("express");
 const router = express.Router();
 const hotelConfirmationService = require("../services/hotelConfirmationService");
 const readinessEngine = require("../services/readinessEngine");
+const { withProfitFields } = require("../utils/profitVisibility");
 
 // --- Hotel Operations ---
 
@@ -63,16 +64,19 @@ router.get("/departures/:tripId/:date/dashboard", async (req, res, next) => {
   try {
     const { tripId, date } = req.params;
     const readiness = await readinessEngine.calculateReadiness(tripId, date);
-    
-    // Mocking other aggregates for the UI
-    res.json({ 
-      success: true, 
-      data: {
-        readiness,
-        passengers: 42,
-        paymentsProgress: "85%",
-        estimatedProfit: "₹58,000"
-      }
+
+    // Mocking other aggregates for the UI — profit is Founder/Superadmin only
+    res.json({
+      success: true,
+      data: withProfitFields(
+        req.user,
+        {
+          readiness,
+          passengers: 42,
+          paymentsProgress: "85%",
+        },
+        { estimatedProfit: "₹58,000" },
+      ),
     });
   } catch (error) {
     next(error);

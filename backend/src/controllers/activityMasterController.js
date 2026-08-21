@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { withProfitFields } = require("../utils/profitVisibility");
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -869,27 +870,33 @@ exports.getActivityAnalyticsKPIs = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: {
-        todayActivities: totalCount > 0 ? totalCount : 28,
-        pendingVendorConfirmations: pendingVendors > 0 ? pendingVendors : 6,
-        passengersBooked: passengersCount > 0 ? passengersCount : 412,
-        totalRevenue: 480000,
-        totalVendorCost: 305000,
-        grossProfit: 175000,
-      },
+      data: withProfitFields(
+        req.user,
+        {
+          todayActivities: totalCount > 0 ? totalCount : 28,
+          pendingVendorConfirmations: pendingVendors > 0 ? pendingVendors : 6,
+          passengersBooked: passengersCount > 0 ? passengersCount : 412,
+          totalRevenue: 480000,
+          totalVendorCost: 305000,
+        },
+        { grossProfit: 175000 },
+      ),
     });
   } catch (error) {
     if (isDbError(error)) {
       return res.status(200).json({
         success: true,
-        data: {
-          todayActivities: 28,
-          pendingVendorConfirmations: 6,
-          passengersBooked: 412,
-          totalRevenue: 480000,
-          totalVendorCost: 305000,
-          grossProfit: 175000,
-        },
+        data: withProfitFields(
+          req.user,
+          {
+            todayActivities: 28,
+            pendingVendorConfirmations: 6,
+            passengersBooked: 412,
+            totalRevenue: 480000,
+            totalVendorCost: 305000,
+          },
+          { grossProfit: 175000 },
+        ),
       });
     }
     console.error("[ActivityMaster] Error fetching KPI statistics:", error);
