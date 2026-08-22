@@ -71,6 +71,137 @@ async function findOperationalSource(db, id, tenantId) {
   return null;
 }
 
+function looksLikeJsonBlob(value) {
+  if (value == null) return false;
+  if (typeof value === "object") return true;
+  const text = String(value).trim();
+  if (!text) return false;
+  if (text.includes("__isHotelPricing")) return true;
+  if (/"pricingMethod"\s*:/.test(text) || /"doubleRate"\s*:/.test(text) || /"allocations"\s*:/.test(text)) {
+    return true;
+  }
+  if (/^\s*[{\[]/.test(text)) return true;
+  if (/[{[]/.test(text) && /"\s*:/.test(text)) return true;
+  return false;
+}
+
+function parseObject(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  try {
+    const parsed = JSON.parse(text.slice(start, end + 1));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function countPart(value, letter) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `${Math.round(n)} ${letter}`;
+}
+
+function roomMixLabel(source = {}) {
+  const alloc = source.allocations && typeof source.allocations === "object" ? source.allocations : source;
+  return [
+    countPart(alloc.doubleRoomsCount ?? alloc.doubleRooms, "D"),
+    countPart(alloc.tripleRoomsCount ?? alloc.tripleRooms, "T"),
+    countPart(alloc.quadRoomsCount ?? alloc.quadRooms, "Q"),
+    countPart(alloc.extraPersonsCount ?? alloc.extraPersons, "E"),
+  ]
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function pricingMethodLabel(method) {
+  const normalized = String(method || "room-wise").toLowerCase().replace(/_/g, "-");
+  if (normalized.includes("person") || normalized.includes("pax")) return "Per person";
+  if (normalized === "per-room" || normalized === "perroom") return "Per room";
+  return "Room-wise";
+}
+
+function formatHotelPricingSummary(value) {
+  const record = parseObject(value);
+  if (!record) return null;
+  const mix = roomMixLabel(record);
+  const method = pricingMethodLabel(record.pricingMethod);
+  if (mix) return `${method} · ${mix}`;
+  const userNotes = String(record.userNotes || "").replace(/\s+/g, " ").trim();
+  if (userNotes && !looksLikeJsonBlob(userNotes)) return userNotes;
+  if (record.__isHotelPricing || record.rates || record.allocations) return method;
+  return null;
+}
+
+function defaultServiceLabel(category) {
+  switch (String(category || "")) {
+    case "Hotels":
+      return "Hotel stay";
+    case "Transport":
+      return "Transport fleet";
+    case "Guides":
+      return "Guide assignment";
+    case "Activities":
+      return "Activity";
+    default:
+      return category || "Service";
+  }
+}
+
+function humanizeVendorServiceDescription(record = {}, category) {
+  const cat = category || record.category || record.vendorType || "";
+  const hotelSummary =
+    formatHotelPricingSummary(record.serviceDescription) ||
+    formatHotelPricingSummary(record.notes) ||
+    formatHotelPricingSummary(record.remarks) ||
+    formatHotelPricingSummary(record);
+  if (hotelSummary) return hotelSummary;
+
+  const candidates = [
+    record.serviceDescription,
+    record.vehicleType,
+    record.assignmentType,
+    record.location,
+    record.roomType,
+    record.notes,
+    record.remarks,
+  ];
+  for (const candidate of candidates) {
+    if (candidate == null || candidate === "") continue;
+    if (looksLikeJsonBlob(candidate)) continue;
+    const text = String(candidate).replace(/\s+/g, " ").trim();
+    if (text && text !== cat) return text;
+  }
+  return defaultServiceLabel(cat);
+}
+
+function humanizeBillReference(record = {}) {
+  const candidates = [record.transactionId, record.transactionRef, record.invoiceProof, record.serviceDescription];
+  for (const candidate of candidates) {
+    if (candidate == null || candidate === "" || looksLikeJsonBlob(candidate)) continue;
+    const text = String(candidate).trim();
+    if (!text) continue;
+    if (/^https?:\/\//i.test(text) || text.startsWith("/") || text.includes("/uploads/")) continue;
+    const bill = text.match(/BILL-[A-Za-z0-9]+/i);
+    if (bill) return `BILL-${bill[0].slice(5)}`;
+    if (text.length <= 48) return text;
+  }
+  return `BILL-${String(record.id || "").slice(-6)}`;
+}
+
+function firstHumanText(values = []) {
+  for (const value of values) {
+    if (value == null || value === "" || looksLikeJsonBlob(value)) continue;
+    const text = String(value).replace(/\s+/g, " ").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
 function vendorFieldsFromOperationalSource(source) {
   if (!source?.record) return null;
   const { sourceType, record } = source;
@@ -80,7 +211,7 @@ function vendorFieldsFromOperationalSource(source) {
       category: "Hotels",
       agreed: Number(record.totalAmount || 0),
       paid: Number(record.advancePaid || 0),
-      serviceDescription: record.notes || record.location || "Hotel stay",
+      serviceDescription: humanizeVendorServiceDescription(record, "Hotels"),
     };
   }
   if (sourceType === SOURCE_FLEET) {
@@ -218,6 +349,10 @@ module.exports = {
   sourceFromOperationalRecord,
   findOperationalSource,
   vendorFieldsFromOperationalSource,
+  humanizeVendorServiceDescription,
+  humanizeBillReference,
+  looksLikeJsonBlob,
+  firstHumanText,
   operationalModelForSourceType,
   writeBackDataForSourceType,
   syncOperationalVendorRecord,

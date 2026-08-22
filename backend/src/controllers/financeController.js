@@ -18,6 +18,9 @@ const {
   isCanonicalSource,
   sourceKey,
   departureWorkspaceHref,
+  humanizeVendorServiceDescription,
+  humanizeBillReference,
+  firstHumanText,
 } = require("../utils/vendorOperationalSource");
 
 function serializeVerifier(admin) {
@@ -513,12 +516,7 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
     record.sourceId ||
     (resolvedSourceType && resolvedSourceType !== "OPS_VENDOR_PAYMENT" ? record.id : null);
   const operationalLinked = isCanonicalSource(resolvedSourceType, resolvedSourceId);
-  const serviceDescription =
-    record.serviceDescription ||
-    record.notes ||
-    record.vehicleType ||
-    record.assignmentType ||
-    category;
+  const serviceDescription = humanizeVendorServiceDescription(record, category);
 
   return {
     id: record.id,
@@ -537,7 +535,7 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
     vendorType: category,
     category,
     serviceDescription,
-    billReference: record.transactionId || record.invoiceProof || record.serviceDescription || `BILL-${String(record.id || "").slice(-6)}`,
+    billReference: humanizeBillReference(record),
     agreedTariff: balance.totalCost,
     totalCost: balance.totalCost,
     paidAmount: balance.paidAmount,
@@ -554,7 +552,7 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
     outgoingPaymentMode: record.paymentMode || "Bank Transfer",
     proofUrl: record.invoiceFileUrl || record.invoiceProof || record.advanceProofUrl || null,
     transactionRef: record.transactionId || null,
-    notes: record.remarks || record.serviceDescription || "",
+    notes: firstHumanText([record.remarks]),
     createdAt: record.createdAt,
     requiresFounderApproval: Boolean(record.requiresFounderApproval) || balance.dueAmount > 50000,
   };
