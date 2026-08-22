@@ -28,14 +28,17 @@ function isCollectionRejected(approvalStatus, status) {
  * A collection is VERIFIED only after the single Founder/FC approval step.
  * OpsClientPayment.status ("Verified") alone is not enough.
  */
+function isCashCollectionMode(paymentMode) {
+  const mode = String(paymentMode || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  return mode.includes("CASH") || mode === "CASH_HANDOVER" || mode === "COD";
+}
+
 function canonicalCollectionStatus(approvalStatus, status) {
   if (isCollectionVerified(approvalStatus)) return "VERIFIED";
   if (isCollectionRejected(approvalStatus, status)) return "REJECTED";
-  if (approvalStatus) return "PENDING";
-  const normalized = normalizeStatus(status);
-  if (normalized === "APPROVED" || normalized === "VERIFIED" || normalized === "COMPLETED") {
-    return "VERIFIED";
-  }
   return "PENDING";
 }
 
@@ -116,6 +119,7 @@ module.exports = {
   isCollectionVerified,
   isCollectionRejected,
   isCollectionPending,
+  isCashCollectionMode,
   canonicalCollectionStatus,
   isFounderIdentity,
   isFinanceControllerIdentity,

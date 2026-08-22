@@ -6,7 +6,7 @@ const {
 const {
   TERMINAL_APPROVED,
   canCompleteCollectionVerification,
-  isFounderIdentity,
+  isCashCollectionMode,
 } = require("../utils/collectionVerification");
 const {
   isCanonicalSource,
@@ -333,10 +333,12 @@ async function completeCollectionVerification(tx, { payment, user, tenantId, rea
 
   const rawProofUrl = proofFileUrl || payment.proofFileUrl || payment.proofUrl;
   const validProofUrl = sanitizeProofUrl(rawProofUrl);
-  const isCash = payment.paymentMode && String(payment.paymentMode).toUpperCase().includes("CASH");
-  const founderCanSkipProof = isFounderIdentity(req.user || req.admin || user);
+  const isCash = isCashCollectionMode(payment.paymentMode);
+  const verifierCanSkipProof = canCompleteCollectionVerification(req.user || req.admin || user);
 
-  if (!validProofUrl && !isCash && !founderCanSkipProof) {
+  // Incoming is one-step for Founder / Finance Controller. Missing slips must not
+  // block verify when the caller is already authorized. Attach proof when present.
+  if (!validProofUrl && !isCash && !verifierCanSkipProof) {
     throw {
       statusCode: 400,
       message: "Valid receipt/payment proof screenshot is required before verification.",

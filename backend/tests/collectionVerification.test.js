@@ -144,6 +144,8 @@ describe("collection verification status rule", () => {
     expect(canonicalCollectionStatus("REVIEWED_FINANCE_CONTROLLER", "Pending Verification")).toBe(
       "PENDING",
     );
+    expect(canonicalCollectionStatus(null, "Verified")).toBe("PENDING");
+    expect(canonicalCollectionStatus(null, "APPROVED")).toBe("PENDING");
   });
 });
 
@@ -262,6 +264,18 @@ describe("single collection verification endpoints", () => {
     expect(tx.opsClientPayment.updateMany).toHaveBeenCalled();
     expect(tx.financeAuditLog.create).toHaveBeenCalledTimes(1);
     expect(tx.booking.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a finance controller verify an online collection without stored proof", async () => {
+    const { tx } = mockSuccessfulVerificationTx({
+      ...pendingPayment,
+      proofFileUrl: null,
+      proofUrl: null,
+    });
+    const res = createRes();
+    await approveCollectionFounder(createReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect(tx.opsClientPayment.updateMany).toHaveBeenCalled();
   });
 
   it("lets a founder complete verification in one step from PENDING", async () => {

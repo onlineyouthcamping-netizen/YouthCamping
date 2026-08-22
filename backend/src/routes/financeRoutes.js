@@ -439,6 +439,11 @@ router.patch(
   requireCollectionVerifier,
   approveCollectionFounder
 );
+router.post(
+  "/collections/:paymentId/approve-founder",
+  requireCollectionVerifier,
+  approveCollectionFounder
+);
 router.patch(
   "/collections/:paymentId/reject",
   requirePermission(["finance.collections.reject", "finance.incoming.reject", "accounting.approve"]),

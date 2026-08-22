@@ -294,41 +294,56 @@ exports.getCashSubmissionsQueue = async (req, res) => {
       }),
     ]);
 
-    // Format with computed reconciliation fields
-    const queue = entries.map((entry) => {
-      const submittedAmount = Number(entry.amount || 0);
-      const bookingRemaining = Number(entry.booking?.remainingAmount || 0);
-      // Expected amount is either stored or the remaining balance
-      const expectedAmount = entry.expectedAmount ? Number(entry.expectedAmount) : submittedAmount;
-      const difference = submittedAmount - expectedAmount;
+    const queue = await Promise.all(
+      entries.map(async (entry) => {
+        const submittedAmount = Number(entry.amount || 0);
+        const expectedAmount = entry.expectedAmount ? Number(entry.expectedAmount) : submittedAmount;
+        const difference = submittedAmount - expectedAmount;
+        const opsPayment = await findExistingCollectionPayment({
+          tenantId,
+          booking: entry.booking,
+          entry,
+        });
+        const approvalStatus = opsPayment?.approvalStatus || null;
+        const displayStatus = opsPayment
+          ? canonicalCollectionStatus(opsPayment.approvalStatus, opsPayment.status)
+          : "PENDING";
+        const proofUrl = opsPayment?.proofFileUrl || opsPayment?.proofUrl || null;
 
-      return {
-        id: entry.id,
-        salespersonId: entry.salespersonId,
-        salespersonName: entry.salesperson?.name || "Direct Sales",
-        salespersonEmail: entry.salesperson?.email,
-        salespersonPhone: entry.salesperson?.phone,
-        bookingId: entry.bookingId,
-        customerName: entry.booking?.fullName || entry.booking?.name || "Guest",
-        customerPhone: entry.booking?.phone,
-        tripName: entry.booking?.tripName || "Tour Package",
-        departureDate: entry.booking?.departureDate,
-        expectedAmount,
-        submittedAmount,
-        difference,
-        hasDiscrepancy: difference !== 0,
-        paymentDate: entry.createdAt,
-        receiptNumber: entry.referenceNumber || `CASH-${entry.id.slice(-6).toUpperCase()}`,
-        receiptUrl: entry.receiptUrl || null,
-        notes: entry.notes || "",
-        status: entry.status,
-        rejectionReason: entry.rejectionReason || null,
-        adjustmentNote: entry.adjustmentNote || null,
-        submittedAt: entry.createdAt,
-        verifiedAt: entry.updatedAt,
-        actionedBy: entry.actionedBy ? { name: entry.actionedBy.name, role: entry.actionedBy.role } : null,
-      };
-    });
+        return {
+          id: entry.id,
+          opsClientPaymentId: opsPayment?.id || null,
+          salespersonId: entry.salespersonId,
+          salespersonName: entry.salesperson?.name || "Direct Sales",
+          salespersonEmail: entry.salesperson?.email,
+          salespersonPhone: entry.salesperson?.phone,
+          bookingId: entry.bookingId,
+          customerName: entry.booking?.fullName || entry.booking?.name || "Guest",
+          customerPhone: entry.booking?.phone,
+          tripName: entry.booking?.tripName || "Tour Package",
+          departureDate: entry.booking?.departureDate,
+          expectedAmount,
+          submittedAmount,
+          difference,
+          hasDiscrepancy: difference !== 0,
+          paymentDate: entry.createdAt,
+          receiptNumber: entry.referenceNumber || `CASH-${entry.id.slice(-6).toUpperCase()}`,
+          receiptUrl: proofUrl,
+          proofUrl,
+          proofFileUrl: proofUrl,
+          notes: entry.notes || "",
+          approvalStatus,
+          status: displayStatus,
+          rejectionReason: entry.rejectionReason || null,
+          adjustmentNote: entry.adjustmentNote || null,
+          submittedAt: entry.createdAt,
+          verifiedAt: entry.updatedAt,
+          actionedBy: entry.actionedBy
+            ? { name: entry.actionedBy.name, role: entry.actionedBy.role }
+            : null,
+        };
+      }),
+    );
 
     return res.json({
       success: true,
@@ -421,6 +436,8 @@ exports.getIncomingPaymentsQueue = async (req, res) => {
             approvalStatus: true,
             status: true,
             transactionId: true,
+            proofUrl: true,
+            proofFileUrl: true,
           },
         })
       : [];
@@ -440,8 +457,12 @@ exports.getIncomingPaymentsQueue = async (req, res) => {
       const approvalStatus = matchedPayment?.approvalStatus || null;
       const displayStatus = matchedPayment
         ? canonicalCollectionStatus(matchedPayment.approvalStatus, matchedPayment.status)
-        : canonicalCollectionStatus(null, entry.status);
+        : "PENDING";
       const isVerified = displayStatus === "VERIFIED";
+      const proofUrl =
+        matchedPayment?.proofFileUrl ||
+        matchedPayment?.proofUrl ||
+        null;
       const assignee = isVerified
         ? entry.actionedBy
           ? { id: entry.actionedBy.id, name: entry.actionedBy.name }
@@ -455,7 +476,8 @@ exports.getIncomingPaymentsQueue = async (req, res) => {
       }
 
       return {
-        id: entry.id,
+        id: matchedPayment?.id || entry.id,
+        opsClientPaymentId: matchedPayment?.id || null,
         bookingId: entry.bookingId,
         customerName: entry.booking?.fullName || entry.booking?.name || "Client",
         customerPhone: entry.booking?.phone,
@@ -467,8 +489,9 @@ exports.getIncomingPaymentsQueue = async (req, res) => {
         bankName: entry.collectionAccount?.bankName || "HDFC Bank",
         upiId: entry.collectionAccount?.upiId || "—",
         notes: entry.notes,
-        receiptUrl: entry.receiptUrl || null,
-        proofUrl: entry.receiptUrl || null,
+        receiptUrl: proofUrl,
+        proofUrl,
+        proofFileUrl: proofUrl,
         approvalStatus,
         status: displayStatus,
         submittedBy: entry.salesperson?.name || "Online / Gateway",
