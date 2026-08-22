@@ -2,6 +2,11 @@ const { prisma } = require("../lib/prisma");
 const { PAYMENT_STATUS } = require("../utils/paymentStatus");
 const { resolveTenantId } = require("../utils/tenantContext");
 const { withProfitFields } = require("../utils/profitVisibility");
+const {
+  canCompleteCollectionVerification,
+  denyCollectionVerification,
+  TERMINAL_APPROVED,
+} = require("../utils/collectionVerification");
 
 function normalizeDepartureDateIndia(dateInput) {
   if (!dateInput) return null;
@@ -147,7 +152,6 @@ exports.addClientPayment = async (req, res) => {
       transactionId,
       paymentDate,
       proofUrl,
-      status,
       remarks,
     } = req.body;
     const tenantId = resolveTenantId(req);
@@ -203,7 +207,7 @@ exports.addClientPayment = async (req, res) => {
 
     // Finance workflow: new receipts start recorded + PENDING approval.
     // Never auto-verify/approve on create (mode/amount/proof/booking accepted).
-    const receiptStatus = status || "Pending Verification";
+    const receiptStatus = "Pending Verification";
 
     const receipt = await prisma.opsClientPayment.create({
       data: {
@@ -336,8 +340,12 @@ exports.verifyClientPayment = async (req, res) => {
     const { status, remarks, collectionAccountId } = req.body; // Verified, Rejected, Refunded
     const tenantId = resolveTenantId(req);
 
-    const receipt = await prisma.opsClientPayment.findUnique({
-      where: { id },
+    if (status === "Verified" && !canCompleteCollectionVerification(req.user || req.admin)) {
+      return denyCollectionVerification(res);
+    }
+
+    const receipt = await prisma.opsClientPayment.findFirst({
+      where: { id, tenantId },
     });
 
     if (!receipt) {
@@ -346,12 +354,19 @@ exports.verifyClientPayment = async (req, res) => {
         .json({ success: false, message: "Payment record not found" });
     }
 
+    if (status === "Verified" && receipt.approvalStatus === TERMINAL_APPROVED) {
+      return res.json({ success: true, data: receipt, message: "Payment already verified" });
+    }
+
     const targetAccountId = collectionAccountId !== undefined ? collectionAccountId : receipt.collectionAccountId;
 
     const updated = await prisma.opsClientPayment.update({
       where: { id },
       data: {
         status,
+        ...(status === "Verified"
+          ? { approvalStatus: TERMINAL_APPROVED }
+          : {}),
         remarks: remarks || receipt.remarks,
         collectionAccountId: targetAccountId,
       },
@@ -572,8 +587,8 @@ exports.syncTreasuryMappings = async (req, res) => {
             collectionAccountId: targetAcc?.id || null,
             transactionId: b.upi_reference || `SYNC-${b.id.slice(-6).toUpperCase()}`,
             paymentDate: b.createdAt,
-            status: "Verified",
-            approvalStatus: "APPROVED_FOUNDER",
+            status: "Pending Verification",
+            approvalStatus: "PENDING",
             collectedBy: "System Sync",
             remarks: "Advance Paid on Booking (Auto-synced to Treasury)",
           },
@@ -600,7 +615,7 @@ exports.syncTreasuryMappings = async (req, res) => {
               collectionAccountId: targetAcc?.id || null,
               referenceNumber: b.upi_reference || `SYNC-${b.id.slice(-6).toUpperCase()}`,
               notes: "Advance Paid on Booking (Auto-synced to Treasury)",
-              status: "APPROVED",
+              status: "PENDING",
               salespersonId: b.salesAdminId,
             },
           });
