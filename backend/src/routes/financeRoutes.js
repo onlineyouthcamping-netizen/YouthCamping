@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const documentUpload = require("../middleware/documentUpload");
 
 // Existing Control Center Controllers
 const {
@@ -437,7 +438,28 @@ router.patch(
 );
 router.post(
   "/collections/:paymentId/upload-proof",
-  requirePermission(["finance.proof.upload", "finance.collections.review", "accounting.approve", "ops.manage"]),
+  requirePermission([
+    "finance.proof.upload",
+    "finance.collections.review",
+    "accounting.approve",
+    "ops.manage",
+    "bookings.edit",
+    "payments.edit",
+  ]),
+  (req, res, next) => {
+    documentUpload.fields([
+      { name: "document", maxCount: 1 },
+      { name: "proof", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message || "Invalid proof file",
+        });
+      }
+      next();
+    });
+  },
   uploadCollectionProof
 );
 router.get(
