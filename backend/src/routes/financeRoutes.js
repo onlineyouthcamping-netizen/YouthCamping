@@ -80,6 +80,7 @@ const {
 } = require("../controllers/tripAccountingController");
 
 const { authenticate, requirePermission } = require("../middleware/auth");
+const { requireCollectionVerifier } = require("../utils/collectionVerification");
 
 router.use(authenticate);
 
@@ -420,15 +421,15 @@ const {
   getMonthlyReconciliation,
 } = require("../controllers/financeApprovalController");
 
-// Collections 2-Tier Approval
+// Collections single verification — Founder or Finance Controller only
 router.patch(
   "/collections/:paymentId/review-fc",
-  requirePermission(["finance.collections.review", "finance.incoming.verify", "accounting.approve", "finance.control_center.view"]),
+  requireCollectionVerifier,
   reviewCollectionFC
 );
 router.patch(
   "/collections/:paymentId/approve-founder",
-  requirePermission(["finance.collections.approve_founder", "finance.incoming.approve"]),
+  requireCollectionVerifier,
   approveCollectionFounder
 );
 router.patch(

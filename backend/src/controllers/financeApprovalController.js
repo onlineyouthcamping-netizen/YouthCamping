@@ -3,6 +3,11 @@ const {
   persistPaymentProofFile,
   resolveUploadedProofFile,
 } = require("../utils/paymentProofStorage");
+const {
+  TERMINAL_APPROVED,
+  canCompleteCollectionVerification,
+  isFounderIdentity,
+} = require("../utils/collectionVerification");
 
 function resolveTenantId(req) {
   return req.user?.tenantId || req.admin?.tenantId || req.tenantId || "default";
@@ -147,296 +152,226 @@ async function resolveCollectionPayment(txOrPrisma, paymentId, tenantId) {
   return payment;
 }
 
+function assertCanVerifyCollection(req) {
+  if (canCompleteCollectionVerification(req.user || req.admin)) return;
+  const err = new Error("Forbidden: only Founder or Finance Controller can verify collections");
+  err.statusCode = 403;
+  throw err;
+}
+
+async function syncVerifiedBookingAndLedger(tx, { payment, user, tenantId }) {
+  if (!payment.booking) return;
+
+  const bookingIds = [payment.booking.id, payment.booking.bookingId].filter(Boolean);
+  const allVerified = await tx.opsClientPayment.findMany({
+    where: {
+      tenantId,
+      bookingId: { in: bookingIds },
+      approvalStatus: TERMINAL_APPROVED,
+      status: "Verified",
+    },
+  });
+
+  const totalVerified = allVerified.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const remaining = Math.max(0, Number(payment.booking.totalAmount || 0) - totalVerified);
+  const isFullyPaid = remaining === 0 && totalVerified > 0;
+  const isPartial = totalVerified > 0 && !isFullyPaid;
+
+  await tx.booking.update({
+    where: { id: payment.booking.id },
+    data: {
+      advancePaid: totalVerified,
+      remainingAmount: remaining,
+      paymentStatus: isFullyPaid ? "Paid" : isPartial ? "Partial" : "Pending",
+      payment_status: isFullyPaid ? "paid" : isPartial ? "partial" : "pending",
+    },
+  });
+
+  try {
+    const rawMode = String(payment.paymentMode || "UPI").toUpperCase();
+    const normalizedMode = rawMode.includes("CASH")
+      ? "CASH"
+      : rawMode.includes("BANK") || rawMode.includes("NEFT") || rawMode.includes("IMPS")
+        ? "BANK_TRANSFER"
+        : "UPI";
+
+    const existingEntry = await tx.accountingEntry.findFirst({
+      where: {
+        tenantId,
+        bookingId: { in: bookingIds },
+        amount: payment.amount,
+      },
+    });
+
+    if (existingEntry) {
+      await tx.accountingEntry.update({
+        where: { id: existingEntry.id },
+        data: {
+          status: "APPROVED",
+          collectionAccountId: payment.collectionAccountId || existingEntry.collectionAccountId,
+          actionedById: user.id,
+        },
+      });
+    } else {
+      await tx.accountingEntry.create({
+        data: {
+          tenantId,
+          bookingId: payment.booking.bookingId || payment.booking.id,
+          amount: payment.amount,
+          paymentMode: normalizedMode,
+          collectionAccountId: payment.collectionAccountId,
+          referenceNumber: payment.transactionId || `PAY-${payment.id}`,
+          notes: payment.remarks || "Verified collection approval",
+          status: "APPROVED",
+          salespersonId: payment.booking.salesAdminId,
+          actionedById: user.id,
+        },
+      });
+    }
+  } catch (entryErr) {
+    console.warn("AccountingEntry sync in collection verification skipped:", entryErr.message);
+  }
+}
+
 /**
- * 1️⃣ Finance Controller Reviews Collection
- * State Transition: PENDING / REJECTED -> REVIEWED_FINANCE_CONTROLLER
- * Concurrency Safe: Uses atomic conditional updateMany
+ * Single verification used by both Founder and Finance Controller.
+ * PENDING / REVIEWED_FINANCE_CONTROLLER / REJECTED → APPROVED_FOUNDER + Verified
+ */
+async function completeCollectionVerification(tx, { payment, user, tenantId, reason, proofFileUrl, req }) {
+  if (payment.approvalStatus === TERMINAL_APPROVED) {
+    return payment;
+  }
+
+  const rawProofUrl = proofFileUrl || payment.proofFileUrl || payment.proofUrl;
+  const validProofUrl = sanitizeProofUrl(rawProofUrl);
+  const isCash = payment.paymentMode && String(payment.paymentMode).toUpperCase().includes("CASH");
+  const founderCanSkipProof = isFounderIdentity(req.user || req.admin || user);
+
+  if (!validProofUrl && !isCash && !founderCanSkipProof) {
+    throw {
+      statusCode: 400,
+      message: "Valid receipt/payment proof screenshot is required before verification.",
+    };
+  }
+
+  const previousState = {
+    approvalStatus: payment.approvalStatus,
+    status: payment.status,
+  };
+
+  const updateResult = await tx.opsClientPayment.updateMany({
+    where: {
+      id: payment.id,
+      tenantId,
+      approvalStatus: { in: ["PENDING", "REVIEWED_FINANCE_CONTROLLER", "REJECTED"] },
+    },
+    data: {
+      approvalStatus: TERMINAL_APPROVED,
+      approvedByFounderAt: new Date(),
+      approvedByFounderId: user.id,
+      reviewedByFinanceAt: payment.reviewedByFinanceAt || new Date(),
+      reviewedByFinanceId: payment.reviewedByFinanceId || user.id,
+      status: "Verified",
+      ...(validProofUrl ? { proofFileUrl: validProofUrl, proofUrl: validProofUrl } : {}),
+    },
+  });
+
+  if (updateResult.count === 0 && payment.approvalStatus !== TERMINAL_APPROVED) {
+    throw {
+      statusCode: 409,
+      message: "Conflict: Payment has already been approved or modified concurrently.",
+    };
+  }
+
+  const updated = await tx.opsClientPayment.findUnique({
+    where: { id: payment.id },
+    include: { booking: true, collectionAccount: true },
+  });
+
+  await tx.financeAuditLog.create({
+    data: {
+      tenantId,
+      entityType: "CUSTOMER_PAYMENT",
+      entityId: payment.id,
+      tripId: payment.booking?.tripId || updated?.booking?.tripId || null,
+      action: "APPROVED_FOUNDER",
+      performedBy: user.id,
+      performedByName: user.name,
+      performedAt: new Date(),
+      oldValue: JSON.stringify(previousState),
+      newValue: JSON.stringify({ approvalStatus: TERMINAL_APPROVED, status: "Verified" }),
+      changeDescription: `Collection of ₹${payment.amount} for booking ${payment.bookingId} verified by ${user.name} (${user.role}). Marked as VERIFIED.`,
+      reason: sanitizeReason(reason) || null,
+      ipAddress: req.ip || null,
+      userAgent: req.get("user-agent") || null,
+    },
+  });
+
+  await syncVerifiedBookingAndLedger(tx, { payment: updated || payment, user, tenantId });
+  return updated;
+}
+
+async function verifyCollectionRequest(req, res, { reason, proofFileUrl } = {}) {
+  assertCanVerifyCollection(req);
+  const { paymentId } = req.params;
+  const user = resolveUser(req);
+  const tenantId = resolveTenantId(req);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const payment = await resolveCollectionPayment(tx, paymentId, tenantId);
+    if (!payment) {
+      throw { statusCode: 404, message: "Collection payment not found or access denied" };
+    }
+    return completeCollectionVerification(tx, {
+      payment,
+      user,
+      tenantId,
+      reason,
+      proofFileUrl,
+      req,
+    });
+  });
+
+  return res.json({
+    success: true,
+    status: "success",
+    message: "Payment verified and approved.",
+    payment: result,
+  });
+}
+
+/**
+ * 1️⃣ Finance Controller / Founder verifies a collection in one step.
+ * State Transition: PENDING / REVIEWED_FINANCE_CONTROLLER / REJECTED -> APPROVED_FOUNDER (status: Verified)
  * PATCH /api/finance/collections/:paymentId/review-fc
  */
 exports.reviewCollectionFC = async (req, res) => {
   try {
-    const { paymentId } = req.params;
-    const { reason } = req.body || {};
-    const user = resolveUser(req);
-    const tenantId = resolveTenantId(req);
-
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Verify existence and tenant ownership
-      const payment = await resolveCollectionPayment(tx, paymentId, tenantId);
-
-      if (!payment) {
-        throw { statusCode: 404, message: "Collection payment not found or access denied" };
-      }
-
-      // Check current state machine status (approvalStatus is source of truth)
-      if (payment.approvalStatus === "APPROVED_FOUNDER") {
-        throw {
-          statusCode: 400,
-          message: "Payment is already approved by Founder and verified. Cannot re-review.",
-        };
-      }
-
-      const previousState = {
-        approvalStatus: payment.approvalStatus,
-        status: payment.status,
-      };
-
-      // 2. Atomic conditional update (guarantees race condition immunity)
-      const updateResult = await tx.opsClientPayment.updateMany({
-        where: {
-          id: payment.id,
-          tenantId,
-          approvalStatus: { in: ["PENDING", "REJECTED"] },
-        },
-        data: {
-          approvalStatus: "REVIEWED_FINANCE_CONTROLLER",
-          reviewedByFinanceAt: new Date(),
-          reviewedByFinanceId: user.id,
-          status: "Pending Verification",
-        },
-      });
-
-      if (updateResult.count === 0) {
-        throw {
-          statusCode: 409,
-          message: "Conflict: Collection payment has already been reviewed, approved, or modified concurrently.",
-        };
-      }
-
-      const updated = await tx.opsClientPayment.findUnique({
-        where: { id: payment.id },
-        include: { booking: true, collectionAccount: true },
-      });
-
-      // 3. Create immutable audit log
-      await tx.financeAuditLog.create({
-        data: {
-          tenantId,
-          entityType: "CUSTOMER_PAYMENT",
-          entityId: payment.id,
-          tripId: payment.booking?.tripId || null,
-          action: "REVIEWED_FC",
-          performedBy: user.id,
-          performedByName: user.name,
-          performedAt: new Date(),
-          oldValue: JSON.stringify(previousState),
-          newValue: JSON.stringify({ approvalStatus: "REVIEWED_FINANCE_CONTROLLER", status: "Pending Verification" }),
-          changeDescription: `Finance Controller reviewed collection of ₹${payment.amount} for booking ${payment.bookingId} (${payment.booking?.fullName || payment.booking?.name || "Client"})`,
-          reason: sanitizeReason(reason) || null,
-          ipAddress: req.ip || null,
-          userAgent: req.get("user-agent") || null,
-        },
-      });
-
-      return updated;
-    });
-
-    return res.json({
-      success: true,
-      status: "success",
-      message: "Payment reviewed by Finance Controller. Awaiting founder approval.",
-      payment: result,
-    });
+    const { reason, proofFileUrl } = req.body || {};
+    return await verifyCollectionRequest(req, res, { reason, proofFileUrl });
   } catch (err) {
     console.error("reviewCollectionFC error:", err);
     return res.status(err.statusCode || 500).json({
       success: false,
-      message: err.message || "Failed to review collection payment",
+      message: err.message || "Failed to verify collection payment",
     });
   }
 };
 
 /**
- * 2️⃣ Founder Approves Collection (Final Sign-off)
- * State Transition: REVIEWED_FINANCE_CONTROLLER -> APPROVED_FOUNDER (status: Verified)
- * Concurrency Safe: Uses atomic conditional updateMany
+ * 2️⃣ Founder / Finance Controller verifies a collection in one step.
+ * Same terminal state as review-fc so Incoming and Ledger stay in sync.
  * PATCH /api/finance/collections/:paymentId/approve-founder
  */
 exports.approveCollectionFounder = async (req, res) => {
   try {
-    const { paymentId } = req.params;
     const { reason, proofFileUrl } = req.body || {};
-    const user = resolveUser(req);
-    const tenantId = resolveTenantId(req);
-
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Verify existence and tenant ownership
-      const payment = await resolveCollectionPayment(tx, paymentId, tenantId);
-
-      if (!payment) {
-        throw { statusCode: 404, message: "Collection payment not found or access denied" };
-      }
-
-      // Check state machine: Allow Founder/Admin to direct-approve from PENDING or REVIEWED_FINANCE_CONTROLLER
-      const isFounderOrAdmin =
-        user.role === "admin" ||
-        user.role === "superadmin" ||
-        user.role === "founder" ||
-        user.role === "owner" ||
-        req.user?.isSuperuser;
-
-      if (payment.approvalStatus === "APPROVED_FOUNDER") {
-        return payment;
-      }
-
-      if (payment.approvalStatus !== "REVIEWED_FINANCE_CONTROLLER" && !isFounderOrAdmin) {
-        throw {
-          statusCode: 400,
-          message: "Payment must be reviewed by Finance Controller before Founder approval.",
-        };
-      }
-
-      const rawProofUrl = proofFileUrl || payment.proofFileUrl || payment.proofUrl;
-      const validProofUrl = sanitizeProofUrl(rawProofUrl);
-
-      // Mandatory Proof Check (Skip for CASH or Founder/Admin explicit approval)
-      const isCash = payment.paymentMode && payment.paymentMode.toUpperCase().includes("CASH");
-      if (!validProofUrl && !isCash && !isFounderOrAdmin) {
-        throw {
-          statusCode: 400,
-          message: "Valid receipt/payment proof screenshot is required before Founder approval.",
-        };
-      }
-
-      const previousState = {
-        approvalStatus: payment.approvalStatus,
-        status: payment.status,
-      };
-
-      // 2. Atomic conditional update (guarantees race condition immunity)
-      const updateResult = await tx.opsClientPayment.updateMany({
-        where: {
-          id: payment.id,
-          tenantId,
-          approvalStatus: { in: ["REVIEWED_FINANCE_CONTROLLER", "PENDING", "REJECTED"] },
-        },
-        data: {
-          approvalStatus: "APPROVED_FOUNDER",
-          approvedByFounderAt: new Date(),
-          approvedByFounderId: user.id,
-          status: "Verified",
-          proofFileUrl: validProofUrl,
-          proofUrl: validProofUrl,
-        },
-      });
-
-      if (updateResult.count === 0 && payment.approvalStatus !== "APPROVED_FOUNDER") {
-        throw {
-          statusCode: 409,
-          message: "Conflict: Payment has already been approved or modified concurrently.",
-        };
-      }
-
-      const updated = await tx.opsClientPayment.findUnique({
-        where: { id: payment.id },
-        include: { booking: true, collectionAccount: true },
-      });
-
-      // 3. Create immutable audit log
-      await tx.financeAuditLog.create({
-        data: {
-          tenantId,
-          entityType: "CUSTOMER_PAYMENT",
-          entityId: payment.id,
-          tripId: payment.booking?.tripId || null,
-          action: "APPROVED_FOUNDER",
-          performedBy: user.id,
-          performedByName: user.name,
-          performedAt: new Date(),
-          oldValue: JSON.stringify(previousState),
-          newValue: JSON.stringify({ approvalStatus: "APPROVED_FOUNDER", status: "Verified" }),
-          changeDescription: `Founder approved ₹${payment.amount} collection for booking ${payment.bookingId}. Marked as VERIFIED.`,
-          reason: sanitizeReason(reason) || null,
-          ipAddress: req.ip || null,
-          userAgent: req.get("user-agent") || null,
-        },
-      });
-
-      // 4. Update booking totals and balance
-      if (payment.booking) {
-        const allVerified = await tx.opsClientPayment.findMany({
-          where: {
-            bookingId: { in: [payment.booking.id, payment.booking.bookingId] },
-            status: "Verified",
-          },
-        });
-
-        const totalVerified = allVerified.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-        const remaining = Math.max(0, Number(payment.booking.totalAmount || 0) - totalVerified);
-        const isFullyPaid = remaining === 0 && totalVerified > 0;
-        const isPartial = totalVerified > 0 && !isFullyPaid;
-
-        await tx.booking.update({
-          where: { id: payment.booking.id },
-          data: {
-            advancePaid: totalVerified,
-            remainingAmount: remaining,
-            paymentStatus: isFullyPaid ? "Paid" : isPartial ? "Partial" : "Pending",
-            payment_status: isFullyPaid ? "paid" : isPartial ? "partial" : "pending",
-          },
-        });
-
-        // Ensure AccountingEntry is approved / created
-        try {
-          const rawMode = String(payment.paymentMode || "UPI").toUpperCase();
-          const normalizedMode = rawMode.includes("CASH")
-            ? "CASH"
-            : rawMode.includes("BANK") || rawMode.includes("NEFT") || rawMode.includes("IMPS")
-              ? "BANK_TRANSFER"
-              : "UPI";
-
-          const existingEntry = await tx.accountingEntry.findFirst({
-            where: {
-              tenantId,
-              bookingId: payment.booking.bookingId || payment.booking.id,
-              amount: payment.amount,
-            },
-          });
-
-          if (existingEntry) {
-            await tx.accountingEntry.update({
-              where: { id: existingEntry.id },
-              data: {
-                status: "APPROVED",
-                collectionAccountId: payment.collectionAccountId || existingEntry.collectionAccountId,
-                actionedById: user.id,
-              },
-            });
-          } else {
-            await tx.accountingEntry.create({
-              data: {
-                tenantId,
-                bookingId: payment.booking.bookingId || payment.booking.id,
-                amount: payment.amount,
-                paymentMode: normalizedMode,
-                collectionAccountId: payment.collectionAccountId,
-                referenceNumber: payment.transactionId || `PAY-${payment.id}`,
-                notes: payment.remarks || "Verified Founder Approval",
-                status: "APPROVED",
-                salespersonId: payment.booking.salesAdminId,
-                actionedById: user.id,
-              },
-            });
-          }
-        } catch (entryErr) {
-          console.warn("AccountingEntry sync in approveCollectionFounder skipped:", entryErr.message);
-        }
-      }
-
-      return updated;
-    });
-
-    return res.json({
-      success: true,
-      status: "success",
-      message: "Payment approved by founder. Marked as VERIFIED.",
-      payment: result,
-    });
+    return await verifyCollectionRequest(req, res, { reason, proofFileUrl });
   } catch (err) {
     console.error("approveCollectionFounder error:", err);
     return res.status(err.statusCode || 500).json({
       success: false,
-      message: err.message || "Failed to approve collection payment",
+      message: err.message || "Failed to verify collection payment",
     });
   }
 };
@@ -776,26 +711,30 @@ exports.getCollectionDetailsWithAudit = async (req, res) => {
       orderBy: { performedAt: "asc" },
     });
 
+    const verificationStatus =
+      payment.approvalStatus === TERMINAL_APPROVED
+        ? "DONE"
+        : payment.approvalStatus === "REJECTED"
+          ? "REJECTED"
+          : "PENDING";
+    const verification = {
+      status: verificationStatus,
+      approvedAt: payment.approvedByFounderAt || payment.reviewedByFinanceAt,
+      approvedBy: payment.approvedByFounderId || payment.reviewedByFinanceId,
+    };
+
     return res.json({
       success: true,
       payment,
       auditTrail,
       approvalChain: {
-        step1_financeController: {
-          status:
-            payment.approvalStatus === "REVIEWED_FINANCE_CONTROLLER" ||
-            payment.approvalStatus === "APPROVED_FOUNDER"
-              ? "DONE"
-              : payment.approvalStatus === "REJECTED"
-              ? "REJECTED"
-              : "PENDING",
-          approvedAt: payment.reviewedByFinanceAt,
-          approvedBy: payment.reviewedByFinanceId,
-        },
+        verification,
+        // Legacy two-step fields kept in sync so older clients do not show a fake second hop.
+        step1_financeController: verification,
         step2_founder: {
-          status: payment.approvalStatus === "APPROVED_FOUNDER" ? "DONE" : "PENDING",
-          approvedAt: payment.approvedByFounderAt,
-          approvedBy: payment.approvedByFounderId,
+          status: verificationStatus === "REJECTED" ? "PENDING" : verificationStatus,
+          approvedAt: verification.approvedAt,
+          approvedBy: verification.approvedBy,
         },
       },
     });
@@ -1373,7 +1312,6 @@ exports.getPendingApprovals = async (req, res) => {
   try {
     const tenantId = resolveTenantId(req);
     const user = resolveUser(req);
-
     const isFounderOrAdmin =
       user.role === "admin" ||
       user.role === "superadmin" ||
@@ -1383,15 +1321,7 @@ exports.getPendingApprovals = async (req, res) => {
     const customerWhere = {
       tenantId,
       approvalStatus: {
-        in: isFounderOrAdmin
-          ? ["PENDING", "REVIEWED_FINANCE_CONTROLLER"]
-          : ["PENDING"],
-      },
-      NOT: {
-        AND: [
-          { approvalStatus: "APPROVED_FOUNDER" },
-          { status: "Verified" },
-        ],
+        in: ["PENDING", "REVIEWED_FINANCE_CONTROLLER"],
       },
     };
 

@@ -1,5 +1,11 @@
 const { prisma } = require("../lib/prisma");
 const { logBookingActivity } = require("../utils/bookingActivityLogger");
+const {
+  canCompleteCollectionVerification,
+  denyCollectionVerification,
+  isIncomingCustomerCollection,
+  TERMINAL_APPROVED,
+} = require("../utils/collectionVerification");
 
 // Helper to check booking ownership for sales
 const checkBookingOwnership = async (bookingId, user) => {
@@ -297,16 +303,135 @@ exports.createEntry = async (req, res) => {
   }
 };
 
+async function findLinkedCollectionPayment({ tenantId, booking, entry }) {
+  const bookingIds = [booking.id, booking.bookingId, entry.bookingId].filter(Boolean);
+  const matches = await prisma.opsClientPayment.findMany({
+    where: {
+      tenantId,
+      bookingId: { in: bookingIds },
+      amount: entry.amount,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!matches.length) return null;
+  const ref = entry.referenceNumber;
+  if (ref) {
+    const byRef = matches.find(
+      (payment) =>
+        payment.transactionId === ref || payment.transactionId === `ACC-${entry.id}`,
+    );
+    if (byRef) return byRef;
+  }
+  return matches[0];
+}
+
+async function settleIncomingCollectionOnce({ entry, booking, user, tenantId }) {
+  const bookingIds = [booking.id, booking.bookingId, entry.bookingId].filter(Boolean);
+  const existingPayment = await findLinkedCollectionPayment({ tenantId, booking, entry });
+
+  if (existingPayment?.approvalStatus === TERMINAL_APPROVED) {
+    return { payment: existingPayment, settledNow: false };
+  }
+
+  let payment;
+  if (existingPayment) {
+    payment = await prisma.opsClientPayment.update({
+      where: { id: existingPayment.id },
+      data: {
+        approvalStatus: TERMINAL_APPROVED,
+        status: "Verified",
+        approvedByFounderAt: new Date(),
+        approvedByFounderId: user.id,
+        reviewedByFinanceAt: existingPayment.reviewedByFinanceAt || new Date(),
+        reviewedByFinanceId: existingPayment.reviewedByFinanceId || user.id,
+      },
+    });
+  } else {
+    payment = await prisma.opsClientPayment.create({
+      data: {
+        tenantId,
+        bookingId: booking.bookingId || booking.id,
+        amount: entry.amount,
+        paymentMode: entry.paymentMode,
+        collectionAccountId: entry.collectionAccountId || null,
+        transactionId: entry.referenceNumber || `ACC-${entry.id}`,
+        status: "Verified",
+        approvalStatus: TERMINAL_APPROVED,
+        approvedByFounderAt: new Date(),
+        approvedByFounderId: user.id,
+        reviewedByFinanceAt: new Date(),
+        reviewedByFinanceId: user.id,
+        collectedBy: user.name || user.email || "Finance",
+        remarks: entry.notes || "Verified collection approval",
+      },
+    });
+  }
+
+  const allVerified = await prisma.opsClientPayment.findMany({
+    where: {
+      tenantId,
+      bookingId: { in: bookingIds },
+      approvalStatus: TERMINAL_APPROVED,
+    },
+  });
+  const totalVerified = allVerified.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const remaining = Math.max(0, Number(booking.totalAmount || 0) - totalVerified);
+  const isFullyPaid = remaining === 0 && totalVerified > 0;
+  const isPartial = totalVerified > 0 && !isFullyPaid;
+
+  await prisma.booking.update({
+    where: { id: booking.id },
+    data: {
+      advancePaid: totalVerified,
+      remainingAmount: remaining,
+      paymentStatus: isFullyPaid ? "Paid" : isPartial ? "Partial" : "Pending",
+      payment_status: isFullyPaid ? "paid" : isPartial ? "partial" : "pending",
+      ...(isFullyPaid && booking.status === "pending" ? { status: "confirmed" } : {}),
+    },
+  });
+
+  await prisma.financeAuditLog.create({
+    data: {
+      tenantId,
+      entityType: "CUSTOMER_PAYMENT",
+      entityId: payment.id,
+      tripId: booking.tripId || null,
+      action: "APPROVED_FOUNDER",
+      performedBy: user.id,
+      performedByName: user.name || user.email || "Finance",
+      performedAt: new Date(),
+      oldValue: JSON.stringify({
+        approvalStatus: existingPayment?.approvalStatus || "PENDING",
+        status: existingPayment?.status || "Pending Verification",
+      }),
+      newValue: JSON.stringify({ approvalStatus: TERMINAL_APPROVED, status: "Verified" }),
+      changeDescription: `Collection of ₹${entry.amount} for booking ${booking.bookingId || booking.id} verified via accounting approval by ${user.name || user.email} (${user.role}).`,
+    },
+  });
+
+  await logBookingActivity({
+    bookingId: booking.id,
+    action: "PAYMENT_APPROVED",
+    details: `Payment entry of ₹${entry.amount.toLocaleString("en-IN")} via ${entry.paymentMode} verified by ${user.name || "Finance"}. Total Paid: ₹${totalVerified.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}`,
+    performedByAdminId: user.id,
+  });
+
+  return { payment, settledNow: true };
+}
+
 /**
  * POST /api/accounting/entries/:id/approve
- * Manager/Admin approves a pending payment entry
+ * Ledger approval for accounting entries.
+ * Incoming customer collections may be financially settled only by Founder / FC.
  */
 exports.approveEntry = async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId || "default";
+    const user = req.user;
 
-    const entry = await prisma.accountingEntry.findUnique({
-      where: { id },
+    const entry = await prisma.accountingEntry.findFirst({
+      where: { id, tenantId },
     });
 
     if (!entry) {
@@ -315,27 +440,82 @@ exports.approveEntry = async (req, res) => {
         .json({ success: false, message: "Accounting entry not found" });
     }
 
-    if (entry.status !== "PENDING") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: `Cannot approve entry with status ${entry.status}`,
+    const booking = await prisma.booking.findFirst({
+      where: {
+        tenantId,
+        OR: [{ bookingId: entry.bookingId }, { id: entry.bookingId }],
+      },
+    });
+
+    if (isIncomingCustomerCollection(entry, booking)) {
+      if (!canCompleteCollectionVerification(user)) {
+        return denyCollectionVerification(res);
+      }
+
+      const existingPayment = await findLinkedCollectionPayment({ tenantId, booking, entry });
+      const alreadySettled =
+        entry.status === "APPROVED" && existingPayment?.approvalStatus === TERMINAL_APPROVED;
+      if (alreadySettled) {
+        return res.json({
+          success: true,
+          data: entry,
+          message: "Collection already verified",
         });
+      }
+
+      if (entry.salespersonId === user.id && entry.status === "PENDING") {
+        return res.status(403).json({
+          success: false,
+          message: "Separation of Duties violation: A salesperson or creator cannot approve their own payment entry. Another Finance Controller or Admin must verify this transaction.",
+        });
+      }
+
+      let updated = entry;
+      if (entry.status === "PENDING") {
+        updated = await prisma.accountingEntry.update({
+          where: { id: entry.id },
+          data: {
+            status: "APPROVED",
+            actionedById: user.id,
+          },
+        });
+        await prisma.accountingEntryLog.create({
+          data: {
+            accountingEntryId: entry.id,
+            action: "APPROVE",
+            notes: `Approved payment entry of ₹${entry.amount.toLocaleString("en-IN")} via ${entry.paymentMode}`,
+            actorId: user.id,
+          },
+        });
+      }
+
+      await settleIncomingCollectionOnce({
+        entry: updated,
+        booking,
+        user,
+        tenantId,
+      });
+
+      return res.json({ success: true, data: updated });
     }
 
-    // Separation of duties: Creator cannot approve their own entry
-    if (entry.salespersonId === req.user.id) {
+    if (entry.status !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot approve entry with status ${entry.status}`,
+      });
+    }
+
+    if (entry.salespersonId === user.id) {
       return res.status(403).json({
         success: false,
         message: "Separation of Duties violation: A salesperson or creator cannot approve their own payment entry. Another Finance Controller or Admin must verify this transaction.",
       });
     }
 
-    // ── STRICT ROLE CHECK: Cash payment approvals strictly reserved for Superuser / Founder / Admin ──
-    const userRole = (req.user.role || "").toLowerCase();
+    const userRole = (user.role || "").toLowerCase();
     const isSuperuserFounder =
-      ["superadmin", "founder", "admin"].includes(userRole) || req.user.isSuperuser;
+      ["superadmin", "founder", "admin"].includes(userRole) || user.isSuperuser;
     const isCash =
       entry.paymentMode &&
       (entry.paymentMode.toUpperCase() === "CASH" ||
@@ -349,82 +529,22 @@ exports.approveEntry = async (req, res) => {
       });
     }
 
-    // 1. Update entry status
     const updated = await prisma.accountingEntry.update({
-      where: { id },
+      where: { id: entry.id },
       data: {
         status: "APPROVED",
-        actionedById: req.user.id,
+        actionedById: user.id,
       },
     });
 
-    // 2. Write immutable history log
     await prisma.accountingEntryLog.create({
       data: {
         accountingEntryId: entry.id,
         action: "APPROVE",
         notes: `Approved payment entry of ₹${entry.amount.toLocaleString("en-IN")} via ${entry.paymentMode}`,
-        actorId: req.user.id,
+        actorId: user.id,
       },
     });
-
-    // 3. Atomically synchronize target booking and client payment receipts
-    const booking = await prisma.booking.findFirst({
-      where: {
-        OR: [{ bookingId: updated.bookingId }, { id: updated.bookingId }],
-      },
-    });
-
-    if (booking) {
-      const targetBookingId = booking.bookingId || booking.id;
-
-      // Upsert verified receipt in OpsClientPayment
-      await prisma.opsClientPayment.create({
-        data: {
-          tenantId: booking.tenantId || "default",
-          bookingId: targetBookingId,
-          amount: updated.amount,
-          paymentMode: updated.paymentMode,
-          transactionId: updated.referenceNumber || `ACC-${updated.id}`,
-          status: "Verified",
-          collectedBy: req.user?.name || req.user?.email || "Finance",
-          remarks: updated.notes || "Approved via Accounting Hub",
-        },
-      });
-
-      // Compute total verified receipts for this booking
-      const allVerified = await prisma.opsClientPayment.findMany({
-        where: {
-          bookingId: { in: [booking.id, booking.bookingId] },
-          status: "Verified",
-        },
-      });
-
-      const totalVerified = allVerified.reduce((sum, r) => sum + (r.amount || 0), 0);
-      const totalAmount = Number(booking.totalAmount || 0);
-      const remaining = Math.max(0, totalAmount - totalVerified);
-
-      const isFullyPaid = remaining === 0 && totalVerified > 0;
-      const isPartial = totalVerified > 0 && !isFullyPaid;
-
-      await prisma.booking.update({
-        where: { id: booking.id },
-        data: {
-          advancePaid: totalVerified,
-          remainingAmount: remaining,
-          paymentStatus: isFullyPaid ? "Paid" : isPartial ? "Partial" : "Pending",
-          payment_status: isFullyPaid ? "paid" : isPartial ? "partial" : "pending",
-          ...(isFullyPaid && booking.status === "pending" ? { status: "confirmed" } : {}),
-        },
-      });
-
-      await logBookingActivity({
-        bookingId: booking.id,
-        action: "PAYMENT_APPROVED",
-        details: `Payment entry of ₹${updated.amount.toLocaleString("en-IN")} via ${updated.paymentMode} approved by ${req.user.name || "Finance"}. Total Paid: ₹${totalVerified.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}`,
-        performedByAdminId: req.user.id,
-      });
-    }
 
     return res.json({ success: true, data: updated });
   } catch (err) {

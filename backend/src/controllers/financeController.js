@@ -1,5 +1,11 @@
 const { prisma } = require("../lib/prisma");
 const { logBookingActivity } = require("../utils/bookingActivityLogger");
+const {
+  canonicalCollectionStatus,
+  canCompleteCollectionVerification,
+  denyCollectionVerification,
+  TERMINAL_APPROVED,
+} = require("../utils/collectionVerification");
 
 /**
  * GET /api/finance/control-center/stats
@@ -269,28 +275,67 @@ exports.getIncomingPaymentsQueue = async (req, res) => {
       }),
     ]);
 
-    const queue = entries.map((entry) => ({
-      id: entry.id,
-      bookingId: entry.bookingId,
-      customerName: entry.booking?.fullName || entry.booking?.name || "Client",
-      customerPhone: entry.booking?.phone,
-      tripName: entry.booking?.tripName || "Tour Package",
-      amount: Number(entry.amount || 0),
-      paymentMode: entry.paymentMode,
-      referenceNumber: entry.referenceNumber || "—",
-      collectionAccountName: entry.collectionAccount?.accountName || "YouthCamping Main Bank",
-      bankName: entry.collectionAccount?.bankName || "HDFC Bank",
-      upiId: entry.collectionAccount?.upiId || "—",
-      notes: entry.notes,
-      receiptUrl: entry.receiptUrl || null,
-      proofUrl: entry.receiptUrl || null,
-      status: entry.status,
-      submittedBy: entry.salesperson?.name || "Online / Gateway",
-      actionedBy: entry.actionedBy?.name || null,
-      createdAt: entry.createdAt,
-      bookingDate: entry.createdAt,
-      tripDepartureDate: entry.booking?.departureDate || null,
-    }));
+    const bookingIds = [
+      ...new Set(
+        entries.flatMap((entry) =>
+          [entry.bookingId, entry.booking?.bookingId, entry.booking?.id].filter(Boolean),
+        ),
+      ),
+    ];
+
+    const linkedPayments = bookingIds.length
+      ? await prisma.opsClientPayment.findMany({
+          where: { tenantId, bookingId: { in: bookingIds } },
+          select: {
+            id: true,
+            bookingId: true,
+            amount: true,
+            approvalStatus: true,
+            status: true,
+            transactionId: true,
+          },
+        })
+      : [];
+
+    const queue = entries.map((entry) => {
+      const amount = Number(entry.amount || 0);
+      const matchedPayment = linkedPayments.find(
+        (payment) =>
+          Number(payment.amount) === amount &&
+          (payment.bookingId === entry.bookingId ||
+            payment.bookingId === entry.booking?.bookingId ||
+            payment.bookingId === entry.booking?.id ||
+            (entry.referenceNumber &&
+              payment.transactionId &&
+              payment.transactionId === entry.referenceNumber)),
+      );
+      const approvalStatus = matchedPayment?.approvalStatus || null;
+      return {
+        id: entry.id,
+        bookingId: entry.bookingId,
+        customerName: entry.booking?.fullName || entry.booking?.name || "Client",
+        customerPhone: entry.booking?.phone,
+        tripName: entry.booking?.tripName || "Tour Package",
+        amount,
+        paymentMode: entry.paymentMode,
+        referenceNumber: entry.referenceNumber || "—",
+        collectionAccountName: entry.collectionAccount?.accountName || "YouthCamping Main Bank",
+        bankName: entry.collectionAccount?.bankName || "HDFC Bank",
+        upiId: entry.collectionAccount?.upiId || "—",
+        notes: entry.notes,
+        receiptUrl: entry.receiptUrl || null,
+        proofUrl: entry.receiptUrl || null,
+        approvalStatus,
+        status: matchedPayment
+          ? canonicalCollectionStatus(matchedPayment.approvalStatus, matchedPayment.status)
+          : canonicalCollectionStatus(null, entry.status),
+        submittedBy: entry.salesperson?.name || "Online / Gateway",
+        actionedBy: entry.actionedBy?.name || null,
+        createdAt: entry.createdAt,
+        bookingDate: entry.createdAt,
+        tripDepartureDate: entry.booking?.departureDate || null,
+      };
+    });
 
     return res.json({
       success: true,
@@ -720,8 +765,9 @@ exports.verifyCashSubmission = async (req, res) => {
       });
     }
 
-    const entry = await prisma.accountingEntry.findUnique({
-      where: { id },
+    const tenantId = req.user?.tenantId || req.admin?.tenantId || "default";
+    const entry = await prisma.accountingEntry.findFirst({
+      where: { id, tenantId },
       include: {
         booking: true,
         salesperson: true,
@@ -740,17 +786,11 @@ exports.verifyCashSubmission = async (req, res) => {
       });
     }
 
-    // ── STRICT ROLE CHECK: Cash approvals strictly reserved for Superuser / Founder / Admin ──
-    const userRole = (req.user.role || "").toLowerCase();
-    const isSuperuserFounder =
-      ["superadmin", "founder", "admin"].includes(userRole) || req.user.isSuperuser;
-
-    if ((action === "APPROVE" || action === "APPROVE_WITH_DISCREPANCY") && !isSuperuserFounder) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Restricted Approval: Cash payment approvals are strictly reserved for Superuser / Founder / Admin accounts only.",
-      });
+    if (
+      (action === "APPROVE" || action === "APPROVE_WITH_DISCREPANCY") &&
+      !canCompleteCollectionVerification(req.user)
+    ) {
+      return denyCollectionVerification(res);
     }
 
     let nextStatus = "APPROVED";
@@ -822,6 +862,7 @@ exports.verifyCashSubmission = async (req, res) => {
           collectionAccountId: targetAccountId,
           transactionId: entry.referenceNumber || `CASH-${entry.id.slice(-6).toUpperCase()}`,
           status: "Verified",
+          approvalStatus: "APPROVED_FOUNDER",
           collectedBy: entry.salesperson?.name || "Sales Executive",
           remarks: `Verified by Finance Controller ${userName}. ${logNote}`,
         },
@@ -885,22 +926,35 @@ exports.verifyIncomingPayment = async (req, res) => {
     const { action, notes, reason } = req.body;
     const userId = req.user?.id;
     const userName = req.user?.name || "Finance Controller";
+    const tenantId = req.user?.tenantId || req.admin?.tenantId || "default";
 
-    let entry = await prisma.accountingEntry.findUnique({
-      where: { id },
+    if (action === "VERIFY" && !canCompleteCollectionVerification(req.user)) {
+      return denyCollectionVerification(res);
+    }
+
+    let entry = await prisma.accountingEntry.findFirst({
+      where: { id, tenantId },
       include: { booking: true },
     });
 
     if (!entry) {
       // Check OpsClientPayment
-      const clientPayment = await prisma.opsClientPayment.findUnique({
-        where: { id },
+      const clientPayment = await prisma.opsClientPayment.findFirst({
+        where: { id, tenantId },
         include: { booking: true },
       });
 
       if (clientPayment) {
+        if (action === "VERIFY" && clientPayment.approvalStatus === TERMINAL_APPROVED) {
+          return res.json({
+            success: true,
+            data: clientPayment,
+            message: "Payment already verified",
+          });
+        }
+
         const nextOpsStatus = action === "VERIFY" ? "Verified" : action === "REJECT" ? "Rejected" : "Pending Verification";
-        const nextApprovalStatus = action === "VERIFY" ? "APPROVED_FOUNDER" : action === "REJECT" ? "REJECTED" : "PENDING";
+        const nextApprovalStatus = action === "VERIFY" ? TERMINAL_APPROVED : action === "REJECT" ? "REJECTED" : "PENDING";
 
         const updatedOps = await prisma.opsClientPayment.update({
           where: { id },
@@ -955,21 +1009,13 @@ exports.verifyIncomingPayment = async (req, res) => {
       });
     }
 
-    // Strict Cash Approval Restriction: ONLY Superuser / Founder / Admin
     const isCash =
       entry.paymentMode &&
       (entry.paymentMode.toUpperCase() === "CASH" ||
         entry.paymentMode.toUpperCase().includes("CASH"));
-    const userRole = (req.user.role || "").toLowerCase();
-    const isSuperuserFounder =
-      ["superadmin", "founder", "admin"].includes(userRole) || req.user.isSuperuser;
 
-    if (isCash && action === "VERIFY" && !isSuperuserFounder) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Restricted Approval: Cash payment approvals are strictly reserved for Superuser / Founder / Admin accounts only.",
-      });
+    if (isCash && action === "VERIFY" && !canCompleteCollectionVerification(req.user)) {
+      return denyCollectionVerification(res);
     }
 
     const nextStatus = action === "VERIFY" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "DISCREPANCY";
@@ -1030,6 +1076,7 @@ exports.verifyIncomingPayment = async (req, res) => {
           collectionAccountId: targetAccountId,
           transactionId: entry.referenceNumber || `BNK-${entry.id.slice(-6).toUpperCase()}`,
           status: "Verified",
+          approvalStatus: "APPROVED_FOUNDER",
           collectedBy: "Finance Clearance",
           remarks: `Verified by Finance Controller ${userName}`,
         },
