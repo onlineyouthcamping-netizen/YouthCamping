@@ -687,6 +687,7 @@ exports.getBookingPayments = async (req, res) => {
         resolvedAcc = mode.includes("CASH") ? cashAcc : mode.includes("BANK") ? bankAcc : upiAcc;
       }
       seenAmounts.add(`${r.amount}-${new Date(r.paymentDate || r.createdAt).toISOString().slice(0, 10)}`);
+      const proofUrl = r.proofFileUrl || r.proofUrl || null;
       allPayments.push({
         id: r.id,
         amount: r.amount,
@@ -701,6 +702,12 @@ exports.getBookingPayments = async (req, res) => {
               ? "failed"
               : "pending",
         createdAt: r.paymentDate || r.createdAt,
+        transactionId: r.transactionId || null,
+        proofUrl,
+        proofFileUrl: proofUrl,
+        proofFileName: r.proofFileName || null,
+        proofFileType: r.proofFileType || null,
+        proofUploadedAt: r.proofUploadedAt || null,
       });
     });
 

@@ -1,4 +1,8 @@
 const { prisma } = require("../lib/prisma");
+const {
+  persistPaymentProofFile,
+  resolveUploadedProofFile,
+} = require("../utils/paymentProofStorage");
 
 function resolveTenantId(req) {
   return req.user?.tenantId || req.admin?.tenantId || req.tenantId || "default";
@@ -555,7 +559,24 @@ exports.uploadCollectionProof = async (req, res) => {
     const user = resolveUser(req);
     const tenantId = resolveTenantId(req);
 
-    let rawUrl = req.body?.proofFileUrl || req.body?.proofUrl || req.file?.path || req.file?.location;
+    const uploadedFile = resolveUploadedProofFile(req);
+    let rawUrl =
+      req.body?.proofFileUrl ||
+      req.body?.proofUrl ||
+      uploadedFile?.path ||
+      uploadedFile?.location;
+
+    if (uploadedFile && uploadedFile.buffer) {
+      try {
+        rawUrl = await persistPaymentProofFile(uploadedFile);
+      } catch (storageErr) {
+        return res.status(storageErr.statusCode || 500).json({
+          success: false,
+          message: storageErr.message || "Failed to store payment proof",
+        });
+      }
+    }
+
     const validatedUrl = sanitizeProofUrl(rawUrl);
 
     if (!validatedUrl) {
@@ -566,8 +587,10 @@ exports.uploadCollectionProof = async (req, res) => {
       });
     }
 
-    const fileName = req.body?.proofFileName || req.file?.originalname || "receipt.png";
-    const fileType = req.body?.proofFileType || req.file?.mimetype || "image/png";
+    const fileName =
+      req.body?.proofFileName || uploadedFile?.originalname || "receipt.png";
+    const fileType =
+      req.body?.proofFileType || uploadedFile?.mimetype || "image/png";
 
     const result = await prisma.$transaction(async (tx) => {
       const payment = await resolveCollectionPayment(tx, paymentId, tenantId);
