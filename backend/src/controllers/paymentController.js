@@ -7,6 +7,12 @@ const {
   denyCollectionVerification,
   TERMINAL_APPROVED,
 } = require("../utils/collectionVerification");
+const {
+  resolveSourceFromBody,
+  isCanonicalSource,
+  findOperationalSource,
+  syncOperationalVendorRecord: syncOperationalBySource,
+} = require("../utils/vendorOperationalSource");
 
 function normalizeDepartureDateIndia(dateInput) {
   if (!dateInput) return null;
@@ -1102,111 +1108,15 @@ async function resolveTargetAccountId(tenantId, paymentMode, collectionAccountId
   return null;
 }
 
-async function syncOperationalVendorRecord(tenantId, tripId, depDate, vendorName, category, agreed, advance, targetId) {
-  try {
-    const remaining = Math.max(0, (agreed || 0) - (advance || 0));
-    const catLower = (category || "").toLowerCase();
-
-    // 1. Hotel booking sync
-    if (catLower.includes("hotel") || catLower.includes("stay") || catLower.includes("camp")) {
-      const hotelWhere = { tenantId };
-      if (tripId && tripId !== "default") hotelWhere.tripId = tripId;
-      if (depDate) hotelWhere.departureDate = depDate;
-
-      if (targetId && (targetId.startsWith("hb-") || targetId.length === 24 || targetId.length === 25)) {
-        const rawId = targetId.startsWith("hb-") ? targetId.replace("hb-", "") : targetId;
-        await prisma.opsHotelBooking.updateMany({
-          where: { id: rawId },
-          data: { advancePaid: advance, balanceAmount: remaining },
-        });
-      }
-      if (vendorName) {
-        await prisma.opsHotelBooking.updateMany({
-          where: { ...hotelWhere, hotelName: { equals: vendorName.trim(), mode: "insensitive" } },
-          data: { advancePaid: advance, balanceAmount: remaining },
-        });
-      }
-    }
-
-    // 2. Transport fleet sync
-    if (catLower.includes("transport") || catLower.includes("fleet") || catLower.includes("cab") || catLower.includes("bus")) {
-      const fleetWhere = { tenantId };
-      if (tripId && tripId !== "default") fleetWhere.tripId = tripId;
-      if (depDate) fleetWhere.departureDate = depDate;
-
-      if (targetId && (targetId.startsWith("fl-") || targetId.length === 24 || targetId.length === 25)) {
-        const rawId = targetId.startsWith("fl-") ? targetId.replace("fl-", "") : targetId;
-        await prisma.opsTransportFleet.updateMany({
-          where: { id: rawId },
-          data: { advancePaid: advance, balanceAmount: remaining },
-        });
-      }
-      if (vendorName) {
-        await prisma.opsTransportFleet.updateMany({
-          where: {
-            ...fleetWhere,
-            OR: [
-              { vendorName: { equals: vendorName.trim(), mode: "insensitive" } },
-              { driverName: { equals: vendorName.trim(), mode: "insensitive" } },
-              { notes: { contains: vendorName.trim(), mode: "insensitive" } },
-            ],
-          },
-          data: { advancePaid: advance, balanceAmount: remaining },
-        });
-      }
-    }
-
-    // 3. Guide payment sync
-    if (catLower.includes("guide") || catLower.includes("leader")) {
-      const guideWhere = { tenantId };
-      if (tripId && tripId !== "default") guideWhere.tripId = tripId;
-      if (depDate) guideWhere.departureDate = depDate;
-      const statusLabel = advance >= agreed && agreed > 0 ? "PAID" : advance > 0 ? "PARTIAL" : "PENDING";
-
-      if (targetId && (targetId.startsWith("gp-") || targetId.length === 24 || targetId.length === 25)) {
-        const rawId = targetId.startsWith("gp-") ? targetId.replace("gp-", "") : targetId;
-        await prisma.opsGuidePayment.updateMany({
-          where: { id: rawId },
-          data: { advancePaid: advance, balanceAmount: remaining, paymentStatus: statusLabel },
-        });
-      }
-      if (vendorName) {
-        await prisma.opsGuidePayment.updateMany({
-          where: { ...guideWhere, guideName: { equals: vendorName.trim(), mode: "insensitive" } },
-          data: { advancePaid: advance, balanceAmount: remaining, paymentStatus: statusLabel },
-        });
-      }
-    }
-
-    // 4. Departure Activity sync
-    if (catLower.includes("activit")) {
-      const actWhere = { tenantId };
-      if (tripId && tripId !== "default") actWhere.tripId = tripId;
-      if (depDate) actWhere.departureDate = depDate;
-
-      if (targetId && (targetId.startsWith("act-") || targetId.length === 24 || targetId.length === 25)) {
-        const rawId = targetId.startsWith("act-vendor-") ? targetId.replace("act-vendor-", "") : targetId;
-        await prisma.opsDepartureActivity.updateMany({
-          where: { id: rawId },
-          data: { actualCost: advance },
-        });
-      }
-      if (vendorName) {
-        await prisma.opsDepartureActivity.updateMany({
-          where: {
-            ...actWhere,
-            OR: [
-              { vendorName: { equals: vendorName.trim(), mode: "insensitive" } },
-              { name: { equals: vendorName.trim(), mode: "insensitive" } },
-            ],
-          },
-          data: { actualCost: advance },
-        });
-      }
-    }
-  } catch (syncErr) {
-    console.warn("syncOperationalVendorRecord warning:", syncErr.message);
+async function syncOperationalVendorRecord(payload, db = prisma) {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    return syncOperationalBySource(payload, db);
   }
+  return {
+    resolved: false,
+    updatedCount: 0,
+    message: "Operational write-back requires canonical sourceType, sourceId, and tenantId",
+  };
 }
 
 exports.createVendorPayment = async (req, res) => {
@@ -1227,8 +1137,22 @@ exports.createVendorPayment = async (req, res) => {
       status,
       approvalStatus,
       remarks,
+      sourceType: bodySourceType,
+      sourceId: bodySourceId,
+      hotelBookingId,
+      fleetBookingId,
+      guideId,
+      activityId,
     } = req.body;
     const tenantId = req.user?.tenantId || "default";
+    const { sourceType, sourceId } = resolveSourceFromBody({
+      sourceType: bodySourceType,
+      sourceId: bodySourceId,
+      hotelBookingId,
+      fleetBookingId,
+      guideId,
+      activityId,
+    });
 
     // Resolve trip ID if slug or shortName was passed
     let tripId = rawTripId;
@@ -1255,7 +1179,11 @@ exports.createVendorPayment = async (req, res) => {
     // Miscellaneous must NEVER upsert that way: empty/shared payees (e.g. "Ad-Hoc Expense")
     // would overwrite a prior approved row and inherit APPROVED + paidBy (looks like auto-approve).
     let payment = null;
-    if (!isMisc && depDate && vendorName) {
+    if (isCanonicalSource(sourceType, sourceId)) {
+      payment = await prisma.opsVendorPayment.findFirst({
+        where: { tenantId, sourceType, sourceId },
+      });
+    } else if (!isMisc && depDate && vendorName) {
       payment = await prisma.opsVendorPayment.findFirst({
         where: {
           tenantId,
@@ -1302,6 +1230,9 @@ exports.createVendorPayment = async (req, res) => {
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
           remarks: remarks !== undefined ? remarks : payment.remarks,
+          ...(isCanonicalSource(sourceType, sourceId) && !payment.sourceId
+            ? { sourceType, sourceId }
+            : {}),
         },
         include: {
           collectionAccount: true,
@@ -1332,6 +1263,7 @@ exports.createVendorPayment = async (req, res) => {
           // Approver is written to paidBy only when approvalStatus becomes APPROVED.
           paidBy: isMisc ? null : req.user?.name || req.user?.email || "Operations",
           remarks: remarks || "",
+          ...(isCanonicalSource(sourceType, sourceId) ? { sourceType, sourceId } : {}),
         },
         include: {
           collectionAccount: true,
@@ -1339,8 +1271,16 @@ exports.createVendorPayment = async (req, res) => {
       });
     }
 
-    // Sync with operational models (Hotels, Transport, Guides, Activities)
-    await syncOperationalVendorRecord(tenantId, tripId, depDate, vendorName, category, agreed, advance, null);
+    await syncOperationalVendorRecord(
+      {
+        tenantId,
+        sourceType: payment.sourceType,
+        sourceId: payment.sourceId,
+        agreed,
+        advance,
+      },
+      prisma,
+    );
 
     return res.json({ success: true, data: payment });
   } catch (err) {
@@ -1370,8 +1310,22 @@ exports.updateVendorPayment = async (req, res) => {
       approvalStatus,
       remarks,
       paidBy,
+      sourceType: bodySourceType,
+      sourceId: bodySourceId,
+      hotelBookingId,
+      fleetBookingId,
+      guideId,
+      activityId,
     } = req.body;
     const tenantId = req.user?.tenantId || "default";
+    const bodySource = resolveSourceFromBody({
+      sourceType: bodySourceType,
+      sourceId: bodySourceId,
+      hotelBookingId,
+      fleetBookingId,
+      guideId,
+      activityId,
+    });
 
     // Resolve trip ID if slug or shortName was passed
     let tripId = rawTripId;
@@ -1392,23 +1346,31 @@ exports.updateVendorPayment = async (req, res) => {
     const targetAccountId = await resolveTargetAccountId(tenantId, paymentMode, collectionAccountId);
 
     let existing = null;
-    // 1. Try finding by ID directly in OpsVendorPayment
-    if (
-      id &&
-      !id.startsWith("hb-") &&
-      !id.startsWith("fl-") &&
-      !id.startsWith("gp-") &&
-      !id.startsWith("auto-") &&
-      !id.startsWith("act-vendor-") &&
-      !id.startsWith("VND-")
-    ) {
-      existing = await prisma.opsVendorPayment.findUnique({
-        where: { id },
+    let resolvedSource = isCanonicalSource(bodySource.sourceType, bodySource.sourceId) ? bodySource : null;
+
+    if (id) {
+      existing = await prisma.opsVendorPayment.findFirst({
+        where: { id, tenantId },
       });
     }
 
-    // 2. If not found by ID, look up by tripId, departureDate, vendorName.
-    // Never vendor-name-match Miscellaneous rows — shared payees must update by id only.
+    if (!existing && resolvedSource) {
+      existing = await prisma.opsVendorPayment.findFirst({
+        where: { tenantId, sourceType: resolvedSource.sourceType, sourceId: resolvedSource.sourceId },
+      });
+    }
+
+    if (!existing && id) {
+      const op = await findOperationalSource(prisma, id, tenantId);
+      if (op) {
+        resolvedSource = { sourceType: op.sourceType, sourceId: op.sourceId };
+        existing = await prisma.opsVendorPayment.findFirst({
+          where: { tenantId, sourceType: op.sourceType, sourceId: op.sourceId },
+        });
+      }
+    }
+
+    // Ops tracker fallback: trip + vendor name, never for Miscellaneous.
     if (!existing && vendorName) {
       const searchWhere = {
         tenantId,
@@ -1473,6 +1435,9 @@ exports.updateVendorPayment = async (req, res) => {
             : {}),
           ...(paidBy !== undefined ? { paidBy } : {}),
           remarks: remarks !== undefined ? remarks : existing.remarks,
+          ...(resolvedSource && !existing.sourceId
+            ? { sourceType: resolvedSource.sourceType, sourceId: resolvedSource.sourceId }
+            : {}),
         },
         include: {
           collectionAccount: true,
@@ -1480,14 +1445,14 @@ exports.updateVendorPayment = async (req, res) => {
       });
 
       await syncOperationalVendorRecord(
-        tenantId,
-        tripId || existing.tripId,
-        depDate || existing.departureDate,
-        vendorName || existing.vendorName,
-        category || existing.category,
-        finalAgreed,
-        finalAdvance,
-        id,
+        {
+          tenantId,
+          sourceType: updated.sourceType,
+          sourceId: updated.sourceId,
+          agreed: finalAgreed,
+          advance: finalAdvance,
+        },
+        prisma,
       );
     } else {
       // Create new OpsVendorPayment record if it didn't exist
@@ -1527,6 +1492,9 @@ exports.updateVendorPayment = async (req, res) => {
               ? paidBy
               : req.user?.name || req.user?.email || "Operations",
           remarks: remarks || "",
+          ...(resolvedSource
+            ? { sourceType: resolvedSource.sourceType, sourceId: resolvedSource.sourceId }
+            : {}),
         },
         include: {
           collectionAccount: true,
@@ -1534,14 +1502,14 @@ exports.updateVendorPayment = async (req, res) => {
       });
 
       await syncOperationalVendorRecord(
-        tenantId,
-        tripId || "default",
-        depDate,
-        vendorName,
-        category,
-        finalAgreed,
-        finalAdvance,
-        id,
+        {
+          tenantId,
+          sourceType: updated.sourceType,
+          sourceId: updated.sourceId,
+          agreed: finalAgreed,
+          advance: finalAdvance,
+        },
+        prisma,
       );
     }
 

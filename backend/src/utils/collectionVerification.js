@@ -105,6 +105,10 @@ function isIncomingCustomerCollection(entry, booking) {
   return Boolean(entry && booking);
 }
 
+function isEligibleCollectionAssignee(user) {
+  return canCompleteCollectionVerification(user);
+}
+
 module.exports = {
   TERMINAL_APPROVED,
   FOUNDER_ROLES,
@@ -119,4 +123,5 @@ module.exports = {
   requireCollectionVerifier,
   denyCollectionVerification,
   isIncomingCustomerCollection,
+  isEligibleCollectionAssignee,
 };
