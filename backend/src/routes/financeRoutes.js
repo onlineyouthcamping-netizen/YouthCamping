@@ -424,6 +424,7 @@ const {
   reviewVendorPaymentFC,
   approveVendorPaymentFounder,
   rejectVendorPayment,
+  uploadVendorPaymentProof,
   getPendingApprovals,
   getMonthlyReconciliation,
 } = require("../controllers/financeApprovalController");
@@ -486,6 +487,32 @@ router.get(
   "/vendor-payments/:paymentId",
   requirePermission(["finance.payments.view", "accounting.view", "finance.audit.view", "finance.control_center.view", "finance.outgoing.verify"]),
   getVendorPaymentDetailsWithAudit
+);
+router.post(
+  "/vendor-payments/:paymentId/upload-proof",
+  requirePermission([
+    "finance.proof.upload",
+    "finance.vendor.review",
+    "finance.outgoing.verify",
+    "accounting.approve",
+    "ops.manage",
+    "payments.edit",
+  ]),
+  (req, res, next) => {
+    documentUpload.fields([
+      { name: "document", maxCount: 1 },
+      { name: "proof", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message || "Invalid proof file",
+        });
+      }
+      next();
+    });
+  },
+  uploadVendorPaymentProof
 );
 router.patch(
   "/vendor-payments/:paymentId/review-fc",

@@ -391,7 +391,7 @@ describe("vendor two-step stays intact", () => {
     await reviewVendorPaymentFC(
       {
         params: { paymentId: "hb_1" },
-        body: {},
+        body: { invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
         user: { id: "fc_1", name: "FC", role: "finance_controller", tenantId: "tenant-a" },
         ip: "127.0.0.1",
         get: () => "jest",
@@ -647,7 +647,7 @@ describe("canonical DH ↔ vendor payment write-back", () => {
   function reviewReq(paymentId, tenantId = "tenant-a", extra = {}) {
     return {
       params: { paymentId },
-      body: extra.body || {},
+      body: { invoiceFileUrl: "https://cdn.example.com/payout.jpg", ...(extra.body || {}) },
       user: { id: "fc_1", name: "FC", role: "finance_controller", tenantId },
       ip: "127.0.0.1",
       get: () => "jest",
@@ -933,7 +933,7 @@ describe("canonical DH ↔ vendor payment write-back", () => {
     await approveVendorPaymentFounder(
       {
         params: { paymentId: "vp_approve" },
-        body: { reason: "Cleared" },
+        body: { reason: "Cleared", invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
         user: { id: "founder_1", name: "Founder", role: "superadmin", tenantId: "tenant-a" },
         ip: "127.0.0.1",
         get: () => "jest",
@@ -953,7 +953,7 @@ describe("canonical DH ↔ vendor payment write-back", () => {
     await approveVendorPaymentFounder(
       {
         params: { paymentId: "vp_approve" },
-        body: { reason: "Cleared again" },
+        body: { reason: "Cleared again", invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
         user: { id: "founder_1", name: "Founder", role: "superadmin", tenantId: "tenant-a" },
         ip: "127.0.0.1",
         get: () => "jest",
@@ -1002,6 +1002,38 @@ describe("canonical DH ↔ vendor payment write-back", () => {
     expect(typeof reviewVendorPaymentFC).toBe("function");
     expect(typeof approveVendorPaymentFounder).toBe("function");
     expect(typeof verifyVendorPayment).toBe("function");
+  });
+
+  it("11 review without payment proof returns 400", async () => {
+    const payment = {
+      id: "vp_no_proof",
+      tenantId: "tenant-a",
+      tripId: "trip_1",
+      vendorName: "Camp Site",
+      category: "Hotels",
+      agreedAmount: 5000,
+      advancePaid: 0,
+      approvalStatus: "PENDING",
+      invoiceFileUrl: null,
+      invoiceProof: null,
+      sourceType: null,
+      sourceId: null,
+    };
+    const tx = {
+      opsVendorPayment: {
+        findFirst: jest.fn().mockResolvedValue(payment),
+        updateMany: jest.fn(),
+      },
+      opsHotelBooking: { findFirst: jest.fn() },
+      opsTransportFleet: { findFirst: jest.fn() },
+      opsGuidePayment: { findFirst: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const res = createRes();
+    await reviewVendorPaymentFC(reviewReq("vp_no_proof", "tenant-a", { body: { invoiceFileUrl: "" } }), res);
+    expect(res.statusCode).toBe(400);
+    expect(String(res.body.message)).toMatch(/proof/i);
+    expect(tx.opsVendorPayment.updateMany).not.toHaveBeenCalled();
   });
 });
 

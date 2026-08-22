@@ -573,7 +573,12 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
         ? "partial"
         : "pending",
     outgoingPaymentMode: record.paymentMode || "Bank Transfer",
-    proofUrl: record.invoiceFileUrl || record.invoiceProof || record.advanceProofUrl || null,
+    proofUrl:
+      record.invoiceFileUrl ||
+      record.invoiceProof ||
+      record.advanceProofUrl ||
+      record.settlementProofUrl ||
+      null,
     transactionRef: record.transactionId || null,
     notes: firstHumanText([record.remarks]),
     createdAt: record.createdAt,

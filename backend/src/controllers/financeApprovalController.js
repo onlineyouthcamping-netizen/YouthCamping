@@ -62,6 +62,29 @@ function sanitizeProofUrl(url) {
   return null;
 }
 
+const VENDOR_PROOF_REQUIRED =
+  "Payment proof is required before this vendor payout can be reviewed or verified. Upload a receipt, screenshot, or PDF on the payout record first.";
+
+function vendorProofUrl(payment, extraUrl) {
+  return sanitizeProofUrl(
+    extraUrl ||
+      payment?.invoiceFileUrl ||
+      payment?.invoiceProof ||
+      payment?.advanceProofUrl ||
+      payment?.settlementProofUrl,
+  );
+}
+
+function vendorProofWriteFields(url) {
+  if (!url) return {};
+  return {
+    invoiceFileUrl: url,
+    invoiceProof: url,
+    advanceProofUrl: url,
+    settlementProofUrl: url,
+  };
+}
+
 /**
  * Sanitizes user input text (reasons / notes)
  */
@@ -1023,7 +1046,7 @@ exports.getVendorPaymentDetailsWithAudit = async (req, res) => {
 exports.reviewVendorPaymentFC = async (req, res) => {
   try {
     const { paymentId } = req.params;
-    const { reason, directClear } = req.body || {};
+    const { reason, directClear, invoiceFileUrl, proofFileUrl, proofUrl } = req.body || {};
     const user = resolveUser(req);
     const tenantId = resolveTenantId(req);
 
@@ -1032,6 +1055,14 @@ exports.reviewVendorPaymentFC = async (req, res) => {
 
       if (!payment) {
         throw { statusCode: 404, message: "Vendor payment not found or access denied" };
+      }
+
+      const resolvedProof = vendorProofUrl(
+        payment,
+        invoiceFileUrl || proofFileUrl || proofUrl,
+      );
+      if (!resolvedProof) {
+        throw { statusCode: 400, message: VENDOR_PROOF_REQUIRED };
       }
 
       // Calculate strictly on the server-side from database fields
@@ -1078,6 +1109,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
           status: newStatus,
           advancePaid: finalAdvance,
           remainingPayable: finalRemaining,
+          ...vendorProofWriteFields(resolvedProof),
         },
       });
 
@@ -1157,7 +1189,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
 exports.approveVendorPaymentFounder = async (req, res) => {
   try {
     const { paymentId } = req.params;
-    const { reason, invoiceFileUrl } = req.body || {};
+    const { reason, invoiceFileUrl, proofFileUrl, proofUrl } = req.body || {};
     const user = resolveUser(req);
     const tenantId = resolveTenantId(req);
 
@@ -1177,7 +1209,13 @@ exports.approveVendorPaymentFounder = async (req, res) => {
         }
       }
 
-      const invoiceUrl = sanitizeProofUrl(invoiceFileUrl || payment.invoiceFileUrl || payment.invoiceProof);
+      const invoiceUrl = vendorProofUrl(
+        payment,
+        invoiceFileUrl || proofFileUrl || proofUrl,
+      );
+      if (!invoiceUrl) {
+        throw { statusCode: 400, message: VENDOR_PROOF_REQUIRED };
+      }
 
       const previousState = {
         approvalStatus: payment.approvalStatus,
@@ -1201,7 +1239,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
           status: "Paid",
           advancePaid: finalAdvance,
           remainingPayable: 0,
-          invoiceFileUrl: invoiceUrl || undefined,
+          ...vendorProofWriteFields(invoiceUrl),
         },
       });
 
@@ -1258,6 +1296,98 @@ exports.approveVendorPaymentFounder = async (req, res) => {
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || "Failed to approve vendor payout",
+    });
+  }
+};
+
+/**
+ * Upload proof for a vendor payout (OpsVendorPayment).
+ * POST /api/finance/vendor-payments/:paymentId/upload-proof
+ */
+exports.uploadVendorPaymentProof = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const user = resolveUser(req);
+    const tenantId = resolveTenantId(req);
+
+    const uploadedFile = resolveUploadedProofFile(req);
+    let rawUrl =
+      req.body?.proofFileUrl ||
+      req.body?.proofUrl ||
+      req.body?.invoiceFileUrl ||
+      req.body?.invoiceProof ||
+      uploadedFile?.path ||
+      uploadedFile?.location;
+
+    if (uploadedFile && uploadedFile.buffer) {
+      try {
+        rawUrl = await persistPaymentProofFile(uploadedFile);
+      } catch (storageErr) {
+        return res.status(storageErr.statusCode || 500).json({
+          success: false,
+          message: storageErr.message || "Failed to store payment proof",
+        });
+      }
+    }
+
+    const validatedUrl = sanitizeProofUrl(rawUrl);
+    if (!validatedUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or insecure proof URL provided. Must be a valid HTTPS/HTTP or upload path.",
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const payment = await resolveVendorPaymentRecord(tx, paymentId, tenantId);
+      if (!payment) {
+        throw { statusCode: 404, message: "Vendor payment not found or access denied" };
+      }
+
+      const updated = await tx.opsVendorPayment.update({
+        where: { id: payment.id },
+        data: vendorProofWriteFields(validatedUrl),
+        include: { trip: true, collectionAccount: true },
+      });
+
+      await tx.financeAuditLog.create({
+        data: {
+          tenantId,
+          entityType: "VENDOR_PAYMENT",
+          entityId: payment.id,
+          tripId: payment.tripId,
+          action: "PROOF_UPLOADED",
+          performedBy: user.id,
+          performedByName: user.name,
+          performedAt: new Date(),
+          oldValue: JSON.stringify({
+            invoiceFileUrl: payment.invoiceFileUrl,
+            invoiceProof: payment.invoiceProof,
+          }),
+          newValue: JSON.stringify({ invoiceFileUrl: validatedUrl }),
+          changeDescription: `Vendor payout proof uploaded for ${payment.vendorName}`,
+          reason: null,
+          ipAddress: req.ip || null,
+          userAgent: req.get("user-agent") || null,
+        },
+      });
+
+      return updated;
+    });
+
+    return res.json({
+      success: true,
+      status: "success",
+      message: "Proof uploaded. Ready for Finance Controller review.",
+      proof_url: validatedUrl,
+      proofUrl: validatedUrl,
+      payment: result,
+    });
+  } catch (err) {
+    console.error("uploadVendorPaymentProof error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Failed to upload vendor payout proof",
     });
   }
 };

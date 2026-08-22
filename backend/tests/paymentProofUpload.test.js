@@ -8,6 +8,11 @@ jest.mock("../src/lib/prisma", () => ({
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    opsVendorPayment: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
     paymentReceivingAccount: { findMany: jest.fn() },
     financeAuditLog: { create: jest.fn() },
   },
@@ -31,6 +36,7 @@ const {
 } = require("../src/utils/paymentProofStorage");
 const {
   uploadCollectionProof,
+  uploadVendorPaymentProof,
 } = require("../src/controllers/financeApprovalController");
 const { getBookingPayments } = require("../src/controllers/paymentController");
 const { hasPermission } = require("../src/config/permissions");
@@ -284,5 +290,56 @@ describe("payment proof RBAC", () => {
         uploadPerms,
       ),
     ).toBe(false);
+  });
+});
+
+describe("Vendor payout proof upload", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("persists proof onto OpsVendorPayment invoice fields", async () => {
+    persistPaymentProofFile.mockResolvedValue("/uploads/payment-proofs/vendor.jpg");
+    const existing = {
+      id: "vp_1",
+      tenantId: "tenant-a",
+      tripId: "trip_1",
+      vendorName: "Hotel",
+      invoiceFileUrl: null,
+      invoiceProof: null,
+    };
+    const updated = {
+      ...existing,
+      invoiceFileUrl: "/uploads/payment-proofs/vendor.jpg",
+      invoiceProof: "/uploads/payment-proofs/vendor.jpg",
+    };
+    prisma.$transaction.mockImplementation(async (fn) =>
+      fn({
+        opsVendorPayment: {
+          findFirst: jest.fn().mockResolvedValue(existing),
+          update: jest.fn().mockResolvedValue(updated),
+        },
+        opsHotelBooking: { findFirst: jest.fn().mockResolvedValue(null) },
+        opsTransportFleet: { findFirst: jest.fn().mockResolvedValue(null) },
+        opsGuidePayment: { findFirst: jest.fn().mockResolvedValue(null) },
+        opsActivity: { findFirst: jest.fn().mockResolvedValue(null) },
+        financeAuditLog: { create: jest.fn().mockResolvedValue({}) },
+      }),
+    );
+
+    const req = createReq({
+      params: { paymentId: "vp_1" },
+      file: {
+        buffer: Buffer.from("fake-image"),
+        originalname: "vendor.jpg",
+        mimetype: "image/jpeg",
+        size: 128,
+      },
+    });
+    const res = createRes();
+    await uploadVendorPaymentProof(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.proofUrl).toBe("/uploads/payment-proofs/vendor.jpg");
+    expect(res.body.payment.invoiceFileUrl).toBe("/uploads/payment-proofs/vendor.jpg");
   });
 });

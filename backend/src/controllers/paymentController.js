@@ -1257,6 +1257,7 @@ exports.createVendorPayment = async (req, res) => {
           invoiceProof: invoiceProof || "",
           invoiceFileUrl: invoiceProof || "",
           advanceProofUrl: invoiceProof || "",
+          settlementProofUrl: invoiceProof || "",
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
           // For pending misc, leave paidBy empty — creator is not the approver.
@@ -1429,6 +1430,8 @@ exports.updateVendorPayment = async (req, res) => {
             invoiceProof !== undefined ? invoiceProof : existing.invoiceFileUrl,
           advanceProofUrl:
             invoiceProof !== undefined ? invoiceProof : existing.advanceProofUrl,
+          settlementProofUrl:
+            invoiceProof !== undefined ? invoiceProof : existing.settlementProofUrl,
           status: computedStatus,
           ...(approvalStatus !== undefined
             ? { approvalStatus }
@@ -1485,6 +1488,7 @@ exports.updateVendorPayment = async (req, res) => {
           invoiceProof: invoiceProof || "",
           invoiceFileUrl: invoiceProof || "",
           advanceProofUrl: invoiceProof || "",
+          settlementProofUrl: invoiceProof || "",
           status: computedStatus,
           ...(approvalStatus !== undefined ? { approvalStatus } : {}),
           paidBy:
