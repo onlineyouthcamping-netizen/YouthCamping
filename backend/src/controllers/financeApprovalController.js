@@ -8,6 +8,12 @@ const {
   canCompleteCollectionVerification,
   isFounderIdentity,
 } = require("../utils/collectionVerification");
+const {
+  isCanonicalSource,
+  findOperationalSource,
+  vendorFieldsFromOperationalSource,
+  writeBackOrThrow,
+} = require("../utils/vendorOperationalSource");
 
 function resolveTenantId(req) {
   return req.user?.tenantId || req.admin?.tenantId || req.tenantId || "default";
@@ -62,6 +68,89 @@ function sanitizeProofUrl(url) {
 function sanitizeReason(text) {
   if (!text || typeof text !== "string") return "";
   return text.replace(/[<>]/g, "").trim().substring(0, 1000);
+}
+
+async function attachReliableSourceIfMissing(tx, payment, tenantId) {
+  if (!payment || isCanonicalSource(payment.sourceType, payment.sourceId)) return payment;
+  const op = await findOperationalSource(tx, payment.id, tenantId);
+  if (!op) return payment;
+  return tx.opsVendorPayment.update({
+    where: { id: payment.id },
+    data: { sourceType: op.sourceType, sourceId: op.sourceId },
+    include: { trip: true, collectionAccount: true },
+  });
+}
+
+async function findVendorPaymentBySource(tx, tenantId, sourceType, sourceId) {
+  if (!tenantId || !isCanonicalSource(sourceType, sourceId)) return null;
+  return tx.opsVendorPayment.findFirst({
+    where: { tenantId, sourceType, sourceId },
+    include: { trip: true, collectionAccount: true },
+  });
+}
+
+async function resolveVendorPaymentRecord(tx, paymentId, tenantId) {
+  const existing = await tx.opsVendorPayment.findFirst({
+    where: { id: paymentId, tenantId },
+    include: { trip: true, collectionAccount: true },
+  });
+  if (existing) return attachReliableSourceIfMissing(tx, existing, tenantId);
+
+  const op = await findOperationalSource(tx, paymentId, tenantId);
+  if (!op) return null;
+
+  const linked = await findVendorPaymentBySource(tx, tenantId, op.sourceType, op.sourceId);
+  if (linked) return linked;
+
+  const fields = vendorFieldsFromOperationalSource(op);
+  const departureDate = op.record.departureDate || new Date();
+  const remaining = Math.max(0, fields.agreed - fields.paid);
+
+  try {
+    return await tx.opsVendorPayment.create({
+      data: {
+        tenantId,
+        tripId: op.record.tripId,
+        departureDate,
+        vendorName: fields.vendorName,
+        category: fields.category,
+        serviceDescription: fields.serviceDescription,
+        agreedAmount: fields.agreed,
+        advancePaid: fields.paid,
+        remainingPayable: remaining,
+        status: fields.paid >= fields.agreed && fields.agreed > 0 ? "Paid" : fields.paid > 0 ? "Advance Paid" : "Pending Approval",
+        approvalStatus: "PENDING",
+        sourceType: op.sourceType,
+        sourceId: op.sourceId,
+      },
+      include: { trip: true, collectionAccount: true },
+    });
+  } catch (err) {
+    if (err?.code === "P2002") {
+      const raced = await findVendorPaymentBySource(tx, tenantId, op.sourceType, op.sourceId);
+      if (raced) return raced;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Find an existing finance vendor payment by canonical id or operational source.
+ * Never creates. Never searches by name, notes, or trip/category heuristics.
+ */
+async function findExistingVendorPayment(tx, paymentId, tenantId) {
+  if (!paymentId || !tenantId) return null;
+
+  const existing = await tx.opsVendorPayment.findFirst({
+    where: { id: paymentId, tenantId },
+    include: { trip: true, collectionAccount: true },
+  });
+  if (existing) return existing;
+
+  const op = await findOperationalSource(tx, paymentId, tenantId);
+  if (!op) return null;
+
+  return findVendorPaymentBySource(tx, tenantId, op.sourceType, op.sourceId);
 }
 
 /**
@@ -937,10 +1026,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
     const tenantId = resolveTenantId(req);
 
     const result = await prisma.$transaction(async (tx) => {
-      const payment = await tx.opsVendorPayment.findFirst({
-        where: { id: paymentId, tenantId },
-        include: { trip: true, collectionAccount: true },
-      });
+      const payment = await resolveVendorPaymentRecord(tx, paymentId, tenantId);
 
       if (!payment) {
         throw { statusCode: 404, message: "Vendor payment not found or access denied" };
@@ -969,12 +1055,18 @@ exports.reviewVendorPaymentFC = async (req, res) => {
       const finalAdvance = newStatus === "Paid" ? Math.max(agreed, advance) : advance;
       const finalRemaining = Math.max(0, agreed - finalAdvance);
 
-      // Atomic conditional update
+      const allowedStatuses =
+        !requiresFounder && directClear
+          ? ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"]
+          : ["PENDING", "REJECTED"];
+
+      // Atomic conditional update — always the resolved OpsVendorPayment id
+      // (request param may be a Departure Hub hotel/fleet/guide id).
       const updateResult = await tx.opsVendorPayment.updateMany({
         where: {
-          id: paymentId,
+          id: payment.id,
           tenantId,
-          approvalStatus: { in: ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"] },
+          approvalStatus: { in: allowedStatuses },
         },
         data: {
           approvalStatus: newApprovalStatus,
@@ -995,8 +1087,14 @@ exports.reviewVendorPaymentFC = async (req, res) => {
       }
 
       const updated = await tx.opsVendorPayment.findUnique({
-        where: { id: paymentId },
+        where: { id: payment.id },
         include: { trip: true, collectionAccount: true },
+      });
+
+      await writeBackOrThrow(tx, updated, {
+        tenantId,
+        agreed,
+        advance: finalAdvance,
       });
 
       // Create immutable audit log
@@ -1004,7 +1102,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
         data: {
           tenantId,
           entityType: "VENDOR_PAYMENT",
-          entityId: paymentId,
+          entityId: payment.id,
           tripId: payment.tripId,
           action: "REVIEWED_FC",
           performedBy: user.id,
@@ -1025,27 +1123,8 @@ exports.reviewVendorPaymentFC = async (req, res) => {
         },
       });
 
-      return { updated, requiresFounder, remainingPayable: finalRemaining };
+      return { updated, requiresFounder, remainingPayable: finalRemaining, operationalSyncResolved: isCanonicalSource(updated?.sourceType, updated?.sourceId) };
     });
-
-    // Synchronize underlying operational vendor allocations (Hotels, Transport, Guides, Activities)
-    try {
-      const { syncOperationalVendorRecord } = require("./paymentController");
-      if (typeof syncOperationalVendorRecord === "function") {
-        await syncOperationalVendorRecord(
-          tenantId,
-          result.updated.tripId,
-          result.updated.departureDate,
-          result.updated.vendorName,
-          result.updated.category,
-          result.updated.agreedAmount,
-          result.updated.advancePaid,
-          result.updated.id
-        );
-      }
-    } catch (e) {
-      console.warn("syncOperationalVendorRecord warning:", e);
-    }
 
     return res.json({
       success: true,
@@ -1056,6 +1135,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
       payment: result.updated,
       requiresFounderApproval: result.requiresFounder,
       remainingPayable: result.remainingPayable,
+      operationalLinked: result.operationalSyncResolved,
     });
   } catch (err) {
     console.error("reviewVendorPaymentFC error:", err);
@@ -1080,10 +1160,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
     const tenantId = resolveTenantId(req);
 
     const result = await prisma.$transaction(async (tx) => {
-      const payment = await tx.opsVendorPayment.findFirst({
-        where: { id: paymentId, tenantId },
-        include: { trip: true, collectionAccount: true },
-      });
+      const payment = await resolveVendorPaymentRecord(tx, paymentId, tenantId);
 
       if (!payment) {
         throw { statusCode: 404, message: "Vendor payment not found or access denied" };
@@ -1108,10 +1185,10 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       const agreed = Number(payment.agreedAmount || 0);
       const finalAdvance = Math.max(agreed, Number(payment.advancePaid || 0));
 
-      // Atomic conditional update
+      // Atomic conditional update — resolved row id, not the inbound DH id
       const updateResult = await tx.opsVendorPayment.updateMany({
         where: {
-          id: paymentId,
+          id: payment.id,
           tenantId,
           approvalStatus: { in: ["REVIEWED_FINANCE_CONTROLLER", "PENDING"] },
         },
@@ -1134,8 +1211,14 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       }
 
       const updated = await tx.opsVendorPayment.findUnique({
-        where: { id: paymentId },
+        where: { id: payment.id },
         include: { trip: true, collectionAccount: true },
+      });
+
+      await writeBackOrThrow(tx, updated, {
+        tenantId,
+        agreed,
+        advance: finalAdvance,
       });
 
       // Create immutable audit log
@@ -1143,7 +1226,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
         data: {
           tenantId,
           entityType: "VENDOR_PAYMENT",
-          entityId: paymentId,
+          entityId: payment.id,
           tripId: payment.tripId,
           action: "APPROVED_FOUNDER",
           performedBy: user.id,
@@ -1161,30 +1244,12 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       return updated;
     });
 
-    // Synchronize underlying operational vendor allocations (Hotels, Transport, Guides, Activities)
-    try {
-      const { syncOperationalVendorRecord } = require("./paymentController");
-      if (typeof syncOperationalVendorRecord === "function") {
-        await syncOperationalVendorRecord(
-          tenantId,
-          result.tripId,
-          result.departureDate,
-          result.vendorName,
-          result.category,
-          result.agreedAmount,
-          result.advancePaid,
-          result.id
-        );
-      }
-    } catch (e) {
-      console.warn("syncOperationalVendorRecord warning:", e);
-    }
-
     return res.json({
       success: true,
       status: "success",
       message: "Founder approved. Vendor payout marked as processed.",
       payment: result,
+      operationalLinked: isCanonicalSource(result?.sourceType, result?.sourceId),
     });
   } catch (err) {
     console.error("approveVendorPaymentFounder error:", err);
@@ -1216,10 +1281,7 @@ exports.rejectVendorPayment = async (req, res) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const payment = await tx.opsVendorPayment.findFirst({
-        where: { id: paymentId, tenantId },
-        include: { trip: true },
-      });
+      const payment = await findExistingVendorPayment(tx, paymentId, tenantId);
 
       if (!payment) {
         throw { statusCode: 404, message: "Vendor payment not found or access denied" };
@@ -1240,7 +1302,7 @@ exports.rejectVendorPayment = async (req, res) => {
       // Atomic conditional update
       const updateResult = await tx.opsVendorPayment.updateMany({
         where: {
-          id: paymentId,
+          id: payment.id,
           tenantId,
           approvalStatus: { not: "APPROVED_FOUNDER" },
           status: { not: "Paid" },
@@ -1262,7 +1324,7 @@ exports.rejectVendorPayment = async (req, res) => {
       }
 
       const updated = await tx.opsVendorPayment.findUnique({
-        where: { id: paymentId },
+        where: { id: payment.id },
         include: { trip: true, collectionAccount: true },
       });
 
@@ -1271,7 +1333,7 @@ exports.rejectVendorPayment = async (req, res) => {
         data: {
           tenantId,
           entityType: "VENDOR_PAYMENT",
-          entityId: paymentId,
+          entityId: payment.id,
           tripId: payment.tripId,
           action: "REJECTED",
           performedBy: user.id,
@@ -1370,6 +1432,38 @@ exports.getPendingApprovals = async (req, res) => {
       }),
     ]);
 
+    const bookingIds = [
+      ...new Set(
+        customerPayments.flatMap((p) => [p.bookingId, p.booking?.bookingId, p.booking?.id].filter(Boolean)),
+      ),
+    ];
+    const linkedEntries = bookingIds.length
+      ? await prisma.accountingEntry.findMany({
+          where: { tenantId, bookingId: { in: bookingIds } },
+          include: { actionedBy: { select: { id: true, name: true, email: true, role: true } } },
+        })
+      : [];
+
+    const decoratedCustomerPayments = customerPayments.map((payment) => {
+      const match = linkedEntries.find(
+        (entry) =>
+          Number(entry.amount) === Number(payment.amount) &&
+          [payment.bookingId, payment.booking?.bookingId, payment.booking?.id].includes(entry.bookingId),
+      );
+      const pending = payment.approvalStatus !== "APPROVED_FOUNDER";
+      const assignee = match?.actionedBy;
+      const validAssignee = pending
+        ? assignee && canCompleteCollectionVerification(assignee)
+          ? assignee
+          : null
+        : assignee;
+      return {
+        ...payment,
+        actionedById: validAssignee?.id || null,
+        actionedBy: validAssignee ? { id: validAssignee.id, name: validAssignee.name } : null,
+      };
+    });
+
     const pendingFC = customerPayments.filter((c) => c.approvalStatus === "PENDING").length;
     const awaitingFounder = customerPayments.filter((c) => c.approvalStatus === "REVIEWED_FINANCE_CONTROLLER").length;
     const vendorPendingFC = vendorPayments.filter((v) => v.approvalStatus === "PENDING").length;
@@ -1388,7 +1482,7 @@ exports.getPendingApprovals = async (req, res) => {
           vendorAwaitingFounder: vendorAwaitingFounder,
         },
         items: {
-          customerPayments,
+          customerPayments: decoratedCustomerPayments,
           vendorPayments,
         },
       },

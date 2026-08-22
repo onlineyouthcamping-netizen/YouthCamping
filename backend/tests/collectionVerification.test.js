@@ -35,6 +35,7 @@ const {
   canonicalCollectionStatus,
   canCompleteCollectionVerification,
   isCollectionVerified,
+  isEligibleCollectionAssignee,
   requireCollectionVerifier,
 } = require("../src/utils/collectionVerification");
 const {
@@ -187,6 +188,13 @@ describe("strict collection verification identity", () => {
     ).toBe(false);
   });
 
+  it("only Founder and Finance Controller may be approval assignees", () => {
+    expect(isEligibleCollectionAssignee({ role: "founder" })).toBe(true);
+    expect(isEligibleCollectionAssignee({ role: "finance_controller" })).toBe(true);
+    expect(isEligibleCollectionAssignee({ role: "admin" })).toBe(false);
+    expect(isEligibleCollectionAssignee({ role: "operations" })).toBe(false);
+  });
+
   it("does not grant verify from isSuperuser or unrelated finance permissions", () => {
     expect(
       canCompleteCollectionVerification({
@@ -198,6 +206,23 @@ describe("strict collection verification identity", () => {
       canCompleteCollectionVerification({
         role: "finance",
         permissions: ["finance.incoming.approve", "finance.collections.review"],
+      }),
+    ).toBe(false);
+  });
+
+  it("denies isSuperuser even with accounting.approve, finance.*, ops.manage, bookings.edit, payments.edit", () => {
+    expect(
+      canCompleteCollectionVerification({
+        role: "admin",
+        isSuperuser: true,
+        permissions: [
+          "accounting.approve",
+          "finance.incoming.verify",
+          "finance.incoming.approve",
+          "ops.manage",
+          "bookings.edit",
+          "payments.edit",
+        ],
       }),
     ).toBe(false);
   });
@@ -402,6 +427,46 @@ describe("alternate incoming verify endpoints stay locked", () => {
     expect(res.statusCode).toBe(200);
     expect(prisma.opsClientPayment.update).not.toHaveBeenCalled();
     expect(prisma.booking.update).not.toHaveBeenCalled();
+  });
+
+  it("does not create a second receipt when verifying an accounting entry that already has a pending collection", async () => {
+    prisma.accountingEntry.findFirst.mockResolvedValue({
+      id: "acc_1",
+      tenantId: "tenant-a",
+      amount: 5000,
+      paymentMode: "UPI",
+      referenceNumber: "UTR-1",
+      salespersonId: "sales_1",
+      collectionAccountId: "acc_bank",
+      booking: pendingPayment.booking,
+    });
+    prisma.opsClientPayment.findMany
+      .mockResolvedValueOnce([pendingPayment])
+      .mockResolvedValueOnce([{ ...pendingPayment, approvalStatus: "APPROVED_FOUNDER", status: "Verified" }]);
+    prisma.opsClientPayment.update.mockResolvedValue({
+      ...pendingPayment,
+      approvalStatus: "APPROVED_FOUNDER",
+      status: "Verified",
+    });
+    prisma.accountingEntry.update.mockResolvedValue({ id: "acc_1", status: "APPROVED" });
+    prisma.accountingEntryLog.create.mockResolvedValue({});
+    prisma.booking.update.mockResolvedValue({});
+
+    const res = createRes();
+    await verifyIncomingPayment(createReq({ params: { id: "acc_1" }, body: { action: "VERIFY" } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(prisma.opsClientPayment.create).not.toHaveBeenCalled();
+    expect(prisma.opsClientPayment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "pay_1" },
+        data: expect.objectContaining({
+          approvalStatus: "APPROVED_FOUNDER",
+          status: "Verified",
+        }),
+      }),
+    );
+    expect(prisma.booking.update).toHaveBeenCalledTimes(1);
   });
 });
 

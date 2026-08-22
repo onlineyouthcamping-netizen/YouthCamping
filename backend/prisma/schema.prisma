@@ -3321,6 +3321,11 @@ model OpsVendorPayment {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
+  // Canonical Departure Hub operational record this payout belongs to.
+  // sourceType: OPS_HOTEL_BOOKING | OPS_TRANSPORT_FLEET | OPS_GUIDE_PAYMENT | OPS_ACTIVITY
+  sourceType String?
+  sourceId   String?
+
   trip              Trip                     @relation(fields: [tripId], references: [id], onDelete: Restrict)
   collectionAccount PaymentReceivingAccount? @relation("VendorPaymentPaidFromAccount", fields: [collectionAccountId], references: [id], onDelete: SetNull)
 
@@ -3328,6 +3333,8 @@ model OpsVendorPayment {
   @@index([tripId, departureDate])
   @@index([collectionAccountId])
   @@index([approvalStatus])
+  @@index([tenantId, sourceType, sourceId])
+  @@unique([tenantId, sourceType, sourceId])
 }
 
 // ── NEW: CLIENT RECEIPTS/PAYMENTS TRACKER ──

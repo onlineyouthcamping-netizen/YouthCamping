@@ -21,6 +21,7 @@ const {
   verifyExpense,
   createExpense,
   assignIncomingPayment,
+  listCollectionVerifiers,
   getStationCashQueue,
   batchVerifyStationCash,
   getTripWiseVendorAccounts,
@@ -170,6 +171,12 @@ router.post(
   "/control-center/incoming/:id/action",
   requirePermission(["accounting.approve", "finance.incoming.approve"]),
   verifyIncomingPayment
+);
+
+router.get(
+  "/control-center/collection-verifiers",
+  requirePermission(["accounting.view", "finance.incoming.approve", "finance.control_center.view"]),
+  listCollectionVerifiers
 );
 
 router.post(
