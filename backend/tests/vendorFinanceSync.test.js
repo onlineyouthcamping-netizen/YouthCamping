@@ -279,6 +279,60 @@ describe("getVendorPaymentsQueue", () => {
     expect(res.body.data[0].operationalLinked).toBe(true);
     expect(res.body.data[0].departureHref).toContain("/admin/departure-workspace");
   });
+
+  it("does not copy hotel pricing JSON into serviceDescription or billReference", async () => {
+    const hotelPricing = {
+      __isHotelPricing: true,
+      pricingMethod: "room-wise",
+      rates: { doubleRate: 1850, tripleRate: 2400 },
+      allocations: { doubleRoomsCount: 2, tripleRoomsCount: 9, quadRoomsCount: 0, extraPersonsCount: 0 },
+    };
+    prisma.opsVendorPayment.findMany.mockResolvedValue([
+      {
+        id: "vp_json",
+        tripId: "trip_1",
+        vendorName: "Camp Site",
+        category: "Hotels",
+        serviceDescription: JSON.stringify(hotelPricing),
+        remarks: JSON.stringify(hotelPricing),
+        agreedAmount: 12000,
+        advancePaid: 0,
+        approvalStatus: "PENDING",
+        status: "Pending Approval",
+        departureDate: new Date("2026-09-01"),
+        trip: { title: "Manali" },
+        createdAt: new Date(),
+      },
+    ]);
+    prisma.opsHotelBooking.findMany.mockResolvedValue([
+      {
+        id: "hb_json",
+        tripId: "trip_1",
+        hotelName: "Ridge Stay",
+        notes: JSON.stringify(hotelPricing),
+        pricingMethod: "room-wise",
+        doubleRoomsCount: 2,
+        tripleRoomsCount: 9,
+        totalAmount: 15000,
+        advancePaid: 0,
+        departureDate: new Date("2026-09-01"),
+        trip: { title: "Manali" },
+        createdAt: new Date(),
+      },
+    ]);
+    const res = createRes();
+    await getVendorPaymentsQueue({ user: { tenantId: "tenant-a" }, query: {} }, res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    for (const row of res.body.data) {
+      expect(String(row.serviceDescription)).not.toContain("{");
+      expect(String(row.serviceDescription)).not.toContain("__isHotelPricing");
+      expect(String(row.billReference)).not.toContain("{");
+      expect(String(row.notes || "")).not.toContain("{");
+    }
+    expect(res.body.data[0].serviceDescription).toBe("Room-wise · 2 D / 9 T");
+    expect(res.body.data[1].serviceDescription).toBe("Room-wise · 2 D / 9 T");
+  });
 });
 
 describe("vendor two-step stays intact", () => {
