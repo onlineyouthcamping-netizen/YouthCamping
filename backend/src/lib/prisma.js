@@ -28,6 +28,22 @@ const prisma =
 
 if (process.env.NODE_ENV !== "production") global.prisma = prisma;
 
+// User never had isActive (baseline + git history). Admin does.
+// Committed eventBus still queried prisma.user with isActive; strip so Prisma
+// does not throw "Unknown argument `isActive`" on User. Do not add the column.
+function stripStaleUserIsActiveArg(params) {
+  if (params.model !== "User" || !params.args?.where) return;
+  const where = params.args.where;
+  if (Object.prototype.hasOwnProperty.call(where, "isActive")) {
+    delete where.isActive;
+  }
+}
+
+prisma.$use(async (params, next) => {
+  stripStaleUserIsActiveArg(params);
+  return next(params);
+});
+
 if (process.env.ENABLE_PERFORMANCE_METRICS === "true") {
   prisma.$use(async (params, next) => {
     const start = Date.now();
