@@ -35,7 +35,7 @@ Root `package.json` is an **orchestrator** (Jest, Playwright, `vercel-build`, Hu
 Browser (public)     → frontend (Next.js)     → REST https://api.youthcamping.online/api
 Browser (admin)      → ycadmin (Vite SPA)     → REST (VITE_API_URL / localhost:3001)
 backend (Express)    → Prisma Client          → PostgreSQL (DATABASE_URL)
-backend (documents)  → Supabase Storage OR local uploads (SUPABASE_URL + keys)
+backend (documents)  → local VPS uploads (`uploads/documents`)
 backend (media)      → Cloudinary (optional)
 backend (email)      → Brevo / Nodemailer (BREVO_API_KEY)
 ```
@@ -65,7 +65,7 @@ backend (email)      → Brevo / Nodemailer (BREVO_API_KEY)
 | `backend/src/config/db.js` | MongoDB connect helper | **LEGACY — not called from `server.js`** |
 | Mongoose in `backend/scripts/*` | Seed/migrate scripts | **LEGACY tooling** — requires `MONGODB_URI` |
 | `scraper/` | MongoDB for scraped trips | **TOOL / legacy pipeline** |
-| Supabase JS | `backend/src/utils/supabaseStorage.js` | **ACTIVE specialized** — document storage (not primary DB) |
+| Local document storage | `backend/src/utils/documentStorage.js` | **ACTIVE** — booking passenger documents on VPS disk |
 | `backend/utils/database.js` | Re-exports `src/lib/prisma` | **ACTIVE wrapper** for legacy route files |
 
 ### Non-backend DB access
@@ -173,8 +173,8 @@ Public site deploy is **separate** (Vercel root project → `frontend` build).
 ### Required backend env (startup)
 
 - **Critical**: `DATABASE_URL`, `JWT_SECRET`
-- **Optional**: `BREVO_API_KEY`, Cloudinary vars, Supabase storage vars
-- **Production documents**: `SUPABASE_URL` + `SUPABASE_KEY` (or `ALLOW_LOCAL_STORAGE=true`)
+- **Optional**: `BREVO_API_KEY`, Cloudinary vars
+- **Production documents**: local VPS path `backend/uploads/documents` (no Supabase)
 
 ## Architectural violations (by severity)
 

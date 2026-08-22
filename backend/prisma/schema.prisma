@@ -522,7 +522,7 @@ model BookingDocument {
   passengerId      String
   uploadedBy       String // admin ID or email/username
   documentType     String // generic file type or classification
-  storagePath      String // private Supabase storage path or local fallback path
+  storagePath      String // local VPS path under uploads/documents
   originalFileName String
   mimeType         String
   fileSize         Int

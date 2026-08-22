@@ -3271,7 +3271,7 @@ exports.updateBookingTask = async (req, res, next) => {
 // ────────────────────────────────────────────
 // PASSENGER DOCUMENT UPLOAD & DOWNLOAD
 // ────────────────────────────────────────────
-const supabaseStorage = require("../utils/supabaseStorage");
+const documentStorage = require("../utils/documentStorage");
 
 exports.uploadPassengerDocument = async (req, res, next) => {
   try {
@@ -3336,7 +3336,7 @@ exports.uploadPassengerDocument = async (req, res, next) => {
 
     let uploadResult;
     try {
-      uploadResult = await supabaseStorage.uploadFile(
+      uploadResult = await documentStorage.uploadFile(
         req.file.buffer,
         storagePath,
         req.file.mimetype,
@@ -3430,7 +3430,7 @@ exports.downloadPassengerDocument = async (req, res, next) => {
     }
 
     // 4. Download content
-    const { buffer } = await supabaseStorage.downloadFile(doc.storagePath);
+    const { buffer } = await documentStorage.downloadFile(doc.storagePath);
 
     res.setHeader("Content-Type", doc.mimeType);
     res.setHeader(
@@ -3487,7 +3487,7 @@ exports.deletePassengerDocument = async (req, res, next) => {
     }
 
     try {
-      await supabaseStorage.deleteFile(doc.storagePath);
+      await documentStorage.deleteFile(doc.storagePath);
     } catch (err) {
       console.error("[DELETE CONTROLLER] Storage delete failed:", err.message);
     }
