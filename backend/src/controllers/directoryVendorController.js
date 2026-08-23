@@ -17,11 +17,22 @@ function attachFoodMenu(vendor) {
   if (!vendor) return vendor;
   const meta = parseVendorNotesMeta(vendor.notes);
   const fromNotes = meta.foodMenu;
+  const normalize = (raw) => {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") {
+      return ["breakfast", "lunch", "dinner", "snacks"]
+        .filter((k) => String(raw[k] || "").trim())
+        .map((k) => ({
+          type: k.toUpperCase(),
+          name: k.charAt(0).toUpperCase() + k.slice(1),
+          inclusions: String(raw[k]).trim(),
+        }));
+    }
+    return [];
+  };
   const foodMenu = Array.isArray(vendor.foodMenu) && vendor.foodMenu.length
     ? vendor.foodMenu
-    : Array.isArray(fromNotes)
-      ? fromNotes
-      : [];
+    : normalize(fromNotes);
   const fromBody = vendor.foodMenuIncluded && typeof vendor.foodMenuIncluded === "object"
     ? vendor.foodMenuIncluded
     : null;
