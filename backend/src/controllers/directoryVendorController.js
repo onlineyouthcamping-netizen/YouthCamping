@@ -15,21 +15,41 @@ function parseVendorNotesMeta(notes) {
 
 function attachFoodMenu(vendor) {
   if (!vendor) return vendor;
-  const fromNotes = parseVendorNotesMeta(vendor.notes).foodMenu;
+  const meta = parseVendorNotesMeta(vendor.notes);
+  const fromNotes = meta.foodMenu;
   const foodMenu = Array.isArray(vendor.foodMenu) && vendor.foodMenu.length
     ? vendor.foodMenu
     : Array.isArray(fromNotes)
       ? fromNotes
       : [];
-  return { ...vendor, foodMenu };
+  const fromBody = vendor.foodMenuIncluded && typeof vendor.foodMenuIncluded === "object"
+    ? vendor.foodMenuIncluded
+    : null;
+  const fromMeta = meta.foodMenuIncluded && typeof meta.foodMenuIncluded === "object"
+    ? meta.foodMenuIncluded
+    : null;
+  const foodMenuIncluded = fromBody || fromMeta || undefined;
+  return foodMenuIncluded
+    ? { ...vendor, foodMenu, foodMenuIncluded }
+    : { ...vendor, foodMenu };
 }
 
-function mergeFoodMenuIntoNotes(existingNotes, foodMenu) {
+function mergeFoodMenuIntoNotes(existingNotes, foodMenu, foodMenuIncluded) {
   const meta = parseVendorNotesMeta(existingNotes);
   if (existingNotes && typeof existingNotes === "string" && !existingNotes.trim().startsWith("{")) {
     meta.legacyNotes = existingNotes;
   }
-  meta.foodMenu = Array.isArray(foodMenu) ? foodMenu : [];
+  if (foodMenu !== undefined) {
+    meta.foodMenu = Array.isArray(foodMenu) ? foodMenu : [];
+  }
+  if (foodMenuIncluded !== undefined && foodMenuIncluded && typeof foodMenuIncluded === "object") {
+    meta.foodMenuIncluded = {
+      breakfast: !!foodMenuIncluded.breakfast,
+      lunch: !!foodMenuIncluded.lunch,
+      dinner: !!foodMenuIncluded.dinner,
+      snacks: !!foodMenuIncluded.snacks,
+    };
+  }
   return JSON.stringify(meta);
 }
 
@@ -1147,8 +1167,12 @@ exports.updateDirectoryVendor = async (req, res, next) => {
             : JSON.stringify(req.body.activityRates)
           : undefined,
         notes:
-          req.body.foodMenu !== undefined
-            ? mergeFoodMenuIntoNotes(existing?.notes, req.body.foodMenu)
+          req.body.foodMenu !== undefined || req.body.foodMenuIncluded !== undefined
+            ? mergeFoodMenuIntoNotes(
+                existing?.notes,
+                req.body.foodMenu,
+                req.body.foodMenuIncluded,
+              )
             : req.body.notes !== undefined
               ? req.body.notes
               : isTrans && req.body.routesCovered !== undefined
