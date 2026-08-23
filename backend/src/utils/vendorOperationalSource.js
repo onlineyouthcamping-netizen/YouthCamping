@@ -137,6 +137,59 @@ function formatHotelPricingSummary(value) {
   return null;
 }
 
+function formatVendorDisplayName(value) {
+  let text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\s*\((hotel|hotels|transport|guide|guides|activity|activities|vendor|misc|miscellaneous)\)\s*$/i, "")
+    .trim();
+  if (!text) return "Vendor";
+  const letters = text.replace(/[^A-Za-z]/g, "");
+  if (letters && (letters === letters.toUpperCase() || letters === letters.toLowerCase())) {
+    text = text.toLowerCase().replace(/\b([a-z])/g, (match) => match.toUpperCase());
+  }
+  return text;
+}
+
+function refineServiceAgainstVendor(text, vendorName) {
+  const vendor = formatVendorDisplayName(vendorName).toLowerCase();
+  const raw = String(text || "")
+    .replace(/\s*\((hotel|hotels|transport|guide|guides|activity|activities|vendor)\)\s*/gi, " ")
+    .replace(/\s*[•|/]\s*/g, " · ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!raw) return "";
+  return raw
+    .split(/\s*·\s*/)
+    .map((part) => part.trim())
+    .filter((part) => {
+      const token = part.toLowerCase();
+      if (!token) return false;
+      if (vendor && token === vendor) return false;
+      if (vendor && vendor.includes(token) && token.length <= 18) return false;
+      return true;
+    })
+    .join(" · ");
+}
+
+function hotelStayServiceLine(record = {}) {
+  const vendor = formatVendorDisplayName(record.hotelName || record.vendorName || "");
+  const rooms = Number(record.numberOfRooms || record.rooms);
+  const loc = String(record.location || "").replace(/\s+/g, " ").trim();
+  const roomType = String(record.roomType || "").replace(/\s+/g, " ").trim();
+  const parts = [];
+  if (Number.isFinite(rooms) && rooms > 0) {
+    parts.push(`${Math.round(rooms)} ${rooms === 1 ? "room" : "rooms"}`);
+  }
+  if (roomType && !/^(standard|hotel|custom(\s+prop.*)?)$/i.test(roomType)) {
+    parts.push(roomType);
+  }
+  if (loc && !vendor.toLowerCase().includes(loc.toLowerCase())) {
+    parts.push(loc);
+  }
+  return parts.join(" · ");
+}
+
 function defaultServiceLabel(category) {
   switch (String(category || "")) {
     case "Hotels":
@@ -154,6 +207,10 @@ function defaultServiceLabel(category) {
 
 function humanizeVendorServiceDescription(record = {}, category) {
   const cat = category || record.category || record.vendorType || "";
+  const vendor = formatVendorDisplayName(record.vendorName || record.hotelName || record.guideName || "");
+  const stay = hotelStayServiceLine(record);
+  if (stay && String(cat).toLowerCase().includes("hotel")) return stay;
+
   const hotelSummary =
     formatHotelPricingSummary(record.serviceDescription) ||
     formatHotelPricingSummary(record.notes) ||
@@ -165,18 +222,18 @@ function humanizeVendorServiceDescription(record = {}, category) {
     record.serviceDescription,
     record.vehicleType,
     record.assignmentType,
-    record.location,
     record.roomType,
     record.notes,
     record.remarks,
+    record.location,
   ];
   for (const candidate of candidates) {
     if (candidate == null || candidate === "") continue;
     if (looksLikeJsonBlob(candidate)) continue;
-    const text = String(candidate).replace(/\s+/g, " ").trim();
+    const text = refineServiceAgainstVendor(String(candidate).replace(/\s+/g, " ").trim(), vendor);
     if (text && text !== cat) return text;
   }
-  return defaultServiceLabel(cat);
+  return stay || defaultServiceLabel(cat);
 }
 
 function humanizeBillReference(record = {}) {
@@ -207,7 +264,7 @@ function vendorFieldsFromOperationalSource(source) {
   const { sourceType, record } = source;
   if (sourceType === SOURCE_HOTEL) {
     return {
-      vendorName: String(record.hotelName || "").trim() || "Hotel",
+      vendorName: formatVendorDisplayName(record.hotelName || "") || "Hotel",
       category: "Hotels",
       agreed: Number(record.totalAmount || 0),
       paid: Number(record.advancePaid || 0),
@@ -216,7 +273,7 @@ function vendorFieldsFromOperationalSource(source) {
   }
   if (sourceType === SOURCE_FLEET) {
     return {
-      vendorName: String(record.vendorName || record.driverName || "Transport Fleet").trim(),
+      vendorName: formatVendorDisplayName(record.vendorName || record.driverName || "Transport Fleet"),
       category: "Transport",
       agreed: Number(record.totalAmount || 0),
       paid: Number(record.advancePaid || 0),
@@ -225,7 +282,7 @@ function vendorFieldsFromOperationalSource(source) {
   }
   if (sourceType === SOURCE_GUIDE) {
     return {
-      vendorName: String(record.guideName || "Lead Guide").trim(),
+      vendorName: formatVendorDisplayName(record.guideName || "Lead Guide"),
       category: "Guides",
       agreed: Number(record.agreedAmount || 0),
       paid: Number(record.advancePaid || 0),
@@ -350,6 +407,7 @@ module.exports = {
   findOperationalSource,
   vendorFieldsFromOperationalSource,
   humanizeVendorServiceDescription,
+  formatVendorDisplayName,
   humanizeBillReference,
   looksLikeJsonBlob,
   firstHumanText,

@@ -12,7 +12,26 @@ const {
   isCanonicalSource,
   findOperationalSource,
   syncOperationalVendorRecord: syncOperationalBySource,
+  formatVendorDisplayName,
 } = require("../utils/vendorOperationalSource");
+
+function vendorProofFieldsFromBody(body = {}, existing = {}) {
+  const invoice = body.invoiceProof || body.invoiceFileUrl || body.proofUrl;
+  const payment = body.paymentProofUrl || body.advanceProofUrl;
+  const data = {};
+  if (invoice) {
+    data.invoiceProof = invoice;
+    data.invoiceFileUrl = invoice;
+  }
+  if (payment && payment !== invoice) {
+    data.advanceProofUrl = payment;
+    data.settlementProofUrl = payment;
+  } else if (existing.advanceProofUrl && existing.advanceProofUrl !== invoice) {
+    data.advanceProofUrl = existing.advanceProofUrl;
+    data.settlementProofUrl = existing.settlementProofUrl || existing.advanceProofUrl;
+  }
+  return data;
+}
 
 function normalizeDepartureDateIndia(dateInput) {
   if (!dateInput) return null;
@@ -1216,7 +1235,7 @@ exports.createVendorPayment = async (req, res) => {
       payment = await prisma.opsVendorPayment.update({
         where: { id: payment.id },
         data: {
-          vendorName: vendorName ? vendorName.trim() : payment.vendorName,
+          vendorName: vendorName ? formatVendorDisplayName(vendorName) : payment.vendorName,
           category: category || payment.category,
           serviceDescription: serviceDescription !== undefined ? serviceDescription : payment.serviceDescription,
           agreedAmount: agreed > 0 ? agreed : payment.agreedAmount,
@@ -1226,7 +1245,7 @@ exports.createVendorPayment = async (req, res) => {
           paymentMode: paymentMode || payment.paymentMode,
           collectionAccountId: targetAccountId !== undefined ? targetAccountId : payment.collectionAccountId,
           transactionId: transactionId || payment.transactionId,
-          invoiceProof: invoiceProof !== undefined ? invoiceProof : payment.invoiceProof,
+          ...vendorProofFieldsFromBody(req.body, payment),
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
           remarks: remarks !== undefined ? remarks : payment.remarks,
@@ -1244,7 +1263,7 @@ exports.createVendorPayment = async (req, res) => {
           tenantId,
           tripId,
           departureDate: depDate || new Date(),
-          vendorName: vendorName ? vendorName.trim() : "Vendor Partner",
+          vendorName: vendorName ? formatVendorDisplayName(vendorName) : "Vendor Partner",
           category: category || "Hotels",
           serviceDescription: serviceDescription || "Trip Service Invoice",
           agreedAmount: agreed,
@@ -1254,10 +1273,7 @@ exports.createVendorPayment = async (req, res) => {
           paymentMode: paymentMode || "BANK_TRANSFER",
           collectionAccountId: targetAccountId,
           transactionId: transactionId || `TXN-${Date.now()}`,
-          invoiceProof: invoiceProof || "",
-          invoiceFileUrl: invoiceProof || "",
-          advanceProofUrl: invoiceProof || "",
-          settlementProofUrl: invoiceProof || "",
+          ...vendorProofFieldsFromBody(req.body),
           status: resolvedStatus,
           approvalStatus: resolvedApproval,
           // For pending misc, leave paidBy empty — creator is not the approver.
@@ -1406,7 +1422,7 @@ exports.updateVendorPayment = async (req, res) => {
       updated = await prisma.opsVendorPayment.update({
         where: { id: existing.id },
         data: {
-          vendorName: vendorName || existing.vendorName,
+          vendorName: vendorName ? formatVendorDisplayName(vendorName) : existing.vendorName,
           category: category || existing.category,
           serviceDescription:
             serviceDescription !== undefined
@@ -1424,14 +1440,7 @@ exports.updateVendorPayment = async (req, res) => {
               : existing.collectionAccountId,
           transactionId:
             transactionId !== undefined ? transactionId : existing.transactionId,
-          invoiceProof:
-            invoiceProof !== undefined ? invoiceProof : existing.invoiceProof,
-          invoiceFileUrl:
-            invoiceProof !== undefined ? invoiceProof : existing.invoiceFileUrl,
-          advanceProofUrl:
-            invoiceProof !== undefined ? invoiceProof : existing.advanceProofUrl,
-          settlementProofUrl:
-            invoiceProof !== undefined ? invoiceProof : existing.settlementProofUrl,
+          ...vendorProofFieldsFromBody(req.body, existing),
           status: computedStatus,
           ...(approvalStatus !== undefined
             ? { approvalStatus }
@@ -1475,7 +1484,7 @@ exports.updateVendorPayment = async (req, res) => {
           tenantId,
           tripId: tripId || "default",
           departureDate: depDate || new Date(),
-          vendorName: vendorName ? vendorName.trim() : "Vendor Partner",
+          vendorName: vendorName ? formatVendorDisplayName(vendorName) : "Vendor Partner",
           category: category || "Hotels",
           serviceDescription: serviceDescription || "Operational Service",
           agreedAmount: finalAgreed,
@@ -1485,10 +1494,7 @@ exports.updateVendorPayment = async (req, res) => {
           paymentMode: paymentMode || "BANK_TRANSFER",
           collectionAccountId: targetAccountId,
           transactionId: transactionId || `TXN-${Date.now()}`,
-          invoiceProof: invoiceProof || "",
-          invoiceFileUrl: invoiceProof || "",
-          advanceProofUrl: invoiceProof || "",
-          settlementProofUrl: invoiceProof || "",
+          ...vendorProofFieldsFromBody(req.body),
           status: computedStatus,
           ...(approvalStatus !== undefined ? { approvalStatus } : {}),
           paidBy:

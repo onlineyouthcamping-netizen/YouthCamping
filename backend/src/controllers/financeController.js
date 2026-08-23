@@ -21,6 +21,7 @@ const {
   humanizeVendorServiceDescription,
   humanizeBillReference,
   firstHumanText,
+  formatVendorDisplayName,
 } = require("../utils/vendorOperationalSource");
 
 function serializeVerifier(admin) {
@@ -559,7 +560,7 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
     tripLocation: record.trip?.location || "",
     departureDate,
     vendorId: record.vendorId || record.id,
-    vendorName: record.vendorName || "Vendor",
+    vendorName: formatVendorDisplayName(record.vendorName || "Vendor"),
     vendorType: category,
     category,
     serviceDescription,
