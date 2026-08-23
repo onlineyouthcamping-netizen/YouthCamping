@@ -399,6 +399,8 @@ const ROLE_PERMISSIONS = {
     "vendors.deactivate",
     "vendors.payments.view",
     "vendors.payments.manage",
+    "finance.vendor.review",
+    "finance.outgoing.verify",
     "vendors.mapping.manage",
     "vendors.costing.calculate",
     "vendors.rates.manage",
@@ -440,6 +442,9 @@ const ROLE_PERMISSIONS = {
     "reports.view",
     "accounting.view",
     "accounting.approve",
+    "finance.vendor.review",
+    "finance.outgoing.verify",
+    "finance.outgoing.approve",
     "emails.view",
     "emails.send",
     // Station Payment Collection - finance verifies, receives, reconciles

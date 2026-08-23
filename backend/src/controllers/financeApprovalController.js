@@ -1036,17 +1036,13 @@ exports.getVendorPaymentDetailsWithAudit = async (req, res) => {
 };
 
 /**
- * 6️⃣ Finance Controller Reviews Vendor Payout
- * Calculation: remainingPayable = agreedAmount - advancePaid (from DB)
- * Boundary rules:
- *   If remainingPayable > 50,000 -> requiresFounderApproval = true
- *   If remainingPayable <= 50,000 -> FC can clear directly to Paid/Verified or review
+ * Single-step vendor payout verify.
  * PATCH /api/finance/vendor-payments/:paymentId/review-fc
  */
 exports.reviewVendorPaymentFC = async (req, res) => {
   try {
     const { paymentId } = req.params;
-    const { reason, directClear, invoiceFileUrl, proofFileUrl, proofUrl } = req.body || {};
+    const { reason, invoiceFileUrl, proofFileUrl, proofUrl } = req.body || {};
     const user = resolveUser(req);
     const tenantId = resolveTenantId(req);
 
@@ -1068,30 +1064,24 @@ exports.reviewVendorPaymentFC = async (req, res) => {
       // Calculate strictly on the server-side from database fields
       const agreed = Number(payment.agreedAmount || 0);
       const advance = Number(payment.advancePaid || 0);
-      const remainingPayable = agreed - advance;
-      const requiresFounder = remainingPayable > 50000;
+      const remainingPayable = Math.max(0, agreed - advance);
 
       const previousState = {
         approvalStatus: payment.approvalStatus,
         status: payment.status,
       };
 
-      let newApprovalStatus = "REVIEWED_FINANCE_CONTROLLER";
-      let newStatus = payment.status;
+      const newApprovalStatus = "APPROVED_FOUNDER";
+      const newStatus =
+        remainingPayable <= 0 && agreed > 0
+          ? "Paid"
+          : advance > 0
+            ? "Advance Paid"
+            : payment.status || "Pending Approval";
+      const finalAdvance = advance;
+      const finalRemaining = remainingPayable;
 
-      // If <= 50K and FC directClear is requested, FC can clear it directly
-      if (!requiresFounder && directClear) {
-        newApprovalStatus = "APPROVED_FOUNDER";
-        newStatus = "Paid";
-      }
-
-      const finalAdvance = newStatus === "Paid" ? Math.max(agreed, advance) : advance;
-      const finalRemaining = Math.max(0, agreed - finalAdvance);
-
-      const allowedStatuses =
-        !requiresFounder && directClear
-          ? ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"]
-          : ["PENDING", "REJECTED"];
+      const allowedStatuses = ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"];
 
       // Atomic conditional update — always the resolved OpsVendorPayment id
       // (request param may be a Departure Hub hotel/fleet/guide id).
@@ -1105,7 +1095,9 @@ exports.reviewVendorPaymentFC = async (req, res) => {
           approvalStatus: newApprovalStatus,
           reviewedByFinanceAt: new Date(),
           reviewedByFinanceId: user.id,
-          requiresFounderApproval: requiresFounder,
+          approvedByFounderAt: new Date(),
+          approvedByFounderId: user.id,
+          requiresFounderApproval: false,
           status: newStatus,
           advancePaid: finalAdvance,
           remainingPayable: finalRemaining,
@@ -1145,29 +1137,25 @@ exports.reviewVendorPaymentFC = async (req, res) => {
           oldValue: JSON.stringify(previousState),
           newValue: JSON.stringify({
             approvalStatus: newApprovalStatus,
-            requiresFounderApproval: requiresFounder,
+            requiresFounderApproval: false,
             status: newStatus,
           }),
-          changeDescription: `Vendor invoice reviewed for ${payment.vendorName} (Category: ${payment.category}, Remaining: ₹${finalRemaining})${
-            requiresFounder ? " [REQUIRES FOUNDER APPROVAL > ₹50,000]" : " [FC CLEARED <= ₹50,000]"
-          }`,
+          changeDescription: `Vendor payout verified for ${payment.vendorName} (Category: ${payment.category}, Remaining: ₹${finalRemaining})`,
           reason: sanitizeReason(reason) || null,
           ipAddress: req.ip || null,
           userAgent: req.get("user-agent") || null,
         },
       });
 
-      return { updated, requiresFounder, remainingPayable: finalRemaining, operationalSyncResolved: isCanonicalSource(updated?.sourceType, updated?.sourceId) };
+      return { updated, remainingPayable: finalRemaining, operationalSyncResolved: isCanonicalSource(updated?.sourceType, updated?.sourceId) };
     });
 
     return res.json({
       success: true,
       status: "success",
-      message: result.requiresFounder
-        ? "Reviewed. Remaining balance > ₹50,000 requires Founder approval."
-        : "Reviewed. Verified & cleared by Finance Controller.",
+      message: "Vendor payout verified.",
       payment: result.updated,
-      requiresFounderApproval: result.requiresFounder,
+      requiresFounderApproval: false,
       remainingPayable: result.remainingPayable,
       operationalLinked: result.operationalSyncResolved,
     });
@@ -1223,7 +1211,10 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       };
 
       const agreed = Number(payment.agreedAmount || 0);
-      const finalAdvance = Math.max(agreed, Number(payment.advancePaid || 0));
+      const recordedAdvance = Number(payment.advancePaid || 0);
+      const remaining = Math.max(0, agreed - recordedAdvance);
+      const newStatus =
+        remaining <= 0 && agreed > 0 ? "Paid" : recordedAdvance > 0 ? "Advance Paid" : payment.status;
 
       // Atomic conditional update — resolved row id, not the inbound DH id
       const updateResult = await tx.opsVendorPayment.updateMany({
@@ -1236,9 +1227,9 @@ exports.approveVendorPaymentFounder = async (req, res) => {
           approvalStatus: "APPROVED_FOUNDER",
           approvedByFounderAt: new Date(),
           approvedByFounderId: user.id,
-          status: "Paid",
-          advancePaid: finalAdvance,
-          remainingPayable: 0,
+          status: newStatus,
+          advancePaid: recordedAdvance,
+          remainingPayable: remaining,
           ...vendorProofWriteFields(invoiceUrl),
         },
       });
@@ -1258,7 +1249,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       await writeBackOrThrow(tx, updated, {
         tenantId,
         agreed,
-        advance: finalAdvance,
+        advance: recordedAdvance,
       });
 
       // Create immutable audit log
@@ -1273,8 +1264,8 @@ exports.approveVendorPaymentFounder = async (req, res) => {
           performedByName: user.name,
           performedAt: new Date(),
           oldValue: JSON.stringify(previousState),
-          newValue: JSON.stringify({ approvalStatus: "APPROVED_FOUNDER", status: "Paid" }),
-          changeDescription: `Founder approved vendor payout of ₹${payment.agreedAmount} to ${payment.vendorName}`,
+          newValue: JSON.stringify({ approvalStatus: "APPROVED_FOUNDER", status: newStatus }),
+          changeDescription: `Vendor payout verified for ${payment.vendorName} (₹${recordedAdvance} recorded)`,
           reason: sanitizeReason(reason) || null,
           ipAddress: req.ip || null,
           userAgent: req.get("user-agent") || null,
