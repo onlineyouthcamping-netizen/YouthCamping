@@ -6,6 +6,7 @@ const {
 const {
   TERMINAL_APPROVED,
   canCompleteCollectionVerification,
+  denyCollectionVerification,
   isCashCollectionMode,
 } = require("../utils/collectionVerification");
 const {
@@ -1053,6 +1054,12 @@ exports.getVendorPaymentDetailsWithAudit = async (req, res) => {
  */
 exports.reviewVendorPaymentFC = async (req, res) => {
   try {
+    if (!canCompleteCollectionVerification(req.user || req.admin)) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: only Founder or Finance Controller can approve vendor payouts",
+      });
+    }
     const { paymentId } = req.params;
     const { reason, invoiceFileUrl, proofFileUrl, proofUrl } = req.body || {};
     const user = resolveUser(req);
@@ -1188,6 +1195,12 @@ exports.reviewVendorPaymentFC = async (req, res) => {
  */
 exports.approveVendorPaymentFounder = async (req, res) => {
   try {
+    if (!canCompleteCollectionVerification(req.user || req.admin)) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: only Founder or Finance Controller can approve vendor payouts",
+      });
+    }
     const { paymentId } = req.params;
     const { reason, invoiceFileUrl, proofFileUrl, proofUrl } = req.body || {};
     const user = resolveUser(req);

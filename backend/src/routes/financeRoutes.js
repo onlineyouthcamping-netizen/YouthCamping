@@ -516,25 +516,12 @@ router.post(
 );
 router.patch(
   "/vendor-payments/:paymentId/review-fc",
-  requirePermission([
-    "finance.vendor.review",
-    "finance.outgoing.verify",
-    "finance.outgoing.approve",
-    "accounting.approve",
-    "vendors.payments.manage",
-  ]),
+  requireCollectionVerifier,
   reviewVendorPaymentFC
 );
 router.patch(
   "/vendor-payments/:paymentId/approve-founder",
-  requirePermission([
-    "finance.vendor.approve_founder",
-    "finance.vendor.review",
-    "finance.outgoing.approve",
-    "finance.outgoing.verify",
-    "accounting.approve",
-    "vendors.payments.manage",
-  ]),
+  requireCollectionVerifier,
   approveVendorPaymentFounder
 );
 router.patch(

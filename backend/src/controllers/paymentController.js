@@ -1528,6 +1528,9 @@ exports.updateVendorPayment = async (req, res) => {
 
 exports.verifyVendorPayment = async (req, res) => {
   try {
+    if (!canCompleteCollectionVerification(req.user || req.admin)) {
+      return denyCollectionVerification(res);
+    }
     const { id } = req.params;
     const { status, remarks } = req.body;
 
