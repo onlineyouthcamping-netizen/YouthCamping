@@ -540,6 +540,11 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
     (resolvedSourceType && resolvedSourceType !== "OPS_VENDOR_PAYMENT" ? record.id : null);
   const operationalLinked = isCanonicalSource(resolvedSourceType, resolvedSourceId);
   const serviceDescription = humanizeVendorServiceDescription(record, category);
+  const invoiceProofUrl = record.invoiceFileUrl || record.invoiceProof || null;
+  const rawPaymentProof = record.advanceProofUrl || record.settlementProofUrl || null;
+  const paymentProofUrl =
+    rawPaymentProof && rawPaymentProof !== invoiceProofUrl ? rawPaymentProof : null;
+  const proofUrls = [invoiceProofUrl, paymentProofUrl].filter(Boolean);
 
   return {
     id: record.id,
@@ -573,12 +578,15 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
         ? "partial"
         : "pending",
     outgoingPaymentMode: record.paymentMode || "Bank Transfer",
-    proofUrl:
-      record.invoiceFileUrl ||
-      record.invoiceProof ||
-      record.advanceProofUrl ||
-      record.settlementProofUrl ||
-      null,
+    proofUrl: proofUrls[0] || null,
+    invoiceProofUrl,
+    paymentProofUrl,
+    proofUrls,
+    approvedByFounderId: record.approvedByFounderId || null,
+    reviewedByFinanceId: record.reviewedByFinanceId || null,
+    paidBy: record.paidBy || null,
+    approvedAt: record.approvedByFounderAt || record.reviewedByFinanceAt || null,
+    approvedByName: null,
     transactionRef: record.transactionId || null,
     notes: firstHumanText([record.remarks]),
     createdAt: record.createdAt,
@@ -682,6 +690,32 @@ exports.getVendorPaymentsQueue = async (req, res) => {
 
     const total = queue.length;
     const paginatedQueue = queue.slice(skip, skip + Number(limit));
+    const approverIds = [
+      ...new Set(
+        paginatedQueue.flatMap((item) =>
+          [item.approvedByFounderId, item.reviewedByFinanceId, item.paidBy].filter(Boolean),
+        ),
+      ),
+    ];
+    if (approverIds.length) {
+      const admins = await prisma.admin.findMany({
+        where: {
+          id: { in: approverIds },
+          OR: [{ tenantId }, { tenantId: null }],
+        },
+        select: { id: true, name: true, email: true },
+      });
+      const names = Object.fromEntries(
+        admins.map((admin) => [admin.id, admin.name || admin.email || "Admin"]),
+      );
+      paginatedQueue.forEach((item) => {
+        item.approvedByName =
+          names[item.approvedByFounderId] ||
+          names[item.reviewedByFinanceId] ||
+          names[item.paidBy] ||
+          null;
+      });
+    }
 
     return res.json({
       success: true,

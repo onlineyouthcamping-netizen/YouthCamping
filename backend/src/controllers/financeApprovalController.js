@@ -75,14 +75,26 @@ function vendorProofUrl(payment, extraUrl) {
   );
 }
 
-function vendorProofWriteFields(url) {
-  if (!url) return {};
-  return {
-    invoiceFileUrl: url,
-    invoiceProof: url,
-    advanceProofUrl: url,
-    settlementProofUrl: url,
+function vendorProofWriteFields(url, secondUrl, existing = {}) {
+  const invoice =
+    sanitizeProofUrl(url) ||
+    sanitizeProofUrl(existing?.invoiceFileUrl) ||
+    sanitizeProofUrl(existing?.invoiceProof);
+  const payment =
+    sanitizeProofUrl(secondUrl) ||
+    sanitizeProofUrl(existing?.advanceProofUrl) ||
+    sanitizeProofUrl(existing?.settlementProofUrl);
+  if (!invoice && !payment) return {};
+  const inv = invoice || payment;
+  const fields = {
+    invoiceFileUrl: inv,
+    invoiceProof: inv,
   };
+  if (payment && payment !== inv) {
+    fields.advanceProofUrl = payment;
+    fields.settlementProofUrl = payment;
+  }
+  return fields;
 }
 
 /**
@@ -1101,7 +1113,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
           status: newStatus,
           advancePaid: finalAdvance,
           remainingPayable: finalRemaining,
-          ...vendorProofWriteFields(resolvedProof),
+          ...vendorProofWriteFields(resolvedProof, undefined, payment),
         },
       });
 
@@ -1230,7 +1242,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
           status: newStatus,
           advancePaid: recordedAdvance,
           remainingPayable: remaining,
-          ...vendorProofWriteFields(invoiceUrl),
+          ...vendorProofWriteFields(invoiceUrl, undefined, payment),
         },
       });
 
@@ -1322,7 +1334,10 @@ exports.uploadVendorPaymentProof = async (req, res) => {
     }
 
     const validatedUrl = sanitizeProofUrl(rawUrl);
-    if (!validatedUrl) {
+    const secondUrl = sanitizeProofUrl(
+      req.body?.paymentProofUrl || req.body?.advanceProofUrl || req.body?.settlementProofUrl,
+    );
+    if (!validatedUrl && !secondUrl) {
       return res.status(400).json({
         success: false,
         message: "Invalid or insecure proof URL provided. Must be a valid HTTPS/HTTP or upload path.",
@@ -1335,9 +1350,17 @@ exports.uploadVendorPaymentProof = async (req, res) => {
         throw { statusCode: 404, message: "Vendor payment not found or access denied" };
       }
 
+      let invoiceUrl = validatedUrl;
+      let paymentUrl = secondUrl;
+      const existingInvoice = sanitizeProofUrl(payment.invoiceFileUrl || payment.invoiceProof);
+      if (validatedUrl && !secondUrl && existingInvoice && existingInvoice !== validatedUrl) {
+        invoiceUrl = existingInvoice;
+        paymentUrl = validatedUrl;
+      }
+
       const updated = await tx.opsVendorPayment.update({
         where: { id: payment.id },
-        data: vendorProofWriteFields(validatedUrl),
+        data: vendorProofWriteFields(invoiceUrl, paymentUrl, payment),
         include: { trip: true, collectionAccount: true },
       });
 
@@ -1355,7 +1378,10 @@ exports.uploadVendorPaymentProof = async (req, res) => {
             invoiceFileUrl: payment.invoiceFileUrl,
             invoiceProof: payment.invoiceProof,
           }),
-          newValue: JSON.stringify({ invoiceFileUrl: validatedUrl }),
+          newValue: JSON.stringify({
+            invoiceFileUrl: updated.invoiceFileUrl,
+            advanceProofUrl: updated.advanceProofUrl,
+          }),
           changeDescription: `Vendor payout proof uploaded for ${payment.vendorName}`,
           reason: null,
           ipAddress: req.ip || null,
@@ -1370,8 +1396,8 @@ exports.uploadVendorPaymentProof = async (req, res) => {
       success: true,
       status: "success",
       message: "Proof uploaded. Ready for Finance Controller review.",
-      proof_url: validatedUrl,
-      proofUrl: validatedUrl,
+      proof_url: result.invoiceFileUrl || validatedUrl,
+      proofUrl: result.invoiceFileUrl || validatedUrl,
       payment: result,
     });
   } catch (err) {
