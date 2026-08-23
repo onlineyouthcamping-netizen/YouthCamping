@@ -1,6 +1,38 @@
 const { prisma } = require("../lib/prisma");
 const pricingEngine = require("../utils/vendorPricingEngine");
 
+function parseVendorNotesMeta(notes) {
+  if (!notes || typeof notes !== "string") return {};
+  const s = notes.trim();
+  if (!s.startsWith("{")) return {};
+  try {
+    const parsed = JSON.parse(s);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function attachFoodMenu(vendor) {
+  if (!vendor) return vendor;
+  const fromNotes = parseVendorNotesMeta(vendor.notes).foodMenu;
+  const foodMenu = Array.isArray(vendor.foodMenu) && vendor.foodMenu.length
+    ? vendor.foodMenu
+    : Array.isArray(fromNotes)
+      ? fromNotes
+      : [];
+  return { ...vendor, foodMenu };
+}
+
+function mergeFoodMenuIntoNotes(existingNotes, foodMenu) {
+  const meta = parseVendorNotesMeta(existingNotes);
+  if (existingNotes && typeof existingNotes === "string" && !existingNotes.trim().startsWith("{")) {
+    meta.legacyNotes = existingNotes;
+  }
+  meta.foodMenu = Array.isArray(foodMenu) ? foodMenu : [];
+  return JSON.stringify(meta);
+}
+
 // ── 1. MAIN DIRECTORY VENDOR CRUD ──
 
 exports.getDirectoryAnalytics = async (req, res, next) => {
@@ -356,7 +388,7 @@ exports.getTripScopedVendorDirectory = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: vendors,
+      data: vendors.map(attachFoodMenu),
       pagination: {
         total,
         page: pageNum,
@@ -580,7 +612,7 @@ exports.getDirectoryVendors = async (req, res, next) => {
           v.guideRates = JSON.parse(v.guideRates);
         } catch {}
       }
-      return v;
+      return attachFoodMenu(v);
     });
 
     res.json({
@@ -862,7 +894,7 @@ exports.getDirectoryVendor = async (req, res, next) => {
         .json({ success: false, message: "Vendor not found" });
     }
 
-    res.json({ success: true, data: vendor });
+    res.json({ success: true, data: attachFoodMenu(vendor) });
   } catch (error) {
     console.error("getDirectoryVendor error:", error);
     next(error);
@@ -997,7 +1029,7 @@ exports.updateDirectoryVendor = async (req, res, next) => {
 
     const existing = await prisma.opsVendor.findUnique({
       where: { id: req.params.vendorId },
-      select: { type: true, accommodationType: true },
+      select: { type: true, accommodationType: true, notes: true },
     });
     const vendorType = (
       type ||
@@ -1115,11 +1147,13 @@ exports.updateDirectoryVendor = async (req, res, next) => {
             : JSON.stringify(req.body.activityRates)
           : undefined,
         notes:
-          req.body.notes !== undefined
-            ? req.body.notes
-            : req.body.routesCovered !== undefined
-              ? req.body.routesCovered
-              : undefined,
+          req.body.foodMenu !== undefined
+            ? mergeFoodMenuIntoNotes(existing?.notes, req.body.foodMenu)
+            : req.body.notes !== undefined
+              ? req.body.notes
+              : isTrans && req.body.routesCovered !== undefined
+                ? req.body.routesCovered
+                : undefined,
         isActive: isActive !== undefined ? isActive : undefined,
         isPreferred: isPreferred !== undefined ? isPreferred : undefined,
       },
@@ -1216,7 +1250,7 @@ exports.updateDirectoryVendor = async (req, res, next) => {
       } catch {}
     }
 
-    res.json({ success: true, data: updatedVendor });
+    res.json({ success: true, data: attachFoodMenu(updatedVendor) });
   } catch (error) {
     next(error);
   }
