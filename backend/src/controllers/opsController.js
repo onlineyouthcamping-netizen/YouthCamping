@@ -180,17 +180,58 @@ exports.getDayItinerary = async (req, res) => {
   }
 };
 
+function normalizeOpsDayTitle(raw) {
+  const t = String(raw || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const m = t.match(/day\s*0*(\d+)/);
+  return m ? `day ${m[1]}` : t;
+}
+
+function opsDayDateKey(raw) {
+  if (!raw) return "";
+  const d = raw instanceof Date ? raw : new Date(raw);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
 exports.upsertDayItinerary = async (req, res) => {
   try {
     const ctx = await parseDepartureFilter(req, res, true);
     if (!ctx) return;
     const { id, date, dayTitle, paxCount, hotelName, hotelVerified, vehicleType, vehicleVerified, remarks, guideDriverDetails, guideVerified, checkInDone } = req.body;
 
+    const dayDate = date ? (normalizeDepartureDateIndia(date) || new Date(date)) : null;
+    const titleKey = normalizeOpsDayTitle(dayTitle);
+    const dateKey = opsDayDateKey(dayDate);
+
+    const existingRows = await prisma.opsDayItinerary.findMany({
+      where: ctx.where,
+      orderBy: { updatedAt: "desc" },
+    });
+    const matched =
+      (id && existingRows.find((r) => r.id === id)) ||
+      existingRows.find((r) => normalizeOpsDayTitle(r.dayTitle) === titleKey) ||
+      (dateKey && existingRows.find((r) => opsDayDateKey(r.date) === dateKey)) ||
+      null;
+
+    const data = {
+      date: dayDate && !isNaN(dayDate.getTime()) ? dayDate : matched?.date || null,
+      dayTitle: dayTitle || matched?.dayTitle || "Day",
+      paxCount: paxCount !== undefined ? paxCount : matched?.paxCount || 0,
+      hotelName: hotelName !== undefined ? hotelName : matched?.hotelName,
+      hotelVerified: hotelVerified !== undefined ? !!hotelVerified : matched?.hotelVerified ?? false,
+      vehicleType: vehicleType !== undefined ? vehicleType : matched?.vehicleType,
+      vehicleVerified: vehicleVerified !== undefined ? !!vehicleVerified : matched?.vehicleVerified ?? false,
+      remarks: remarks !== undefined ? remarks : matched?.remarks,
+      guideDriverDetails: guideDriverDetails !== undefined ? guideDriverDetails : matched?.guideDriverDetails,
+      guideVerified: guideVerified !== undefined ? !!guideVerified : matched?.guideVerified ?? false,
+      checkInDone: checkInDone !== undefined ? !!checkInDone : matched?.checkInDone ?? false,
+    };
+
     let result;
-    if (id) {
+    if (matched) {
       result = await prisma.opsDayItinerary.update({
-        where: { id },
-        data: { date: date ? new Date(date) : null, dayTitle, paxCount, hotelName, hotelVerified, vehicleType, vehicleVerified, remarks, guideDriverDetails, guideVerified, checkInDone }
+        where: { id: matched.id },
+        data,
       });
     } else {
       result = await prisma.opsDayItinerary.create({
@@ -198,18 +239,8 @@ exports.upsertDayItinerary = async (req, res) => {
           tenantId: ctx.tenantId,
           tripId: ctx.tripId,
           departureDate: ctx.departureDate,
-          date: date ? new Date(date) : null,
-          dayTitle,
-          paxCount: paxCount || 0,
-          hotelName,
-          hotelVerified: !!hotelVerified,
-          vehicleType,
-          vehicleVerified: !!vehicleVerified,
-          remarks,
-          guideDriverDetails,
-          guideVerified: !!guideVerified,
-          checkInDone: !!checkInDone
-        }
+          ...data,
+        },
       });
     }
     return res.json({ success: true, data: result });
