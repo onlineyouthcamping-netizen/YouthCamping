@@ -193,10 +193,26 @@ async function applyCreditNote(req, res) {
         data: {
           advancePaid: updatedAdvance,
           remainingAmount: remainingDue,
-          paymentStatus: remainingDue === 0 ? "Paid" : "Partial",
+          paymentStatus: remainingDue === 0 ? "PAID" : "PARTIAL",
           adminNotes: targetBooking.adminNotes
             ? `${targetBooking.adminNotes}\n[Credit Note Applied]: ₹${requestedAmount} from Refund #${refund.id}`
             : `[Credit Note Applied]: ₹${requestedAmount} from Refund #${refund.id}`,
+        },
+      });
+
+      await tx.opsClientPayment.create({
+        data: {
+          tenantId,
+          bookingId: targetBooking.bookingId,
+          amount: requestedAmount,
+          paymentMode: "CREDIT_NOTE",
+          transactionId: `CREDIT-${refund.id.slice(-6).toUpperCase()}`,
+          paymentDate: new Date(),
+          status: "Verified",
+          approvalStatus: "APPROVED_FOUNDER",
+          remarks: `TYPE:CREDIT|REFUND_ID:${refund.id}|Store credit applied`,
+          collectedBy: "Finance",
+          recordedByUserId: appliedById || null,
         },
       });
 
@@ -278,15 +294,19 @@ async function getActiveCreditNotes(req, res) {
 
         return {
           refundId: r.id,
+          id: r.id,
+          code: `CR-${String(r.id).slice(-6).toUpperCase()}`,
           bookingId: r.bookingId,
           customerName: r.booking?.fullName || r.booking?.name,
           customerPhone: r.booking?.phone,
           tripName: r.booking?.tripName,
           originalCreditAmount: r.creditNoteAmount,
+          originalAmount: r.creditNoteAmount,
           totalUsed,
           remainingBalance,
           validityStart: r.creditNoteValidityStart,
           validityEnd: r.creditNoteValidityEnd,
+          expiresAt: r.creditNoteValidityEnd,
           status: r.creditNoteStatus,
           isExpiringSoon,
         };

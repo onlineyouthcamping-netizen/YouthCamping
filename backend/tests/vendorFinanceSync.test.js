@@ -231,6 +231,33 @@ describe("getVendorPaymentsQueue", () => {
     expect(res.body.data[0].sourceType).toBe("OPS_VENDOR_PAYMENT");
   });
 
+  it("does not mark an unapproved full payout as paid in the finance queue", async () => {
+    prisma.opsVendorPayment.findMany.mockResolvedValue([
+      {
+        id: "vp_paid_pending",
+        tripId: "trip_1",
+        vendorName: "Mehak Resort Sangla",
+        category: "Hotels",
+        serviceDescription: "Chitkul - 6 Rooms",
+        agreedAmount: 44000,
+        advancePaid: 22000,
+        remainingPayable: 22000,
+        approvalStatus: "PENDING",
+        status: "Paid",
+        transactionId: "TXN-1787470413189",
+        departureDate: new Date("2026-09-08"),
+        trip: { title: "Spiti" },
+        createdAt: new Date(),
+      },
+    ]);
+    const res = createRes();
+    await getVendorPaymentsQueue({ user: { tenantId: "tenant-a" }, query: {} }, res);
+    expect(res.body.data[0].paymentStatus).toBe("partial");
+    expect(res.body.data[0].approvalStatus).toBe("PENDING");
+    expect(res.body.data[0].paidAmount).toBe(22000);
+    expect(res.body.data[0].totalCost).toBe(44000);
+  });
+
   it("does not hide an overpayment by clamping to zero", async () => {
     prisma.opsVendorPayment.findMany.mockResolvedValue([
       {

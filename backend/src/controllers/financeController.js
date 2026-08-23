@@ -567,7 +567,7 @@ function mapVendorQueueItem(record, { sourceType = "OPS_VENDOR_PAYMENT" } = {}) 
     isOverpaid: balance.isOverpaid,
     approvalStatus,
     status,
-    paymentStatus: approvalStatus === "APPROVED_FOUNDER" || status === "Paid"
+    paymentStatus: approvalStatus === "APPROVED_FOUNDER"
       ? "paid"
       : balance.paidAmount > 0
         ? "partial"

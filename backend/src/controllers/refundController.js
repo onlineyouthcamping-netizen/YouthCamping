@@ -1,5 +1,10 @@
 const { prisma } = require("../lib/prisma");
 const { logAction } = require("../utils/auditLogger");
+const { logBookingActivity } = require("../utils/bookingActivityLogger");
+const {
+  mapRefundQueueItem,
+  writeRefundToBookingAndOps,
+} = require("../utils/refundErpSync");
 
 /**
  * POST /api/finance/refunds
@@ -120,7 +125,7 @@ async function createRefundRequest(req, res) {
 async function getRefunds(req, res) {
   try {
     const tenantId = req.user?.tenantId || req.admin?.tenantId || "default";
-    const { bookingId, status, refundMethod, page = 1, limit = 20 } = req.query;
+    const { bookingId, status, refundMethod, search, page = 1, limit = 20 } = req.query;
 
     const where = { tenantId };
     if (bookingId) {
@@ -131,6 +136,25 @@ async function getRefunds(req, res) {
     }
     if (refundMethod && refundMethod !== "ALL") {
       where.refundMethod = refundMethod;
+    }
+    if (search && String(search).trim()) {
+      const q = String(search).trim();
+      const searchOr = [
+        { bookingId: { contains: q, mode: "insensitive" } },
+        { refundReason: { contains: q, mode: "insensitive" } },
+        { refundReasonText: { contains: q, mode: "insensitive" } },
+        { refundReference: { contains: q, mode: "insensitive" } },
+        { booking: { bookingId: { contains: q, mode: "insensitive" } } },
+        { booking: { fullName: { contains: q, mode: "insensitive" } } },
+        { booking: { name: { contains: q, mode: "insensitive" } } },
+        { booking: { tripName: { contains: q, mode: "insensitive" } } },
+      ];
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: searchOr }];
+        delete where.OR;
+      } else {
+        where.OR = searchOr;
+      }
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -148,9 +172,13 @@ async function getRefunds(req, res) {
               fullName: true,
               name: true,
               phone: true,
+              tripId: true,
               tripName: true,
               totalAmount: true,
               advancePaid: true,
+              remainingAmount: true,
+              paymentStatus: true,
+              status: true,
               departureDate: true,
             },
           },
@@ -167,7 +195,7 @@ async function getRefunds(req, res) {
 
     return res.json({
       success: true,
-      data: refunds,
+      data: refunds.map(mapRefundQueueItem),
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -242,20 +270,31 @@ async function approveRefund(req, res) {
         data: updateData,
       });
 
-      // Update booking notes / history
-      if (refund.bookingId) {
-        await tx.booking.update({
-          where: { bookingId: refund.bookingId },
-          data: {
-            adminNotes: refund.booking?.adminNotes
-              ? `${refund.booking.adminNotes}\n[Refund Approved]: ₹${refund.refundAmount} Cash (Ref: ${updateData.refundReference}) + ₹${refund.creditNoteAmount} Credit Note`
-              : `[Refund Approved]: ₹${refund.refundAmount} Cash (Ref: ${updateData.refundReference}) + ₹${refund.creditNoteAmount} Credit Note`,
-          },
+      if (refund.booking) {
+        await writeRefundToBookingAndOps(tx, {
+          refund,
+          booking: refund.booking,
+          refundReference: updateData.refundReference,
+          tenantId,
+          actorId: approverId,
         });
       }
 
       return resTx;
     });
+
+    try {
+      if (refund.booking?.id) {
+        await logBookingActivity({
+          bookingId: refund.booking.id,
+          action: "PAYMENT_RECORD",
+          details: `Finance posted refund ₹${refund.refundAmount} cash + ₹${refund.creditNoteAmount} credit (Ref: ${updateData.refundReference}).`,
+          performedByAdminId: approverId,
+        });
+      }
+    } catch (_e) {
+      // best-effort ERP activity
+    }
 
     await logAction({
       tenantId,
