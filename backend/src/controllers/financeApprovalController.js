@@ -106,6 +106,21 @@ function sanitizeReason(text) {
   return text.replace(/[<>]/g, "").trim().substring(0, 1000);
 }
 
+/** Finance verify clears the contracted bill. Keep any recorded overpayment. */
+function clearedVendorPayoutAmounts(agreedAmount, recordedAdvance) {
+  const agreed = Number(agreedAmount || 0);
+  const recorded = Number(recordedAdvance || 0);
+  const finalAdvance = Math.max(agreed, recorded);
+  const finalRemaining = Math.max(0, agreed - finalAdvance);
+  const newStatus =
+    agreed > 0 && finalRemaining <= 0
+      ? "Paid"
+      : finalAdvance > 0
+        ? "Advance Paid"
+        : "Pending Approval";
+  return { finalAdvance, finalRemaining, newStatus };
+}
+
 async function attachReliableSourceIfMissing(tx, payment, tenantId) {
   if (!payment || isCanonicalSource(payment.sourceType, payment.sourceId)) return payment;
   const op = await findOperationalSource(tx, payment.id, tenantId);
@@ -914,8 +929,8 @@ exports.getVendorPaymentDetailsWithAudit = async (req, res) => {
             remainingPayable: Math.max(0, (hb.totalAmount || 0) - (hb.advancePaid || 0)),
             paymentDate: hb.departureDate || hb.createdAt,
             paymentMode: "BANK_TRANSFER",
-            status: (hb.advancePaid || 0) >= (hb.totalAmount || 0) && (hb.totalAmount || 0) > 0 ? "Paid" : "Pending Approval",
-            approvalStatus: (hb.advancePaid || 0) >= (hb.totalAmount || 0) && (hb.totalAmount || 0) > 0 ? "APPROVED_FOUNDER" : "PENDING",
+            status: (hb.advancePaid || 0) > 0 ? "Advance Paid" : "Pending Approval",
+            approvalStatus: "PENDING",
             trip: hb.trip,
             collectionAccount: null,
             createdAt: hb.createdAt,
@@ -940,8 +955,8 @@ exports.getVendorPaymentDetailsWithAudit = async (req, res) => {
             remainingPayable: Math.max(0, (fl.totalAmount || 0) - (fl.advancePaid || 0)),
             paymentDate: fl.departureDate || fl.createdAt,
             paymentMode: "BANK_TRANSFER",
-            status: (fl.advancePaid || 0) >= (fl.totalAmount || 0) && (fl.totalAmount || 0) > 0 ? "Paid" : "Pending Approval",
-            approvalStatus: (fl.advancePaid || 0) >= (fl.totalAmount || 0) && (fl.totalAmount || 0) > 0 ? "APPROVED_FOUNDER" : "PENDING",
+            status: (fl.advancePaid || 0) > 0 ? "Advance Paid" : "Pending Approval",
+            approvalStatus: "PENDING",
             trip: fl.trip,
             collectionAccount: null,
             createdAt: fl.createdAt,
@@ -966,8 +981,8 @@ exports.getVendorPaymentDetailsWithAudit = async (req, res) => {
             remainingPayable: Math.max(0, (gp.agreedAmount || 0) - (gp.advancePaid || 0)),
             paymentDate: gp.departureDate || gp.createdAt,
             paymentMode: "BANK_TRANSFER",
-            status: gp.paymentStatus === "PAID" ? "Paid" : "Pending Approval",
-            approvalStatus: gp.paymentStatus === "PAID" ? "APPROVED_FOUNDER" : "PENDING",
+            status: gp.paymentStatus === "PAID" ? "Advance Paid" : "Pending Approval",
+            approvalStatus: "PENDING",
             trip: gp.trip,
             collectionAccount: null,
             createdAt: gp.createdAt,
@@ -1082,8 +1097,10 @@ exports.reviewVendorPaymentFC = async (req, res) => {
 
       // Calculate strictly on the server-side from database fields
       const agreed = Number(payment.agreedAmount || 0);
-      const advance = Number(payment.advancePaid || 0);
-      const remainingPayable = Math.max(0, agreed - advance);
+      const { finalAdvance, finalRemaining, newStatus } = clearedVendorPayoutAmounts(
+        agreed,
+        payment.advancePaid,
+      );
 
       const previousState = {
         approvalStatus: payment.approvalStatus,
@@ -1091,15 +1108,6 @@ exports.reviewVendorPaymentFC = async (req, res) => {
       };
 
       const newApprovalStatus = "APPROVED_FOUNDER";
-      const newStatus =
-        remainingPayable <= 0 && agreed > 0
-          ? "Paid"
-          : advance > 0
-            ? "Advance Paid"
-            : payment.status || "Pending Approval";
-      const finalAdvance = advance;
-      const finalRemaining = remainingPayable;
-
       const allowedStatuses = ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"];
 
       // Atomic conditional update — always the resolved OpsVendorPayment id
@@ -1159,7 +1167,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
             requiresFounderApproval: false,
             status: newStatus,
           }),
-          changeDescription: `Vendor payout verified for ${payment.vendorName} (Category: ${payment.category}, Remaining: ₹${finalRemaining})`,
+          changeDescription: `Vendor payout verified for ${payment.vendorName} (Category: ${payment.category}, Settled: ₹${finalAdvance})`,
           reason: sanitizeReason(reason) || null,
           ipAddress: req.ip || null,
           userAgent: req.get("user-agent") || null,
@@ -1236,10 +1244,10 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       };
 
       const agreed = Number(payment.agreedAmount || 0);
-      const recordedAdvance = Number(payment.advancePaid || 0);
-      const remaining = Math.max(0, agreed - recordedAdvance);
-      const newStatus =
-        remaining <= 0 && agreed > 0 ? "Paid" : recordedAdvance > 0 ? "Advance Paid" : payment.status;
+      const { finalAdvance, finalRemaining, newStatus } = clearedVendorPayoutAmounts(
+        agreed,
+        payment.advancePaid,
+      );
 
       // Atomic conditional update — resolved row id, not the inbound DH id
       const updateResult = await tx.opsVendorPayment.updateMany({
@@ -1253,8 +1261,8 @@ exports.approveVendorPaymentFounder = async (req, res) => {
           approvedByFounderAt: new Date(),
           approvedByFounderId: user.id,
           status: newStatus,
-          advancePaid: recordedAdvance,
-          remainingPayable: remaining,
+          advancePaid: finalAdvance,
+          remainingPayable: finalRemaining,
           ...vendorProofWriteFields(invoiceUrl, undefined, payment),
         },
       });
@@ -1274,7 +1282,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
       await writeBackOrThrow(tx, updated, {
         tenantId,
         agreed,
-        advance: recordedAdvance,
+        advance: finalAdvance,
       });
 
       // Create immutable audit log
@@ -1290,7 +1298,7 @@ exports.approveVendorPaymentFounder = async (req, res) => {
           performedAt: new Date(),
           oldValue: JSON.stringify(previousState),
           newValue: JSON.stringify({ approvalStatus: "APPROVED_FOUNDER", status: newStatus }),
-          changeDescription: `Vendor payout verified for ${payment.vendorName} (₹${recordedAdvance} recorded)`,
+          changeDescription: `Vendor payout verified for ${payment.vendorName} (₹${finalAdvance} settled)`,
           reason: sanitizeReason(reason) || null,
           ipAddress: req.ip || null,
           userAgent: req.get("user-agent") || null,

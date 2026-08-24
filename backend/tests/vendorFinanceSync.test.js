@@ -445,7 +445,7 @@ describe("vendor two-step stays intact", () => {
     expect(tx.opsHotelBooking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "hb_1", tenantId: "tenant-a" },
-        data: expect.objectContaining({ advancePaid: 0 }),
+        data: expect.objectContaining({ advancePaid: 12000 }),
       }),
     );
   });
@@ -814,7 +814,7 @@ describe("canonical DH ↔ vendor payment write-back", () => {
     expect(tx.opsGuidePayment.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "gp_1", tenantId: "tenant-a" },
-        data: expect.objectContaining({ advancePaid: 0 }),
+        data: expect.objectContaining({ advancePaid: 5000 }),
       }),
     );
     expect(tx.opsHotelBooking.updateMany).not.toHaveBeenCalled();

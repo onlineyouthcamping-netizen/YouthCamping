@@ -664,8 +664,11 @@ exports.getVendorPaymentsQueue = async (req, res) => {
             advancePaid: paidAmount,
             sourceType,
             sourceId: record.id,
-            approvalStatus: record.approvalStatus || (paidAmount >= totalCost && totalCost > 0 ? "APPROVED_FOUNDER" : "PENDING"),
-            status: record.status || record.paymentStatus || (paidAmount >= totalCost && totalCost > 0 ? "Paid" : paidAmount > 0 ? "Advance Paid" : "Pending Approval"),
+            approvalStatus: record.approvalStatus || "PENDING",
+            status:
+              record.status ||
+              record.paymentStatus ||
+              (paidAmount > 0 ? "Advance Paid" : "Pending Approval"),
           },
           { sourceType },
         ),
