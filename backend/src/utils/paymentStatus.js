@@ -14,6 +14,8 @@
  * keep grouping correctly without destructive data migration.
  */
 
+const { TERMINAL_APPROVED } = require("./collectionVerification");
+
 const PAYMENT_STATUS = {
   UNPAID: "UNPAID",
   PARTIAL: "PARTIAL",
@@ -96,8 +98,8 @@ const derivePaymentStatus = ({
  * `Payment` (status success) and `opsClientPayment` (status Verified)
  * tables. Returns { sum, standard, receipts }.
  */
-const sumVerifiedPaymentsForBooking = async (prisma, bookingId) => {
-  const ids = Array.from(new Set([bookingId].filter(Boolean)));
+const sumVerifiedPaymentsForBooking = async (prisma, bookingId, extraId) => {
+  const ids = Array.from(new Set([bookingId, extraId].filter(Boolean)));
 
   const [standardPayments, verifiedReceipts] = await Promise.all([
     prisma.payment.findMany({
@@ -105,7 +107,10 @@ const sumVerifiedPaymentsForBooking = async (prisma, bookingId) => {
       select: { amount: true, status: true },
     }),
     prisma.opsClientPayment.findMany({
-      where: { bookingId: { in: ids }, status: "Verified" },
+      where: {
+        bookingId: { in: ids },
+        approvalStatus: TERMINAL_APPROVED,
+      },
       select: { amount: true },
     }),
   ]);

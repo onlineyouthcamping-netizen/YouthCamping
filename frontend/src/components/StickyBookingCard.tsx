@@ -16,8 +16,12 @@ export default function StickyBookingCard({ trip }: StickyBookingCardProps) {
   const { settings } = useTheme();
   const [isVisible, setIsVisible] = useState(false);
 
-  const displayPrice = currentPrice > 0 ? currentPrice : trip.price || 12999;
-  const durationStr = formatDuration(trip.duration, "9 Days / 8 Nights");
+  const displayPrice = currentPrice > 0 ? currentPrice : trip.price;
+  const durationStr = formatDuration(trip.duration);
+  const priceLabel =
+    Number.isFinite(Number(displayPrice)) && Number(displayPrice) > 0
+      ? `₹ ${Number(displayPrice).toLocaleString()}`
+      : "Price unavailable";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,7 +48,7 @@ export default function StickyBookingCard({ trip }: StickyBookingCardProps) {
         `📌 Package Details:\n` +
         `- Duration: ${durationStr}\n` +
         `- Departure Date: ${formattedDate}\n` +
-        `- Total Price: ₹${displayPrice.toLocaleString()}/-\n\n` +
+        `- Total Price: ${priceLabel}\n\n` +
         `Please assist me with the booking.`,
     );
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank");
@@ -60,7 +64,7 @@ export default function StickyBookingCard({ trip }: StickyBookingCardProps) {
           </span>
 
           <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-1 font-montserrat flex items-baseline gap-2">
-            ₹ {displayPrice.toLocaleString()}
+            {priceLabel}
           </div>
 
           <div className="text-zinc-400 text-xs font-normal mb-5 font-montserrat">
@@ -187,12 +191,9 @@ export default function StickyBookingCard({ trip }: StickyBookingCardProps) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col shrink-0">
             <span className="text-xl font-extrabold text-[#0B1528] leading-none font-montserrat">
-              ₹ {displayPrice.toLocaleString()}
+              {priceLabel}
             </span>
             <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-zinc-400 line-through text-[11px] font-normal">
-                ₹ {(displayPrice + 3000).toLocaleString()}
-              </span>
               <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">
                 per person
               </span>

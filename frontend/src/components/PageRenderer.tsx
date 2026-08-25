@@ -35,44 +35,6 @@ export default function PageRenderer({
   if (!sections || !Array.isArray(sections)) return null;
 
   let visibleSections = sections.filter((s) => s.visible !== false);
-  const hasDestinations = visibleSections.some(
-    (s) => s.type === "destinations",
-  );
-
-  // Insert destinations right before reviews if not already present in section array
-  if (!hasDestinations) {
-    const reviewsIndex = visibleSections.findIndex((s) => s.type === "reviews");
-    const destSection = { type: "destinations", data: {} };
-    if (reviewsIndex !== -1) {
-      visibleSections = [
-        ...visibleSections.slice(0, reviewsIndex),
-        destSection,
-        ...visibleSections.slice(reviewsIndex),
-      ];
-    } else {
-      visibleSections.push(destSection);
-    }
-  }
-
-  // Ensure recent_photos section is always included if missing
-  const hasRecentPhotos = visibleSections.some(
-    (s) => s.type === "recent_photos" || s.type === "photo_grid",
-  );
-  if (!hasRecentPhotos) {
-    const reviewsIndex = visibleSections.findIndex(
-      (s) => s.type === "reviews" || s.type === "blogs",
-    );
-    const photoSection = { type: "recent_photos", data: {} };
-    if (reviewsIndex !== -1) {
-      visibleSections = [
-        ...visibleSections.slice(0, reviewsIndex),
-        photoSection,
-        ...visibleSections.slice(reviewsIndex),
-      ];
-    } else {
-      visibleSections.push(photoSection);
-    }
-  }
 
   return (
     <div className="flex flex-col w-full min-w-0">

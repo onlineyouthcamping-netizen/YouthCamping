@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatDuration(
   duration: any,
-  fallback: string = "08 N / 09 D",
+  fallback: string = "",
 ): string {
   if (!duration) return fallback;
   if (typeof duration === "string") return duration;

@@ -9,7 +9,7 @@ const { logBookingActivity } = require("../utils/bookingActivityLogger");
 const { verifySignedPayload } = require("./bookingLinkController");
 const cache = require("../lib/cache");
 const { hasPermission } = require("../config/permissions");
-const { PAYMENT_STATUS, normalizePaymentStatus } = require("../utils/paymentStatus");
+const { PAYMENT_STATUS, normalizePaymentStatus, sumVerifiedPaymentsForBooking } = require("../utils/paymentStatus");
 const { validateBookingStatusTransition, BOOKING_STATUS } = require("../utils/bookingStatus");
 const { resolveTenantId } = require("../utils/tenantContext");
 const {
@@ -492,6 +492,7 @@ exports.getBookings = async (req, res, next) => {
       bookingEnd,
       depStart,
       depEnd,
+      departureDate,
     } = req.query;
 
     // 1. Pagination parameters parse
@@ -499,7 +500,13 @@ exports.getBookings = async (req, res, next) => {
     let limit = parseInt(req.query.limit, 10);
     if (isNaN(page) || page < 1) page = 1;
     if (isNaN(limit) || limit < 1) limit = 25;
-    if (limit > 100) limit = 100;
+    const departureDateKey =
+      departureDate && /^\d{4}-\d{2}-\d{2}$/.test(String(departureDate))
+        ? String(departureDate)
+        : null;
+    // Departure-scoped lists may exceed 100; still paginate. Generic lists stay capped.
+    const maxLimit = departureDateKey ? 500 : 100;
+    if (limit > maxLimit) limit = maxLimit;
     const skip = (page - 1) * limit;
 
     const userTenant = req.user?.tenantId || "default";
@@ -568,6 +575,11 @@ exports.getBookings = async (req, res, next) => {
         end.setHours(23, 59, 59, 999);
         where.departureDate.lte = end;
       }
+    } else if (departureDateKey) {
+      where.departureDate = {
+        gte: new Date(`${departureDateKey}T00:00:00+05:30`),
+        lte: new Date(`${departureDateKey}T23:59:59.999+05:30`),
+      };
     }
 
     // 3. Database query parallel execution
@@ -2134,34 +2146,31 @@ exports.confirmBooking = async (req, res, next) => {
         });
     }
 
-    // Financial values set here must pass through server-side validation.
-    // paymentStatus is normalized to the canonical vocabulary (UNPAID/PARTIAL/PAID/REFUNDED).
-    const canonicalPaymentStatus = normalizePaymentStatus(
-      paymentStatus || (targetAdvance > 0 ? PAYMENT_STATUS.PARTIAL : PAYMENT_STATUS.UNPAID),
-    );
-    // advancePaid > 0 with a full payment → PAID; remaining amount decides PARTIAL vs PAID.
-    const resolvedPaymentStatus =
-      targetAdvance > 0 && targetAdvance >= targetTotal
-        ? PAYMENT_STATUS.PAID
-        : targetAdvance > 0
-          ? PAYMENT_STATUS.PARTIAL
-          : canonicalPaymentStatus;
-
-    const role = req.user?.role;
     const where = { id: req.params.id, tenantId: req.user.tenantId };
-    /* all sales allowed */
-
     const beforeBooking = await prisma.booking.findFirst({ where });
-    if (!beforeBooking)
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
+    if (!beforeBooking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    const paymentTotals = await sumVerifiedPaymentsForBooking(
+      prisma,
+      beforeBooking.id,
+      beforeBooking.bookingId,
+    );
+    const verifiedCollected = Number(paymentTotals.sum || 0);
+    const remainingAfterConfirm = Math.max(0, targetTotal - verifiedCollected);
+    const resolvedPaymentStatus =
+      verifiedCollected > 0 && remainingAfterConfirm <= 0
+        ? PAYMENT_STATUS.PAID
+        : verifiedCollected > 0
+          ? PAYMENT_STATUS.PARTIAL
+          : PAYMENT_STATUS.UNPAID;
 
     const updatePayload = {
       status: "confirmed",
       totalAmount: targetTotal,
-      advancePaid: targetAdvance,
-      remainingAmount: targetTotal - targetAdvance,
+      advancePaid: verifiedCollected,
+      remainingAmount: remainingAfterConfirm,
       paymentMode,
       paymentStatus: resolvedPaymentStatus,
       payment_status: resolvedPaymentStatus.toLowerCase(),
@@ -2188,7 +2197,7 @@ exports.confirmBooking = async (req, res, next) => {
     await logBookingActivity({
       bookingId: req.params.id,
       action: "STATUS_CHANGE",
-      details: `Booking status set to confirmed (Total: ₹${totalAmount}, Advance Paid: ₹${targetAdvance} via ${paymentMode})`,
+      details: `Booking status set to confirmed (Total: ₹${targetTotal}, Advance recorded: ₹${targetAdvance} pending finance, verified collected: ₹${verifiedCollected} via ${paymentMode})`,
       performedByAdminId: req.user.id,
     });
 
@@ -3551,10 +3560,13 @@ exports.cancelBookingWithRefund = async (req, res, next) => {
 
     // ── REFUND VALIDATION (server-authoritative, never trust the client) ──
     // Collected amount is derived from actual verified payment records.
-    const paymentTotals = await sumVerifiedPaymentsForBooking(prisma, booking.id);
+    const paymentTotals = await sumVerifiedPaymentsForBooking(
+      prisma,
+      booking.id,
+      booking.bookingId,
+    );
     const collectedFromRecords = paymentTotals.sum;
-    // Legacy bookings may have advancePaid recorded without payment rows.
-    const collected = Math.max(collectedFromRecords, Number(booking.advancePaid) || 0);
+    const collected = collectedFromRecords;
 
     if (hasRefundRequested && Number.isNaN(requestedRefund)) {
       return res
@@ -3581,7 +3593,7 @@ exports.cancelBookingWithRefund = async (req, res, next) => {
         });
     }
 
-    const refundableAmount = Math.min(collected, Number(booking.advancePaid) || collected);
+    const refundableAmount = Math.min(collected, collectedFromRecords || collected);
     if (hasRefundRequested && refund > refundableAmount) {
       return res
         .status(400)

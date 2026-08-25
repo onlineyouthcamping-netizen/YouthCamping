@@ -15,57 +15,6 @@ interface RecentPhoto {
   location: string;
 }
 
-const DEFAULT_PHOTOS: RecentPhoto[] = [
-  {
-    id: "p1",
-    url: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1000&q=85",
-    caption: "Bonfire Night & Acoustic Music",
-    location: "Manali, Himachal Pradesh",
-  },
-  {
-    id: "p2",
-    url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1000&q=85",
-    caption: "Conquering Snow Pass Together",
-    location: "Hampta Pass Trek",
-  },
-  {
-    id: "p3",
-    url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=1000&q=85",
-    caption: "Divine Vibes at Kedarnath Gate",
-    location: "Kedarnath, Uttarakhand",
-  },
-  {
-    id: "p4",
-    url: "https://images.unsplash.com/photo-1526772662000-3f88f10405ff?w=1000&q=85",
-    caption: "Sunset Jump Celebration",
-    location: "Spiti Valley",
-  },
-  {
-    id: "p5",
-    url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=1000&q=85",
-    caption: "YouthCamping Peak Victory Flag",
-    location: "Kedarkantha Summit",
-  },
-  {
-    id: "p6",
-    url: "https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=1000&q=85",
-    caption: "Himalayan Trekking Trail",
-    location: "Pangong Tso & Nubra Valley",
-  },
-  {
-    id: "p7",
-    url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1000&q=85",
-    caption: "Beachside Sunset Camping",
-    location: "Gokarna & Goa",
-  },
-  {
-    id: "p8",
-    url: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=1000&q=85",
-    caption: "Green Valley Exploration",
-    location: "Matheran & Western Ghats",
-  },
-];
-
 interface RecentPhotosSectionProps {
   photos?: RecentPhoto[];
   title?: string;
@@ -73,7 +22,7 @@ interface RecentPhotosSectionProps {
 }
 
 export default function RecentPhotosSection({
-  photos = DEFAULT_PHOTOS,
+  photos = [],
   title = "Recent Photos",
   subtitle = "From Our Trips",
 }: RecentPhotosSectionProps) {
@@ -135,6 +84,8 @@ export default function RecentPhotosSection({
     setSelectedIndex((selectedIndex + 1) % basePhotos.length);
   };
 
+  if (basePhotos.length === 0) return null;
+
   return (
     <section
       className="py-4 sm:py-5 font-montserrat overflow-hidden bg-[#E2E7ED]"
@@ -189,9 +140,7 @@ export default function RecentPhotosSection({
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src =
-                      DEFAULT_PHOTOS[actualIndex % DEFAULT_PHOTOS.length].url;
+                    (e.target as HTMLImageElement).style.display = "none";
                   }}
                 />
               </div>

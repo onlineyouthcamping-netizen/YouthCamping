@@ -6,6 +6,7 @@ const {
   canCompleteCollectionVerification,
   denyCollectionVerification,
   TERMINAL_APPROVED,
+  canonicalCollectionStatus,
 } = require("../utils/collectionVerification");
 const {
   resolveSourceFromBody,
@@ -14,6 +15,49 @@ const {
   syncOperationalVendorRecord: syncOperationalBySource,
   formatVendorDisplayName,
 } = require("../utils/vendorOperationalSource");
+
+async function resolveLedgerSalespersonId(tenantId, userId, salesAdminId) {
+  if (userId) return userId;
+  if (salesAdminId) return salesAdminId;
+  const admin = await prisma.admin.findFirst({
+    where: { tenantId: tenantId || "default" },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return admin?.id || null;
+}
+
+async function refreshBookingFromApprovedReceipts(booking) {
+  if (!booking?.id) return booking;
+  const ids = [booking.id, booking.bookingId].filter(Boolean);
+  const allVerified = await prisma.opsClientPayment.findMany({
+    where: {
+      bookingId: { in: ids },
+      approvalStatus: TERMINAL_APPROVED,
+    },
+  });
+  const totalVerified = allVerified.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const remaining = Math.max(0, Number(booking.totalAmount || 0) - totalVerified);
+  return prisma.booking.update({
+    where: { id: booking.id },
+    data: {
+      advancePaid: totalVerified,
+      remainingAmount: remaining,
+      paymentStatus:
+        remaining === 0 && totalVerified > 0
+          ? PAYMENT_STATUS.PAID
+          : totalVerified > 0
+            ? PAYMENT_STATUS.PARTIAL
+            : PAYMENT_STATUS.UNPAID,
+      payment_status:
+        remaining === 0 && totalVerified > 0
+          ? "paid"
+          : totalVerified > 0
+            ? "partial"
+            : "unpaid",
+    },
+  });
+}
 
 function vendorProofFieldsFromBody(body = {}, existing = {}) {
   const invoice = body.invoiceProof || body.invoiceFileUrl || body.proofUrl;
@@ -257,42 +301,8 @@ exports.addClientPayment = async (req, res) => {
       },
     });
 
-    // Operational booking balance only moves on finance-verified receipts.
-    // Pending approvals must not be treated as cleared collections.
-    let updatedBooking = booking;
-    if (receipt.status === "Verified") {
-      const allVerified = await prisma.opsClientPayment.findMany({
-        where: { bookingId: targetBookingId, status: "Verified" },
-      });
-      const totalVerified = allVerified.reduce((s, r) => s + r.amount, 0);
-      const remaining = Math.max(0, booking.totalAmount - totalVerified);
-
-      const updateData = {
-        advancePaid: totalVerified,
-        remainingAmount: remaining,
-        paymentStatus:
-          remaining === 0 && totalVerified > 0
-            ? PAYMENT_STATUS.PAID
-            : totalVerified > 0
-              ? PAYMENT_STATUS.PARTIAL
-              : PAYMENT_STATUS.UNPAID,
-        payment_status:
-          remaining === 0 && totalVerified > 0
-            ? "paid"
-            : totalVerified > 0
-              ? "partial"
-              : "unpaid",
-      };
-
-      if (booking.status !== "confirmed" && booking.status !== "cancelled" && totalVerified > 0) {
-        updateData.status = "confirmed";
-      }
-
-      updatedBooking = await prisma.booking.update({
-        where: { id: booking.id },
-        data: updateData,
-      });
-    }
+    // Pending receipts must not move booking.advancePaid / remainingAmount.
+    const updatedBooking = booking;
 
     // Mirror into ledger as PENDING so Finance → Incoming queue can clear it.
     // Do not create APPROVED entries on record.
@@ -304,20 +314,39 @@ exports.addClientPayment = async (req, res) => {
           ? "BANK_TRANSFER"
           : "UPI";
 
-      await prisma.accountingEntry.create({
-        data: {
+      const salespersonId = await resolveLedgerSalespersonId(
+        tenantId,
+        req.user?.id,
+        booking.salesAdminId,
+      );
+      if (!salespersonId) {
+        throw new Error("No salesperson available to attach the ledger entry");
+      }
+      const referenceNumber = transactionId || `PAY-${receipt.id}`;
+      const existingEntry = await prisma.accountingEntry.findFirst({
+        where: {
           tenantId,
           bookingId: targetBookingId,
           amount: parseFloat(amount) || 0,
-          paymentMode: normalizedMode,
-          collectionAccountId: targetAccountId,
-          referenceNumber: transactionId || `PAY-${receipt.id}`,
-          notes: remarks || "Recorded via Booking Workspace",
-          status: receipt.status === "Verified" ? "APPROVED" : "PENDING",
-          salespersonId: req.user?.id || booking.salesAdminId,
-          actionedById: receipt.status === "Verified" ? req.user?.id : null,
+          referenceNumber,
         },
       });
+      if (!existingEntry) {
+        await prisma.accountingEntry.create({
+          data: {
+            tenantId,
+            bookingId: targetBookingId,
+            amount: parseFloat(amount) || 0,
+            paymentMode: normalizedMode,
+            collectionAccountId: targetAccountId,
+            referenceNumber,
+            notes: remarks || "Recorded via Booking Workspace",
+            status: receipt.status === "Verified" ? "APPROVED" : "PENDING",
+            salespersonId,
+            actionedById: receipt.status === "Verified" ? req.user?.id : null,
+          },
+        });
+      }
     } catch (entryErr) {
       console.warn("AccountingEntry auto-sync skipped:", entryErr.message);
     }
@@ -409,32 +438,8 @@ exports.verifyClientPayment = async (req, res) => {
       },
     });
 
-    if (booking) {
-      const allVerified = await prisma.opsClientPayment.findMany({
-        where: { bookingId: receipt.bookingId, status: "Verified" },
-      });
-      const totalVerified = allVerified.reduce((s, r) => s + r.amount, 0);
-      const remaining = Math.max(0, booking.totalAmount - totalVerified);
-
-      await prisma.booking.update({
-        where: { id: booking.id },
-        data: {
-          advancePaid: totalVerified,
-          remainingAmount: remaining,
-          paymentStatus:
-            remaining === 0 && totalVerified > 0
-              ? PAYMENT_STATUS.PAID
-              : totalVerified > 0
-                ? PAYMENT_STATUS.PARTIAL
-                : PAYMENT_STATUS.UNPAID,
-          payment_status:
-            remaining === 0 && totalVerified > 0
-              ? "paid"
-              : totalVerified > 0
-                ? "partial"
-                : "unpaid",
-        },
-      });
+    if (booking && updated.approvalStatus === TERMINAL_APPROVED) {
+      await refreshBookingFromApprovedReceipts(booking);
 
       // Auto-sync into AccountingEntry if verified
       if (status === "Verified") {
@@ -474,7 +479,11 @@ exports.verifyClientPayment = async (req, res) => {
                 referenceNumber: receipt.transactionId || `PAY-${receipt.id}`,
                 notes: remarks || receipt.remarks || "Verified via Finance Control",
                 status: "APPROVED",
-                salespersonId: booking.salesAdminId,
+                salespersonId: await resolveLedgerSalespersonId(
+                  tenantId,
+                  req.user?.id,
+                  booking.salesAdminId,
+                ),
                 actionedById: req.user?.id,
               },
             });
@@ -684,13 +693,7 @@ exports.getBookingPayments = async (req, res) => {
       (a) => a.accountType === "CASH" || a.accountName.toLowerCase().includes("cash"),
     );
     const upiAcc =
-      activeAccounts.find(
-        (a) =>
-          a.accountName.toLowerCase().includes("nikul") ||
-          (a.upiId && a.upiId.toLowerCase().includes("nikul")) ||
-          a.accountType === "INDIVIDUAL" ||
-          a.accountType === "UPI",
-      ) ||
+      activeAccounts.find((a) => a.accountType === "INDIVIDUAL" || a.accountType === "UPI") ||
       activeAccounts.find((a) => a.accountType === "COMPANY") ||
       activeAccounts[0];
 
@@ -727,6 +730,7 @@ exports.getBookingPayments = async (req, res) => {
         resolvedAcc = mode.includes("CASH") ? cashAcc : mode.includes("BANK") ? bankAcc : upiAcc;
       }
       seenAmounts.add(`${r.amount}-${new Date(r.paymentDate || r.createdAt).toISOString().slice(0, 10)}`);
+      const display = canonicalCollectionStatus(r.approvalStatus, r.status);
       const proofUrl = r.proofFileUrl || r.proofUrl || null;
       allPayments.push({
         id: r.id,
@@ -736,11 +740,8 @@ exports.getBookingPayments = async (req, res) => {
         collectionAccount: resolvedAcc || null,
         notes: r.remarks || "Recorded Payment",
         status:
-          r.status === "Verified"
-            ? "success"
-            : r.status === "Rejected"
-              ? "failed"
-              : "pending",
+          display === "VERIFIED" ? "success" : display === "REJECTED" ? "failed" : "pending",
+        approvalStatus: r.approvalStatus || "PENDING",
         createdAt: r.paymentDate || r.createdAt,
         transactionId: r.transactionId || null,
         proofUrl,
@@ -1882,7 +1883,7 @@ exports.getPaymentsDashboardStats = async (req, res) => {
     const clientPayments = await prisma.opsClientPayment.findMany({
       where: {
         bookingId: { in: bookingIds },
-        status: "Verified",
+        approvalStatus: TERMINAL_APPROVED,
       },
       select: {
         amount: true,
@@ -1902,14 +1903,9 @@ exports.getPaymentsDashboardStats = async (req, res) => {
     let clientAmountReceived = 0;
     let clientOutstandingBalance = 0;
     bookings.forEach((b) => {
-      const advancePaid = b.advancePaid || 0;
       const receiptSum = receiptSumByBooking[b.bookingId] || 0;
-      const effectivePaid = Math.max(advancePaid, receiptSum);
-      const outstanding =
-        b.remainingAmount !== undefined && b.remainingAmount !== null
-          ? b.remainingAmount
-          : Math.max(0, (b.totalAmount || 0) - effectivePaid);
-      clientAmountReceived += effectivePaid;
+      const outstanding = Math.max(0, (b.totalAmount || 0) - receiptSum);
+      clientAmountReceived += receiptSum;
       clientOutstandingBalance += outstanding;
     });
 
@@ -1998,8 +1994,8 @@ exports.getAllVendorPayablesQueue = async (req, res) => {
 
     hotelBookings.forEach((h) => {
       const vName = (h.hotelName || "Hotel Vendor").trim();
-      const tripTitle = h.trip?.title || "Spiti Valley Road Trip";
-      const tripCode = h.tripId || "SPT-1";
+      const tripTitle = h.trip?.title || "Trip title unavailable";
+      const tripCode = h.tripId || "—";
       const key = `${vName.toLowerCase()}_HOTEL_${h.tripId}`;
 
       const total = Number(h.totalAmount || 0);
@@ -2031,8 +2027,8 @@ exports.getAllVendorPayablesQueue = async (req, res) => {
 
     transportFleet.forEach((t) => {
       const vName = (t.vendor?.name || t.notes || t.driverName || "Transport Vendor").trim();
-      const tripTitle = t.trip?.title || "Spiti Valley Road Trip";
-      const tripCode = t.tripId || "SPT-1";
+      const tripTitle = t.trip?.title || "Trip title unavailable";
+      const tripCode = t.tripId || "—";
       const key = `${vName.toLowerCase()}_TRANSPORT_${t.tripId}`;
 
       const total = Number(t.totalAmount || 0);
@@ -2077,8 +2073,8 @@ exports.getAllVendorPayablesQueue = async (req, res) => {
           vendorId: { name: vName, type: cat },
           vendorName: vName,
           category: cat,
-          tripName: "Spiti Valley Road Trip",
-          tripCode: "SPT-1",
+          tripName: p.trip?.title || "Trip title unavailable",
+          tripCode: p.tripId || "—",
           tripId: p.tripId,
           totalAmount: total,
           paidAmount: paid,

@@ -19,7 +19,7 @@ interface CTABannerProps {
 export default function CTABanner({
   title = "Group Trips",
   tagline = "for 18-35 Year Olds",
-  backgroundImage = "https://images.unsplash.com/photo-1539635278303-d4002c07dee3",
+  backgroundImage,
   ctaText = "Join solo or bring your buddy",
   ctaLink = "/trips",
   titleSize,
@@ -41,13 +41,17 @@ export default function CTABanner({
         <div className="relative h-[400px] md:h-[500px] w-full rounded-[32px] overflow-hidden shadow-2xl group border border-zinc-50">
           {/* Background Image */}
           <div className="absolute inset-0">
+            {normalizeImageUrl(backgroundImage) ? (
             <OptimizedImage
               src={normalizeImageUrl(backgroundImage)}
-              alt={title}
+              alt=""
               cloudinaryWidth={1600}
               sizes="(max-width: 768px) calc(100vw - 32px), (max-width: 1440px) calc(100vw - 96px), 1280px"
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
             />
+            ) : (
+              <div className="w-full h-full bg-[#0B1528]" />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
           </div>
 

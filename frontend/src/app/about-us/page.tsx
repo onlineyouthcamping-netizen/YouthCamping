@@ -13,7 +13,6 @@ import {
   Phone,
   ArrowRight,
 } from "lucide-react";
-import { OptimizedImage } from "@/components/ui/OptimizedImage";
 
 const values = [
   {
@@ -42,12 +41,7 @@ const values = [
   },
 ];
 
-const stats = [
-  { label: "Expeditions Completed", value: "500+" },
-  { label: "Happy Travelers", value: "15,000+" },
-  { label: "Google Review Rating", value: "4.9 ★" },
-  { label: "Repeat Traveler Rate", value: "98%" },
-];
+const stats: { label: string; value: string }[] = [];
 
 export default function AboutPage() {
   return (
@@ -68,7 +62,7 @@ export default function AboutPage() {
         </p>
       </section>
 
-      {/* Stats Bar */}
+      {stats.length > 0 && (
       <section className="bg-[#0B1528] text-white py-12 px-5 sm:px-8 my-12">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {stats.map((st, i) => (
@@ -83,16 +77,13 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Story & Philosophy Section */}
       <section className="py-12 px-5 sm:px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div className="relative aspect-[4/3] rounded-[28px] overflow-hidden shadow-xl border border-zinc-100">
-            <OptimizedImage
-              src="https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1600"
-              alt="YouthCamping Himalayan Trip"
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full bg-zinc-200" aria-hidden />
           </div>
           <div className="space-y-6">
             <h2 className="text-2xl sm:text-4xl font-extrabold text-[#0B1528] tracking-tight leading-tight uppercase font-montserrat">

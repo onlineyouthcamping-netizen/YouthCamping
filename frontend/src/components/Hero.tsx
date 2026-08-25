@@ -26,33 +26,6 @@ const DEFAULT_ROTATING_WORDS = [
   "Restless",
 ];
 
-const DEFAULT_HERO_SLIDES = [
-  {
-    url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=1800&q=85",
-    topTag: "EXPLORE. CONNECT. BELONG.",
-    subtitle:
-      "Pick a month and explore group adventures that bring stories to life.",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1800&q=85",
-    topTag: "HIGH ROADS. HIGHER VIBES.",
-    subtitle:
-      "Pick a month and explore group adventures that bring stories to life.",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=1800&q=85",
-    topTag: "SUMMIT DREAMS.",
-    subtitle:
-      "Pick a month and explore group adventures that bring stories to life.",
-  },
-  {
-    url: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=1800&q=85",
-    topTag: "BACKWATERS. BEACHES. BLISS.",
-    subtitle:
-      "Pick a month and explore group adventures that bring stories to life.",
-  },
-];
-
 export default function Hero({
   tagline,
   headlinePrefix,
@@ -71,7 +44,7 @@ export default function Hero({
     if (Array.isArray(backgroundImages) && backgroundImages.length > 0)
       return backgroundImages;
     if (backgroundImage) return [backgroundImage];
-    return DEFAULT_HERO_SLIDES.map((s) => s.url);
+    return [];
   })();
 
   const rotWords: string[] = (() => {
@@ -102,35 +75,42 @@ export default function Hero({
     return () => clearInterval(wordTimer);
   }, [rotWords.length]);
 
-  const activeImg = imagesList[currentSlide % imagesList.length];
-  const displayTagline =
-    tagline ||
-    DEFAULT_HERO_SLIDES[currentSlide % DEFAULT_HERO_SLIDES.length]?.topTag ||
-    "EXPLORE. CONNECT. BELONG.";
+  const activeImg = imagesList.length
+    ? imagesList[currentSlide % imagesList.length]
+    : "";
+  const displayTagline = tagline || "EXPLORE. CONNECT. BELONG.";
   const displayHeadline = headlinePrefix || headline || "Trips for the";
   const displaySubheadline =
     subheadline ||
     subtitle ||
     "Pick a month and explore group adventures that bring stories to life.";
 
-  const nextSlide = () =>
+  const nextSlide = () => {
+    if (imagesList.length <= 1) return;
     setCurrentSlide((prev) => (prev + 1) % imagesList.length);
-  const prevSlide = () =>
+  };
+  const prevSlide = () => {
+    if (imagesList.length <= 1) return;
     setCurrentSlide(
       (prev) => (prev - 1 + imagesList.length) % imagesList.length,
     );
+  };
 
   return (
     <div className="relative w-full h-[60vh] sm:h-[70vh] md:h-[78vh] min-h-[440px] md:min-h-[540px] max-h-[720px] overflow-hidden bg-zinc-900 font-montserrat flex items-center">
       {/* BACKGROUND IMAGE SLIDE */}
       <div className="absolute inset-0 z-0">
-        <img
-          src={activeImg}
-          alt="Hero Background"
-          fetchPriority="high"
-          loading="eager"
-          className="w-full h-full object-cover transition-opacity duration-1000"
-        />
+        {activeImg ? (
+          <img
+            src={activeImg}
+            alt=""
+            fetchPriority="high"
+            loading="eager"
+            className="w-full h-full object-cover transition-opacity duration-1000"
+          />
+        ) : (
+          <div className="w-full h-full bg-[#0B1528]" />
+        )}
         <div
           className="absolute inset-0"
           style={{

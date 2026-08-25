@@ -39,7 +39,7 @@ export default async function TripDetailPage({
     { id: "faqs", label: "FAQs" },
   ];
 
-  const durationStr = formatDuration(trip.duration, "08 N / 09 D");
+  const durationStr = formatDuration(trip.duration);
 
   return (
     <div className="bg-white min-h-screen font-montserrat">

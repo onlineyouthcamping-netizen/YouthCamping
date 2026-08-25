@@ -65,17 +65,6 @@ function stripHtml(html: string) {
   return decoded.replace(/<[^>]*>/g, "");
 }
 
-const DEFAULT_CARDS: AboutTripCard[] = [
-  { title: "Group Trips", subtitle: "For Solo & Friends", icon: "Users" },
-  {
-    title: "Verified & Safe",
-    subtitle: "Trusted by 10K+",
-    icon: "ShieldCheck",
-  },
-  { title: "Trip Captain", subtitle: "Expert & Friendly", icon: "UserCheck" },
-  { title: "24×7 Support", subtitle: "We're here for you", icon: "PhoneCall" },
-];
-
 export default function AboutTrip({
   description,
   customAboutTrip,

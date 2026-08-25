@@ -897,26 +897,38 @@ exports.getDirectoryVendor = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "vendorId is required" });
     }
 
+    const vendorInclude = {
+      vendorRooms: true,
+      seasonalRates: true,
+      destinations: true,
+      vendorContacts: true,
+      contracts: true,
+      tripVendors: {
+        include: { trip: { select: { id: true, title: true } } },
+      },
+    };
     let vendor = null;
     try {
       vendor = await prisma.opsVendor.findUnique({
         where: { id: vendorId },
-        include: {
-          vendorRooms: true,
-          seasonalRates: true,
-          destinations: true,
-          vendorContacts: true,
-          contracts: true,
-          tripVendors: {
-            include: { trip: { select: { id: true, title: true } } },
-          },
-        },
+        include: vendorInclude,
       });
+      if (!vendor) {
+        vendor = await prisma.opsVendor.findFirst({
+          where: { vendorCode: vendorId },
+          include: vendorInclude,
+        });
+      }
     } catch (relError) {
       console.warn("getDirectoryVendor relation query failed, using direct query fallback:", relError?.message);
       vendor = await prisma.opsVendor.findUnique({
         where: { id: vendorId },
       });
+      if (!vendor) {
+        vendor = await prisma.opsVendor.findFirst({
+          where: { vendorCode: vendorId },
+        });
+      }
     }
 
     if (!vendor) {

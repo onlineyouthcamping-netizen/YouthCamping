@@ -111,10 +111,7 @@ export default function TripCard({
     });
   };
 
-  const price = Number(trip.price || 12999);
-  const heroImg =
-    normalizeImageUrl(trip.heroImage) ||
-    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80";
+  const price = Number(trip.price);
 
   // Build unique images list STRICTLY from Admin uploaded trip.heroImage and trip.images
   const imagesList = useMemo(() => {
@@ -131,12 +128,8 @@ export default function TripCard({
       });
     }
 
-    if (list.length === 0) {
-      list.push(heroImg);
-    }
-
     return list;
-  }, [trip.heroImage, trip.images, heroImg]);
+  }, [trip.heroImage, trip.images]);
 
   // Staggered automatic photo slider — stagger start time per card index
   useEffect(() => {
@@ -155,40 +148,15 @@ export default function TripCard({
     };
   }, [imagesList.length, index]);
 
-  const activePhotoIndex = currentImgIdx % imagesList.length;
+  const activePhotoIndex = imagesList.length
+    ? currentImgIdx % imagesList.length
+    : 0;
 
   // Location Badge (e.g., HIMACHAL, LADAKH, UTTARAKHAND, KERALA)
-  const locationBadge = (trip.location || "HIMACHAL").toUpperCase();
+  const locationBadge = (trip.location || "").toUpperCase();
 
-  // Compact Duration formatting (e.g. "9 D / 8 N")
-  const durationText = (() => {
-    const raw = formatDuration(trip.duration, "9 D / 8 N");
-    let text = typeof raw === "string" ? raw : "9 D / 8 N";
+  const durationText = formatDuration(trip.duration);
 
-    if (
-      !text.includes("Night") &&
-      !text.includes("night") &&
-      !text.includes("N") &&
-      !text.includes("n")
-    ) {
-      const daysMatch = text.match(/(\d+)\s*Days?/i);
-      if (daysMatch) {
-        const days = parseInt(daysMatch[1], 10);
-        const nights = Math.max(1, days - 1);
-        text = `${days} D / ${nights} N`;
-      }
-    } else {
-      text = text
-        .replace(/Days?/gi, "D")
-        .replace(/Nights?/gi, "N")
-        .replace(/(\d+)\s*D/gi, "$1 D")
-        .replace(/(\d+)\s*N/gi, "$1 N")
-        .replace(/\s*\/\s*/g, " / ");
-    }
-    return text;
-  })();
-
-  // Compact Ex-city location (Always formatted as "Ex. Chandigarh", "Ex. Cochin", "Ex. Ahmedabad", "Ex. Delhi")
   const exCity = (() => {
     let raw = "";
     if (trip.departureCity) {
@@ -199,28 +167,8 @@ export default function TripCard({
       trip.variants[0].location
     ) {
       raw = trip.variants[0].location;
-    } else {
-      const titleLower = (trip.title || "").toLowerCase();
-      const locLower = (trip.location || "").toLowerCase();
-      if (
-        locLower.includes("ladakh") ||
-        titleLower.includes("ladakh") ||
-        titleLower.includes("spiti")
-      ) {
-        raw = "Delhi";
-      } else if (
-        locLower.includes("uttarakhand") ||
-        titleLower.includes("kedarkantha")
-      ) {
-        raw = "Dehradun";
-      } else if (locLower.includes("kerala")) {
-        raw = "Cochin";
-      } else {
-        raw = "Ahmedabad";
-      }
     }
-
-    // Strip " to X", " To X", parenthetical details, and secondary cities
+    if (!raw) return "";
     const clean = raw
       .replace(/\s+to\s+.*$/i, "")
       .replace(/\s*\(.*?\)/g, "")
@@ -228,14 +176,13 @@ export default function TripCard({
       .split("&")[0]
       .split(",")[0]
       .trim();
-
-    return `Ex. ${clean}`;
+    return clean ? `Ex. ${clean}` : "";
   })();
 
-  const title = trip.title || "Manali Kasol Amritsar Backpacking Trip";
+  const title = trip.title || "Untitled Trip";
 
   const { main: mainTitle, sub: subTitle } = splitTripTitle(title);
-  const tagline = (trip.description || "Get ready for an unforgettable...")
+  const tagline = (trip.description || "")
     .replace(/<[^>]*>/g, "")
     .trim();
 
@@ -364,7 +311,9 @@ export default function TripCard({
               From
             </span>
             <span className="font-montserrat text-[#D4541A] font-bold text-[16px] sm:text-[18px] leading-none">
-              ₹{price.toLocaleString("en-IN")}
+              {Number.isFinite(price) && price > 0
+                ? `₹${price.toLocaleString("en-IN")}`
+                : "Price unavailable"}
             </span>
           </div>
 

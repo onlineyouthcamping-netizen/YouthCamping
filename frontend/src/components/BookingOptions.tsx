@@ -18,8 +18,11 @@ import { Trip } from "@/types";
 import { normalizeImageUrl } from "@/lib/api";
 import { useTripSelection } from "@/store/trip-selection";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
-import { parseTripDate } from "@/lib/parseTripDate";
 import { useTheme } from "@/components/DynamicThemeProvider";
+import {
+  groupDeparturesByMonth,
+  listUpcomingDepartures,
+} from "@/lib/upcomingDepartures";
 
 interface BookingOptionsProps {
   trip: Trip;
@@ -42,71 +45,20 @@ export default function BookingOptions({
   const [selectedTravel, setSelectedTravel] = useState(0);
   const [selectedRoom, setSelectedRoom] = useState(0);
 
-  const defaultVariants = useMemo(
-    () => [
-      {
-        name: "Delhi Expedition",
-        location: "Ex-Delhi",
-        price: 15999,
-        discountedPrice: 12999,
-        image:
-          "https://images.unsplash.com/photo-1587474260584-136574528ed5?q=80&w=800",
-      },
-      {
-        name: "Ahmedabad Expedition",
-        location: "Ex-Ahmedabad",
-        price: 17999,
-        discountedPrice: 14999,
-        image:
-          "https://images.unsplash.com/photo-1605140885332-f4ad6071b03c?q=80&w=800",
-      },
-      {
-        name: "Chandigarh Expedition",
-        location: "Ex-Chandigarh",
-        price: 14999,
-        discountedPrice: 11999,
-        image:
-          "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6?q=80&w=800",
-      },
-      {
-        name: "Mumbai Expedition",
-        location: "Ex-Mumbai",
-        price: 18999,
-        discountedPrice: 15999,
-        image:
-          "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?q=80&w=800",
-      },
-    ],
-    [],
-  );
-
   const variants = useMemo(() => {
-    if (
-      trip.variants &&
-      Array.isArray(trip.variants) &&
-      trip.variants.length > 0
-    ) {
+    if (trip.variants && Array.isArray(trip.variants) && trip.variants.length > 0) {
       return trip.variants;
     }
-    return defaultVariants;
-  }, [trip.variants, defaultVariants]);
+    return [];
+  }, [trip.variants]);
 
   const travelOptions = useMemo(
-    () =>
-      trip.travelOptions || [
-        { label: "Non AC Sleeper Train", priceDelta: 0 },
-        { label: "3 AC Train", priceDelta: 2000 },
-      ],
+    () => (Array.isArray(trip.travelOptions) ? trip.travelOptions : []),
     [trip.travelOptions],
   );
 
   const roomOptions = useMemo(
-    () =>
-      trip.roomOptions || [
-        { label: "Quad Sharing", priceDelta: 0 },
-        { label: "Triple Sharing", priceDelta: 1500 },
-        { label: "Double Sharing", priceDelta: 3000 },
-      ],
+    () => (Array.isArray(trip.roomOptions) ? trip.roomOptions : []),
     [trip.roomOptions],
   );
 
@@ -161,113 +113,9 @@ export default function BookingOptions({
   ]);
   const { settings } = useTheme();
 
-  // Auto-remove past dates & ended months; auto-generate current/upcoming departure dates if empty
   const { groupedDates, months } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalized start of current day
-
-    const validDates: Array<{
-      date: string;
-      capacity: number;
-      bookedCount: number;
-      parsed: Date;
-      monthLabel: string;
-      dayStr: string;
-      weekdayStr: string;
-    }> = [];
-
-    const rawAvailable = trip.availableDates || [];
-
-    rawAvailable.forEach((ad) => {
-      const rawDateStr = typeof ad === "string" ? ad : ad.date;
-      const d = parseTripDate(rawDateStr);
-      if (!d) return;
-
-      const checkDate = new Date(d);
-      checkDate.setHours(0, 0, 0, 0);
-
-      // AUTO-REMOVE PAST DATES: Keep only dates >= today
-      if (checkDate.getTime() >= today.getTime()) {
-        const monthName = d.toLocaleString("default", { month: "long" });
-        const year = d.getFullYear();
-        const monthLabel =
-          year !== today.getFullYear() ? `${monthName} ${year}` : monthName;
-        const weekdayStr = d.toLocaleString("default", { weekday: "short" });
-
-        validDates.push({
-          date: rawDateStr,
-          capacity:
-            typeof ad === "object" && (ad as any).capacity
-              ? (ad as any).capacity
-              : 20,
-          bookedCount:
-            typeof ad === "object" && (ad as any).bookedCount
-              ? (ad as any).bookedCount
-              : 0,
-          parsed: d,
-          monthLabel,
-          dayStr: d.getDate().toString(),
-          weekdayStr,
-        });
-      }
-    });
-
-    // Auto-generate fallback departure dates if no upcoming dates exist for this trip
-    if (validDates.length === 0) {
-      const curYear = today.getFullYear();
-      const curMonth = today.getMonth();
-      const sampleDays = [5, 12, 19, 26];
-
-      for (let mOffset = 0; mOffset < 5; mOffset++) {
-        const targetDate = new Date(curYear, curMonth + mOffset, 1);
-        const yyyy = targetDate.getFullYear();
-        const mIdx = targetDate.getMonth();
-
-        sampleDays.forEach((day) => {
-          const sample = new Date(yyyy, mIdx, day);
-          sample.setHours(0, 0, 0, 0);
-
-          if (sample.getTime() >= today.getTime()) {
-            const mmStr = String(sample.getMonth() + 1).padStart(2, "0");
-            const ddStr = String(sample.getDate()).padStart(2, "0");
-            const isoStr = `${yyyy}-${mmStr}-${ddStr}`;
-
-            const monthName = sample.toLocaleString("default", {
-              month: "long",
-            });
-            const monthLabel =
-              yyyy !== today.getFullYear() ? `${monthName} ${yyyy}` : monthName;
-            const weekdayStr = sample.toLocaleString("default", {
-              weekday: "short",
-            });
-
-            validDates.push({
-              date: isoStr,
-              capacity: 20,
-              bookedCount: 0,
-              parsed: sample,
-              monthLabel,
-              dayStr: sample.getDate().toString(),
-              weekdayStr,
-            });
-          }
-        });
-      }
-    }
-
-    // Sort chronologically
-    validDates.sort((a, b) => a.parsed.getTime() - b.parsed.getTime());
-
-    // Group dates by Month Label
-    const grouped: Record<string, typeof validDates> = {};
-    validDates.forEach((item) => {
-      if (!grouped[item.monthLabel]) grouped[item.monthLabel] = [];
-      grouped[item.monthLabel].push(item);
-    });
-
-    // Only months with active upcoming dates remain in monthKeys (ended months are automatically removed)
-    const monthKeys = Object.keys(grouped);
-    return { groupedDates: grouped, months: monthKeys };
+    const validDates = listUpcomingDepartures(trip.availableDates);
+    return groupDeparturesByMonth(validDates);
   }, [trip.availableDates]);
 
   // Group dates by Year -> Month Abbr -> Day list for PDF brochure departure calendar layout
@@ -335,13 +183,17 @@ export default function BookingOptions({
         {/* Starting Location Section - Horizontal Slide */}
         <div>
           <div className="flex flex-row overflow-x-auto no-scrollbar gap-[16px] pb-3 -mx-1 px-1 snap-x select-none">
+            {variants.length === 0 && (
+              <p className="text-sm text-zinc-500 font-montserrat px-1">
+                Departure options are not available for this trip.
+              </p>
+            )}
             {variants.map((v, i) => {
               const displayDuration = formatDuration(
                 (v as any).duration || trip.duration,
+                "",
               );
-              const imageSrc =
-                normalizeImageUrl(v.image) ||
-                "https://images.unsplash.com/photo-1596230529625-7ee10f7b09b6?q=80&w=800";
+              const imageSrc = normalizeImageUrl(v.image);
               const isSelected = selectedVariant === i;
 
               return (
@@ -360,11 +212,13 @@ export default function BookingOptions({
                 >
                   {/* Card Thumbnail Image — extends down to title */}
                   <div className="relative flex-1 w-full overflow-hidden bg-zinc-100 min-h-[130px]">
-                    <OptimizedImage
-                      src={imageSrc}
-                      alt={v.location}
-                      className="card-image absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    />
+                    {imageSrc ? (
+                      <OptimizedImage
+                        src={imageSrc}
+                        alt={v.location}
+                        className="card-image absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                      />
+                    ) : null}
                   </div>
 
                   {/* Card Content — compact, no white space */}
@@ -531,6 +385,12 @@ export default function BookingOptions({
             )}
           </div>
 
+          {months.length === 0 ? (
+            <p className="text-sm text-zinc-500 font-montserrat py-3">
+              No upcoming departures
+            </p>
+          ) : (
+            <>
           {/* Month Tabs (Auto-purges ended months) */}
           <div className="month-tabs flex items-center gap-2 overflow-x-auto no-scrollbar">
             {months.map((month) => {
@@ -595,6 +455,8 @@ export default function BookingOptions({
           </div>
 
           {/* View All Dates Button (Removed per user request) */}
+            </>
+          )}
         </div>
       </section>
 

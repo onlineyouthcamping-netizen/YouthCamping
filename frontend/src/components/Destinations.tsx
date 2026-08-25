@@ -29,78 +29,6 @@ interface DestinationsProps {
   destinations?: Destination[];
 }
 
-const DEFAULT_DESTINATIONS: Destination[] = [
-  {
-    name: "Matheran",
-    img: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80",
-    subtext: "Hill Station Trek",
-  },
-  {
-    name: "Valley of Flowers",
-    img: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80",
-    subtext: "UNESCO World Heritage",
-  },
-  {
-    name: "Discover The Dangs",
-    img: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-    subtext: "Waterfalls & Forest Trail",
-  },
-  {
-    name: "Saputara",
-    img: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
-    subtext: "Mist & Valley Views",
-  },
-  {
-    name: "Mahabaleshwar",
-    img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-    subtext: "Plateau & Sunrise Points",
-  },
-  {
-    name: "Spiti Valley",
-    img: "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80",
-    subtext: "High Altitude Circuit",
-  },
-  {
-    name: "Ladakh",
-    img: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=800&q=80",
-    subtext: "Pangong & Nubra",
-  },
-];
-
-const DEST_IMAGE_MAP: Record<string, string> = {
-  himachal:
-    "https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=800&q=80",
-  "himachal pradesh":
-    "https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=800&q=80",
-  uttarakhand:
-    "https://images.unsplash.com/photo-1605640840605-14ac1855827b?auto=format&fit=crop&w=800&q=80",
-  spiti:
-    "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80",
-  "spiti valley":
-    "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80",
-  ladakh:
-    "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=800&q=80",
-  kerala:
-    "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=800&q=80",
-  sikkim:
-    "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80",
-  goa: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-  matheran:
-    "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80",
-  "valley of flowers":
-    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80",
-  "discover the dangs":
-    "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-  "the dangs":
-    "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-  dangs:
-    "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-  saputara:
-    "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
-  mahabaleshwar:
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-};
-
 function destinationHref(d: any): string | undefined {
   if (!d || typeof d !== "object") return undefined;
   const raw = d.href || d.link || d.url;
@@ -126,38 +54,27 @@ export default function Destinations({
   useWheelPassThrough(scrollRef);
 
   const sourceList =
-    Array.isArray(destinations) && destinations.length > 0
-      ? destinations
-      : DEFAULT_DESTINATIONS;
+    Array.isArray(destinations) && destinations.length > 0 ? destinations : [];
 
   const displayItems: Destination[] = useMemo(
     () =>
-      sourceList.map((d: any, i: number) => {
-        const fallback = DEFAULT_DESTINATIONS[i % DEFAULT_DESTINATIONS.length];
-        const rawName = typeof d === "string" ? d : d?.name || fallback.name;
+      sourceList.map((d: any) => {
+        const rawName = typeof d === "string" ? d : d?.name || "";
         const customImg =
           typeof d === "object" && (d?.img || d?.imageUrl)
             ? normalizeImageUrl(d.img || d.imageUrl)
-            : undefined;
-        const cleanKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const mappedImg =
-          customImg ||
-          Object.entries(DEST_IMAGE_MAP).find(([key]) =>
-            cleanKey.includes(key.replace(/[^a-z0-9]/g, "")),
-          )?.[1] ||
-          fallback.img;
+            : "";
         return {
           name: rawName,
-          subtext:
-            typeof d === "object" && d?.subtext
-              ? d.subtext
-              : fallback.subtext || "Explore Group Trip",
-          img: mappedImg,
+          subtext: typeof d === "object" && d?.subtext ? d.subtext : "",
+          img: customImg || "",
           href: destinationHref(d),
         };
-      }),
+      }).filter((d) => d.name),
     [sourceList],
   );
+
+  if (displayItems.length === 0) return null;
 
   const primaryWord = (
     titlePrimary ||
@@ -228,12 +145,16 @@ export default function Destinations({
                 "dest-photo-card group relative block w-full aspect-[9/14] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF4D00]";
               const inner = (
                 <>
-                  <img
-                    src={item.img}
-                    alt={item.name}
-                    loading="lazy"
-                    className="dest-photo-img absolute inset-0 w-full h-full object-cover"
-                  />
+                  {item.img ? (
+                    <img
+                      src={item.img}
+                      alt={item.name}
+                      loading="lazy"
+                      className="dest-photo-img absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-zinc-300" aria-hidden />
+                  )}
                   <div
                     className="dest-photo-fade pointer-events-none absolute inset-0 z-[1]"
                     aria-hidden
