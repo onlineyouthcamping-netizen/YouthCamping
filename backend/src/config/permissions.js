@@ -130,6 +130,9 @@ const PERMISSIONS = [
   "recurring_tasks.pause",
   "recurring_tasks.assign",
 
+  // Task allotments — view all assignees (founders/admins); others see own only
+  "tasks.view_all",
+
   // Customer Timeline
   "customers.timeline.view",
   "customers.timeline.view_finance",
@@ -322,6 +325,7 @@ const ROLE_PERMISSIONS = {
     "recurring_tasks.view",
     "customers.timeline.view",
     "announcements.view",
+    "tasks.view_all",
   ],
 
   sales: [
@@ -519,6 +523,7 @@ const ROLE_PERMISSIONS = {
     "finance.audit.export",
     "finance.accounting.view",
     "finance.accounting.manage",
+    "tasks.view_all",
 
     // Approval Workflow
     "finance.collections.review",

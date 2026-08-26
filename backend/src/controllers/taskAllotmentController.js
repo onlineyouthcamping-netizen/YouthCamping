@@ -1,5 +1,9 @@
 const { prisma } = require("../lib/prisma");
 const { logAction } = require("../utils/auditLogger");
+const {
+  resolveTaskAssigneeScope,
+  canAccessAssignedTask,
+} = require("../utils/taskVisibility");
 
 /**
  * POST /api/finance/tasks
@@ -92,10 +96,11 @@ async function getTasks(req, res) {
   try {
     const tenantId = req.user?.tenantId || req.admin?.tenantId || "default";
     const { assignedToId, status, priority, bookingId, taskType, isOverdue, page = 1, limit = 30 } = req.query;
+    const assigneeScope = resolveTaskAssigneeScope(req.user || req.admin, assignedToId);
 
     const where = { tenantId };
-    if (assignedToId && assignedToId !== "ALL") {
-      where.assignedToId = assignedToId;
+    if (assigneeScope) {
+      where.assignedToId = assigneeScope;
     }
     if (status && status !== "ALL") {
       where.status = status;
@@ -171,6 +176,10 @@ async function updateTaskStatus(req, res) {
 
     if (!existing) {
       return res.status(404).json({ success: false, message: "Task not found" });
+    }
+
+    if (!canAccessAssignedTask(req.user || req.admin, existing)) {
+      return res.status(403).json({ success: false, message: "Not allowed to update this task" });
     }
 
     const updateData = {
@@ -252,6 +261,10 @@ async function addTaskComment(req, res) {
       return res.status(404).json({ success: false, message: "Task not found" });
     }
 
+    if (!canAccessAssignedTask(req.user || req.admin, task)) {
+      return res.status(403).json({ success: false, message: "Not allowed to comment on this task" });
+    }
+
     const newComment = await prisma.taskComment.create({
       data: {
         tenantId,
@@ -284,9 +297,13 @@ async function getTaskDashboard(req, res) {
   try {
     const tenantId = req.user?.tenantId || req.admin?.tenantId || "default";
     const now = new Date();
+    const assigneeScope = resolveTaskAssigneeScope(req.user || req.admin);
 
     const tasks = await prisma.taskAllotment.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        ...(assigneeScope ? { assignedToId: assigneeScope } : {}),
+      },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
       },

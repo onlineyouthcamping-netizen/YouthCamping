@@ -725,6 +725,9 @@ function BookingForm() {
         if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
           return `Please enter a valid age between 1 and 120 for Traveler ${i + 1}`;
         }
+        if (!(traveler as any).aadhaarUrl && !(traveler as any).idProofUrl) {
+          return `Aadhaar / Govt ID proof is required for Traveler ${i + 1}`;
+        }
         if (
           traveler.email &&
           traveler.email.trim() !== "" &&
@@ -1758,11 +1761,14 @@ function BookingForm() {
                             </div>
                           </div>
 
-                          {/* Aadhaar Card / ID Proof Upload (Optional) */}
+                          {/* Aadhaar Card / ID Proof Upload (Required) */}
                           <div className="space-y-1.5 pt-1.5 border-t border-slate-100 mt-2">
                             <div className="flex items-center justify-between">
                               <label className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">
-                                Aadhaar Card / Govt ID Proof (Optional)
+                                Aadhaar Card / Govt ID Proof{" "}
+                                <span className="text-rose-500 normal-case tracking-normal">
+                                  *
+                                </span>
                               </label>
                               {(traveler as any).aadhaarUrl && (
                                 <span className="text-emerald-600 font-bold flex items-center gap-1 normal-case text-[10px]">
@@ -1777,7 +1783,11 @@ function BookingForm() {
                                   "flex-1 h-[42px] px-3 bg-white border border-dashed rounded-lg flex items-center justify-between cursor-pointer transition-all hover:bg-slate-50/80",
                                   (traveler as any).aadhaarUrl
                                     ? "border-emerald-500/60 bg-emerald-50/20"
-                                    : "border-slate-300",
+                                    : error &&
+                                        !(traveler as any).aadhaarUrl &&
+                                        !(traveler as any).idProofUrl
+                                      ? "border-rose-400 bg-rose-50/30"
+                                      : "border-slate-300",
                                 )}
                               >
                                 <div className="flex items-center gap-2 overflow-hidden min-w-0">
@@ -1811,6 +1821,13 @@ function BookingForm() {
                                 </button>
                               )}
                             </div>
+                            {!(traveler as any).aadhaarUrl &&
+                              !(traveler as any).idProofUrl &&
+                              error?.toLowerCase().includes("aadhaar") && (
+                              <p className="text-[10px] font-bold text-rose-600 pt-0.5">
+                                Upload Aadhaar / Govt ID proof to continue
+                              </p>
+                            )}
                             {uploadingAadhaarIndex === index && (
                               <div className="flex items-center gap-1.5 text-[10px] text-amber-600 font-bold animate-pulse pt-0.5">
                                 <Loader2 className="w-3 h-3 animate-spin" /> Uploading document...

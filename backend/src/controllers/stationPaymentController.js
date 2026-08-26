@@ -1,6 +1,14 @@
 "use strict";
 const { prisma } = require("../lib/prisma");
 const { logBookingActivity } = require("../utils/bookingActivityLogger");
+const {
+  istDayBounds,
+  sameIstDay,
+  isActiveStationCollection,
+  sumActiveStationCollections,
+  computeEffectivePaid,
+  syncBookingBalanceFromSources,
+} = require("../utils/stationPaymentBalance");
 const SibApiV3Sdk = require("sib-api-v3-sdk");
 
 const defaultClient = SibApiV3Sdk.ApiClient.instance;
@@ -18,6 +26,23 @@ async function generateReceiptNumber(tenantId) {
 
 function fmt(amount) {
   return `₹${Number(amount || 0).toLocaleString("en-IN")}`;
+}
+
+async function rejectStationAccountingEntries(tx, record) {
+  if (!record?.bookingId) return;
+  const refs = [record.receiptNumber, record.utrNumber].filter(Boolean);
+  if (refs.length === 0) return;
+  await tx.accountingEntry.updateMany({
+    where: {
+      bookingId: record.bookingId,
+      status: { in: ["APPROVED", "PENDING"] },
+      OR: [
+        { referenceNumber: { in: refs } },
+        { notes: { contains: record.receiptNumber || "__none__" } },
+      ],
+    },
+    data: { status: "REJECTED" },
+  });
 }
 
 async function sendReceiptEmail(collection, booking, tripName, adminName) {
@@ -122,17 +147,21 @@ exports.getDashboard = async (req, res) => {
       });
     }
 
-    const startOfDay = new Date(departureDate);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(departureDate);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const dayBounds = istDayBounds(departureDate);
+    if (!dayBounds) {
+      return res.status(400).json({
+        success: false,
+        message: "departureDate must be YYYY-MM-DD",
+      });
+    }
+    const { start: startOfDay, end: endOfDay } = dayBounds;
 
     const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
         tripId,
         departureDate: { gte: startOfDay, lte: endOfDay },
-        status: { not: "cancelled" },
+        status: { notIn: ["cancelled", "CANCELLED", "rejected", "REJECTED"] },
       },
       include: {
         stationPayments: {
@@ -174,18 +203,17 @@ exports.getDashboard = async (req, res) => {
 
     for (const bk of bookings) {
       const finalAmount = bk.totalAmount || bk.amount || 0;
-      const currentAdvancePaid = bk.advancePaid || 0;
       const cashPmts = bk.stationPayments.filter(
         (p) =>
           p.paymentMode === "CASH" &&
-          p.collectionStatus === "COLLECTED" &&
-          !p.isReversed,
+          isActiveStationCollection(p),
       );
       const upiPmts = bk.stationPayments.filter(
         (p) =>
           p.paymentMode === "UPI" &&
-          p.collectionStatus !== "CANCELLED" &&
-          !p.isReversed,
+          !p.isReversed &&
+          String(p.collectionStatus || "").toUpperCase() !== "CANCELLED" &&
+          String(p.collectionStatus || "").toUpperCase() !== "REVERSED",
       );
       const verifiedUpi = upiPmts.filter(
         (p) => p.upiVerificationStatus === "VERIFIED",
@@ -198,12 +226,18 @@ exports.getDashboard = async (req, res) => {
       const verifiedAmt = verifiedUpi.reduce((s, p) => s + p.amount, 0);
       const pendingAmt = pendingUpi.reduce((s, p) => s + p.amount, 0);
 
-      const stationTotal = cashAmt + verifiedAmt;
-      // Since booking.advancePaid ALREADY includes verified station collections,
-      // the amount paid BEFORE coming to the station is:
-      const prevPaidBeforeStation = currentAdvancePaid - stationTotal;
-      const grandTotal = currentAdvancePaid;
-      const remaining = Math.max(0, finalAmount - grandTotal);
+      const stationTotal = sumActiveStationCollections(bk.stationPayments);
+      const computed = computeEffectivePaid({
+        totalAmount: finalAmount,
+        opsClientPayments: [],
+        legacyPayments: [],
+        stationPayments: bk.stationPayments,
+        accountingEntries: bk.accountingEntries || [],
+      });
+      // Paid before station = cleared total minus active station collections
+      const prevPaidBeforeStation = Math.max(0, computed.paidAmount - stationTotal);
+      const grandTotal = computed.paidAmount;
+      const remaining = computed.remainingAmount;
 
       totalPackageAmount += finalAmount;
       totalPreviouslyPaid += prevPaidBeforeStation;
@@ -516,15 +550,58 @@ exports.collect = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Amount must be a positive number" });
 
-    const booking = await prisma.booking.findUnique({ where: { bookingId } });
+    const booking = await prisma.booking.findFirst({
+      where: {
+        OR: [{ bookingId }, { id: bookingId }],
+      },
+    });
     if (!booking)
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
 
+    if (booking.tripId !== tripId) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking ${booking.bookingId} belongs to trip ${booking.tripId}, not ${tripId}`,
+      });
+    }
+    if (!sameIstDay(booking.departureDate, departureDate)) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking ${booking.bookingId} is not on departure ${departureDate}`,
+      });
+    }
+
+    const canonicalBookingId = booking.bookingId;
     const finalAmount = booking.totalAmount || booking.amount || 0;
-    const currentPaid = booking.advancePaid || 0;
-    const currentRemaining = Math.max(0, finalAmount - currentPaid);
+
+    // Remaining must use live cleared sources, not a possibly inflated advancePaid.
+    const [existingStation, accountingEntries, opsClientPayments, legacyPayments] =
+      await Promise.all([
+        prisma.stationPaymentCollection.findMany({
+          where: { bookingId: canonicalBookingId },
+        }),
+        prisma.accountingEntry.findMany({
+          where: { bookingId: canonicalBookingId },
+          select: { amount: true, status: true },
+        }),
+        prisma.opsClientPayment.findMany({
+          where: { bookingId: { in: [booking.id, canonicalBookingId] } },
+        }),
+        prisma.payment.findMany({
+          where: { bookingId: { in: [booking.id, canonicalBookingId] } },
+        }),
+      ]);
+    const liveBalance = computeEffectivePaid({
+      totalAmount: finalAmount,
+      opsClientPayments,
+      legacyPayments,
+      stationPayments: existingStation,
+      accountingEntries,
+    });
+    const currentPaid = liveBalance.paidAmount;
+    const currentRemaining = liveBalance.remainingAmount;
 
     if (parsedAmount > currentRemaining + 0.01)
       return res
@@ -551,7 +628,7 @@ exports.collect = async (req, res) => {
       const dup = await prisma.stationPaymentCollection.findFirst({
         where: {
           tenantId,
-          bookingId,
+          bookingId: canonicalBookingId,
           paymentMode: "CASH",
           amount: parsedAmount,
           collectedByAdminId: req.user?.id,
@@ -607,9 +684,11 @@ exports.collect = async (req, res) => {
         data: {
           tenantId,
           receiptNumber,
-          bookingId,
-          tripId,
-          departureDate: new Date(departureDate),
+          bookingId: canonicalBookingId,
+          tripId: booking.tripId,
+          departureDate: booking.departureDate
+            ? new Date(booking.departureDate)
+            : new Date(departureDate),
           station,
           platform: platform || null,
           paymentMode,
@@ -637,7 +716,7 @@ exports.collect = async (req, res) => {
       await tx.accountingEntry.create({
         data: {
           tenantId,
-          bookingId,
+          bookingId: canonicalBookingId,
           amount: parsedAmount,
           paymentMode: paymentMode === "CASH" ? "CASH" : "UPI",
           referenceNumber: utrNumber || receiptNumber,
@@ -648,15 +727,7 @@ exports.collect = async (req, res) => {
       });
 
       if (isCash) {
-        await tx.booking.update({
-          where: { bookingId },
-          data: {
-            advancePaid: newTotalPaid,
-            remainingAmount: newRemaining,
-            paymentStatus: newPaymentStatus,
-            payment_status: newPaymentStatus === "PAID" ? "paid" : "partial",
-          },
-        });
+        await syncBookingBalanceFromSources(tx, booking);
       }
 
       await tx.bookingActivityLog.create({
@@ -782,22 +853,9 @@ exports.cancel = async (req, res) => {
           reversalReason,
         },
       });
-      const shouldReverse =
-        record.paymentMode === "CASH" ||
-        record.upiVerificationStatus === "VERIFIED";
-      if (shouldReverse && booking) {
-        const newPaid = Math.max(0, (booking.advancePaid || 0) - record.amount);
-        const finalAmount = booking.totalAmount || booking.amount || 0;
-        await tx.booking.update({
-          where: { bookingId: record.bookingId },
-          data: {
-            advancePaid: newPaid,
-            remainingAmount: Math.max(0, finalAmount - newPaid),
-            paymentStatus: newPaid <= 0 ? "UNPAID" : "PARTIAL",
-          },
-        });
-      }
+      await rejectStationAccountingEntries(tx, record);
       if (booking) {
+        await syncBookingBalanceFromSources(tx, booking);
         await tx.bookingActivityLog.create({
           data: {
             bookingId: booking.id,
@@ -824,10 +882,29 @@ exports.verifyUpi = async (req, res) => {
     });
     if (!record)
       return res.status(404).json({ success: false, message: "Not found" });
-    if (record.paymentMode !== "UPI" && record.paymentMode !== "CASH")
+    if (record.paymentMode !== "UPI")
       return res
         .status(400)
-        .json({ success: false, message: "Invalid station payment mode" });
+        .json({
+          success: false,
+          message: "Only UPI station payments can be verified here",
+        });
+    if (record.isReversed || record.collectionStatus === "REVERSED")
+      return res
+        .status(409)
+        .json({ success: false, message: "Payment already reversed" });
+    if (record.upiVerificationStatus === "VERIFIED" && action === "VERIFY")
+      return res
+        .status(409)
+        .json({ success: false, message: "UPI payment already verified" });
+    if (
+      record.upiVerificationStatus === "REJECTED" ||
+      record.collectionStatus === "CANCELLED"
+    )
+      return res
+        .status(409)
+        .json({ success: false, message: "UPI payment already rejected" });
+
     const userRole = (req.user?.role || "").toUpperCase().replace(/[-\s]/g, "_");
     const isPrivileged = [
       "SUPER_ADMIN",
@@ -850,65 +927,49 @@ exports.verifyUpi = async (req, res) => {
     const booking = await prisma.booking.findUnique({
       where: { bookingId: record.bookingId },
     });
-    const finalAmount = booking
-      ? booking.totalAmount || booking.amount || 0
-      : 0;
 
     await prisma.$transaction(async (tx) => {
-      const newPaid = isVerify
-        ? (booking?.advancePaid || 0) + record.amount
-        : booking?.advancePaid || 0;
-      const newRemaining = isVerify
-        ? Math.max(0, finalAmount - newPaid)
-        : Math.max(0, finalAmount - (booking?.advancePaid || 0));
       await tx.stationPaymentCollection.update({
         where: { id: record.id },
         data: {
-          upiVerificationStatus:
-            record.paymentMode === "UPI"
-              ? isVerify
-                ? "VERIFIED"
-                : "REJECTED"
-              : record.upiVerificationStatus,
+          upiVerificationStatus: isVerify ? "VERIFIED" : "REJECTED",
           collectionStatus: isVerify
             ? "COLLECTED"
             : action === "REJECT"
-            ? "CANCELLED"
-            : record.collectionStatus,
+              ? "CANCELLED"
+              : record.collectionStatus,
           verifiedByAdminId: req.user?.id,
           verifiedAt: isVerify ? new Date() : null,
           remarks:
             !isVerify && rejectionReason
               ? `${record.remarks ? record.remarks + " | " : ""}Rejected: ${rejectionReason}`
               : record.remarks,
-          ...(isVerify
-            ? {
-                newTotalPaid: newPaid,
-                newRemaining,
-                paymentStatus: newRemaining <= 0 ? "PAID" : "PARTIAL",
-              }
-            : {}),
         },
       });
-      if (isVerify && booking) {
-        await tx.booking.update({
-          where: { bookingId: record.bookingId },
-          data: {
-            advancePaid: newPaid,
-            remainingAmount: newRemaining,
-            paymentStatus: newRemaining <= 0 ? "PAID" : "PARTIAL",
-          },
-        });
+
+      if (!isVerify) {
+        await rejectStationAccountingEntries(tx, record);
+      } else {
         await tx.accountingEntry.updateMany({
           where: {
             bookingId: record.bookingId,
-            referenceNumber: record.utrNumber,
+            referenceNumber: record.utrNumber || record.receiptNumber,
             status: "PENDING",
           },
           data: { status: "APPROVED", actionedById: req.user?.id },
         });
       }
+
       if (booking) {
+        const updatedBooking = await syncBookingBalanceFromSources(tx, booking);
+        await tx.stationPaymentCollection.update({
+          where: { id: record.id },
+          data: {
+            newTotalPaid: updatedBooking?.advancePaid ?? record.newTotalPaid,
+            newRemaining: updatedBooking?.remainingAmount ?? record.newRemaining,
+            paymentStatus: updatedBooking?.paymentStatus || record.paymentStatus,
+          },
+        });
         await tx.bookingActivityLog.create({
           data: {
             bookingId: booking.id,
@@ -926,6 +987,7 @@ exports.verifyUpi = async (req, res) => {
       message: isVerify ? "Verified. Booking balance updated." : "Rejected.",
     });
   } catch (err) {
+    console.error("[StationPayment] verifyUpi error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };

@@ -9,6 +9,10 @@ const { logBookingActivity } = require("../utils/bookingActivityLogger");
 const { verifySignedPayload } = require("./bookingLinkController");
 const cache = require("../lib/cache");
 const { hasPermission } = require("../config/permissions");
+const {
+  resolveTaskAssigneeScope,
+  canAccessAssignedTask,
+} = require("../utils/taskVisibility");
 const { PAYMENT_STATUS, normalizePaymentStatus, sumVerifiedPaymentsForBooking } = require("../utils/paymentStatus");
 const { validateBookingStatusTransition, BOOKING_STATUS } = require("../utils/bookingStatus");
 const { resolveTenantId } = require("../utils/tenantContext");
@@ -17,6 +21,10 @@ const {
   mergePassengerPreferences,
 } = require("../utils/roomAllocationAuthority");
 const { mergeProofUrls } = require("../utils/paymentProofStorage");
+const {
+  assertPassengersHaveIdProof,
+  extractPassengerPersons,
+} = require("../utils/passengerIdProof");
 
 function sanitizeConfirmProofUrl(url) {
   if (!url || typeof url !== "string") return null;
@@ -767,6 +775,9 @@ exports.getBookings = async (req, res, next) => {
       if (!paymentsByBookingKey.has(key)) paymentsByBookingKey.set(key, []);
       paymentsByBookingKey.get(key).push(p);
     });
+    const {
+      computeEffectivePaid,
+    } = require("../utils/stationPaymentBalance");
     const bookingsWithPayments = bookings.map((b) => {
       const fromId = paymentsByBookingKey.get(b.id) || [];
       const fromRef = b.bookingId && b.bookingId !== b.id
@@ -779,7 +790,32 @@ exports.getBookings = async (req, res, next) => {
         seenPay.add(p.id);
         merged.push(p);
       });
-      return { ...b, payments: merged };
+
+      // Align list due with cleared receipts (same rule as booking Payments tab).
+      const computed = computeEffectivePaid({
+        totalAmount: b.totalAmount,
+        opsClientPayments: b.opsClientPayments || [],
+        legacyPayments: merged,
+        stationPayments: [],
+        accountingEntries: [],
+      });
+      // Prefer cleared receipts when present; otherwise stored advancePaid
+      // (station cash / manual books without OpsClientPayment rows).
+      const effectivePaid =
+        computed.paidAmount > 0
+          ? computed.paidAmount
+          : Number(b.advancePaid) || 0;
+      const effectiveRemaining = Math.max(
+        0,
+        Number(b.totalAmount || 0) - effectivePaid,
+      );
+
+      return {
+        ...b,
+        payments: merged,
+        advancePaid: effectivePaid,
+        remainingAmount: effectiveRemaining,
+      };
     });
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -814,37 +850,46 @@ exports.getBookingById = async (req, res, next) => {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || "default";
 
+    const bookingDetailInclude = {
+      sourceBookingLink: {
+        select: {
+          id: true,
+          tokenPrefix: true,
+          expiresAt: true,
+          status: true,
+          shareUrl: true,
+        },
+      },
+      salesAdmin: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      documents: true,
+      opsClientPayments: {
+        include: {
+          collectionAccount: {
+            select: {
+              id: true,
+              accountName: true,
+              accountHolderName: true,
+              accountType: true,
+              bankName: true,
+              upiId: true,
+            },
+          },
+        },
+      },
+    };
+
     let booking = await prisma.booking.findFirst({
       where: {
         OR: [{ id }, { bookingId: id }],
         tenantId,
       },
-      include: {
-        sourceBookingLink: {
-          select: {
-            id: true,
-            tokenPrefix: true,
-            expiresAt: true,
-            status: true,
-            shareUrl: true,
-          },
-        },
-        documents: true,
-        opsClientPayments: {
-          include: {
-            collectionAccount: {
-              select: {
-                id: true,
-                accountName: true,
-                accountHolderName: true,
-                accountType: true,
-                bankName: true,
-                upiId: true,
-              },
-            },
-          },
-        },
-      },
+      include: bookingDetailInclude,
     });
 
     if (!booking) {
@@ -852,32 +897,7 @@ exports.getBookingById = async (req, res, next) => {
         where: {
           OR: [{ id }, { bookingId: id }],
         },
-        include: {
-          sourceBookingLink: {
-            select: {
-              id: true,
-              tokenPrefix: true,
-              expiresAt: true,
-              status: true,
-              shareUrl: true,
-            },
-          },
-          documents: true,
-          opsClientPayments: {
-            include: {
-              collectionAccount: {
-                select: {
-                  id: true,
-                  accountName: true,
-                  accountHolderName: true,
-                  accountType: true,
-                  bankName: true,
-                  upiId: true,
-                },
-              },
-            },
-          },
-        },
+        include: bookingDetailInclude,
       });
     }
 
@@ -1221,6 +1241,30 @@ exports.createBooking = async (req, res, next) => {
           message:
             "Required fields missing: Name, Phone, and Trip are mandatory",
         });
+    }
+
+    // Public (unauthenticated) bookings must include Aadhaar/ID proof per traveler.
+    // Staff create/edit flows may attach documents later via PassengerDrawer.
+    if (!req.user) {
+      const persons = Array.isArray(req.body.passengers)
+        ? req.body.passengers
+        : extractPassengerPersons(req.body.passengers);
+      if (persons.length > 0) {
+        const idProofError = assertPassengersHaveIdProof(persons);
+        if (idProofError) {
+          return res.status(400).json({
+            success: false,
+            message: idProofError.message,
+            missingIdProof: idProofError.missing,
+          });
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Aadhaar / Govt ID proof is required. Add traveler details with ID proof before submitting.",
+        });
+      }
     }
 
     let tripId = inputTripId;
@@ -2237,9 +2281,29 @@ exports.confirmBooking = async (req, res, next) => {
     }
 
     const where = { id: req.params.id, tenantId: req.user.tenantId };
-    const beforeBooking = await prisma.booking.findFirst({ where });
+    const beforeBooking = await prisma.booking.findFirst({
+      where,
+      include: { documents: { select: { id: true, passengerId: true } } },
+    });
     if (!beforeBooking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    // Gate confirmation on Aadhaar/ID proof for active travelers.
+    // Does not affect already-confirmed bookings (this path only confirms).
+    const persons = extractPassengerPersons(beforeBooking.passengers);
+    if (persons.length > 0) {
+      const idProofError = assertPassengersHaveIdProof(
+        beforeBooking.passengers,
+        beforeBooking.documents || [],
+      );
+      if (idProofError) {
+        return res.status(400).json({
+          success: false,
+          message: idProofError.message,
+          missingIdProof: idProofError.missing,
+        });
+      }
     }
 
     const paymentTotals = await sumVerifiedPaymentsForBooking(
@@ -2256,6 +2320,16 @@ exports.confirmBooking = async (req, res, next) => {
           ? PAYMENT_STATUS.PARTIAL
           : PAYMENT_STATUS.UNPAID;
 
+    const resolvedTrainStatus = trainTicketStatus
+      ? String(trainTicketStatus).trim().toUpperCase().replace(/\s+/g, "_")
+      : undefined;
+    const trainTicketRequired =
+      resolvedTrainStatus == null
+        ? undefined
+        : !["NOT_REQUIRED", "NOT_BOOKED", "SELF_BOOKED"].includes(
+            resolvedTrainStatus,
+          );
+
     const updatePayload = {
       status: "confirmed",
       totalAmount: targetTotal,
@@ -2265,7 +2339,10 @@ exports.confirmBooking = async (req, res, next) => {
       paymentStatus: resolvedPaymentStatus,
       payment_status: resolvedPaymentStatus.toLowerCase(),
       email: email || undefined,
-      trainTicketStatus: trainTicketStatus || undefined,
+      trainTicketStatus: resolvedTrainStatus || undefined,
+      ...(trainTicketRequired === undefined
+        ? {}
+        : { trainTicketRequired }),
     };
 
     const booking = await prisma.booking.updateMany({
@@ -2795,6 +2872,25 @@ exports.submitBookingForm = async (req, res, next) => {
     const leadAge = req.body.age ?? leadPassenger.age ?? null;
     const leadGender = req.body.gender || leadPassenger.gender || null;
 
+    const persons = Array.isArray(req.body.passengers)
+      ? req.body.passengers
+      : extractPassengerPersons(req.body.passengers);
+    if (!persons.length) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Aadhaar / Govt ID proof is required. Add traveler details with ID proof before submitting.",
+      });
+    }
+    const idProofError = assertPassengersHaveIdProof(persons);
+    if (idProofError) {
+      return res.status(400).json({
+        success: false,
+        message: idProofError.message,
+        missingIdProof: idProofError.missing,
+      });
+    }
+
     // Find the trip
     let targetTrip = await prisma.trip.findFirst({
       where: { id: tripCode, tenantId },
@@ -3145,8 +3241,12 @@ exports.getBookingTasks = async (req, res, next) => {
         .status(404)
         .json({ success: false, message: "Booking not found" });
 
+    const assigneeScope = resolveTaskAssigneeScope(req.user);
     const tasks = await prisma.bookingTask.findMany({
-      where: { bookingId: booking.id },
+      where: {
+        bookingId: booking.id,
+        ...(assigneeScope ? { assignedToId: assigneeScope } : {}),
+      },
       include: {
         assignedBy: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
@@ -3346,6 +3446,12 @@ exports.updateBookingTask = async (req, res, next) => {
     });
 
     if (existingBookingTask) {
+      if (!canAccessAssignedTask(req.user, existingBookingTask)) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Not allowed to update this task" });
+      }
+
       const updated = await prisma.bookingTask.update({
         where: { id: taskId },
         data: { status },
@@ -3378,6 +3484,12 @@ exports.updateBookingTask = async (req, res, next) => {
     });
 
     if (existingUniversalTask) {
+      if (!canAccessAssignedTask(req.user, existingUniversalTask)) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Not allowed to update this task" });
+      }
+
       const updated = await prisma.taskAllotment.update({
         where: { id: taskId },
         data: {
@@ -3942,6 +4054,7 @@ exports.getAllBookingTasks = async (req, res, next) => {
   try {
     const tenantId = req.user?.tenantId;
     const { status, assignee, type } = req.query;
+    const assigneeScope = resolveTaskAssigneeScope(req.user, assignee);
 
     const bWhere = {};
     if (tenantId && tenantId !== "default") {
@@ -3950,8 +4063,8 @@ exports.getAllBookingTasks = async (req, res, next) => {
     if (status && status !== "ALL") {
       bWhere.status = status;
     }
-    if (assignee && assignee !== "ALL") {
-      bWhere.assignedToId = assignee;
+    if (assigneeScope) {
+      bWhere.assignedToId = assigneeScope;
     }
 
     let bookingTasks = [];
@@ -3997,8 +4110,8 @@ exports.getAllBookingTasks = async (req, res, next) => {
       if (status && status !== "ALL") {
         uWhere.status = status;
       }
-      if (assignee && assignee !== "ALL") {
-        uWhere.assignedToId = assignee;
+      if (assigneeScope) {
+        uWhere.assignedToId = assigneeScope;
       }
 
       const uRaw = await prisma.taskAllotment.findMany({

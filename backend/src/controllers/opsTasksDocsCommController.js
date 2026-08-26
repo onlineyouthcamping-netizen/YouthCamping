@@ -1,5 +1,6 @@
 const { prisma } = require("../lib/prisma");
 const { normalizeDepartureDateIndia } = require("./opsController");
+const { resolveTaskAssigneeScope } = require("../utils/taskVisibility");
 
 // Helper to construct departure filter
 async function parseDepartureFilter(req, res, requireDepartureDate = true) {
@@ -199,6 +200,7 @@ exports.getAllOperationsTasks = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     const { assignee, source, status, priority, tripId, search } = req.query;
+    const assigneeScope = resolveTaskAssigneeScope(req.user, assignee);
 
     const checklistWhere = {};
     if (tenantId && tenantId !== "default") {
@@ -216,7 +218,12 @@ exports.getAllOperationsTasks = async (req, res) => {
     if (status && status !== "ALL") {
       checklistWhere.status = status;
     }
-    if (assignee && assignee !== "ALL") {
+    // Checklist rows store assignee as a free-text name; privileged filter by query, others by own name.
+    if (assigneeScope) {
+      if (req.user?.name) {
+        checklistWhere.assignedTo = req.user.name;
+      }
+    } else if (assignee && assignee !== "ALL") {
       checklistWhere.assignedTo = assignee;
     }
     if (search && search.trim()) {
@@ -269,7 +276,9 @@ exports.getAllOperationsTasks = async (req, res) => {
       if (status && status !== "ALL") {
         bWhere.status = status.toUpperCase();
       }
-      if (assignee && assignee !== "ALL") {
+      if (assigneeScope) {
+        bWhere.assignedToId = assigneeScope;
+      } else if (assignee && assignee !== "ALL") {
         bWhere.OR = [
           { assignedToId: assignee },
           { assignedTo: { name: { contains: assignee, mode: "insensitive" } } },
