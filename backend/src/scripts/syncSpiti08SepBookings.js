@@ -39,7 +39,7 @@ async function main() {
     console.log("✅ Created Departure:", dep.departureCode);
   }
 
-  // 2. KHUSHI'S GROUP (4 PAX, Umangiben Cancelled)
+  // 2. KHUSHI'S GROUP (3 active + Umangiben cancelled; Excel total 73500)
   const khushiBookingId = "BK-SPITI-08SEP-KHUSHI";
   const khushiPassengers = {
     details: {
@@ -115,11 +115,11 @@ async function main() {
       email: "khushi7069@gmail.com",
       age: 24,
       gender: "Female",
-      numberOfTravelers: 4,
-      totalAmount: 95000,
+      numberOfTravelers: 3,
+      totalAmount: 73500,
       amount: 21000,
       advancePaid: 21000,
-      remainingAmount: 74000,
+      remainingAmount: 52500,
       paymentMode: "YAC",
       payment_method: "upi",
       paymentStatus: "Partial",
@@ -129,8 +129,43 @@ async function main() {
       trainTicketStatus: "CONFIRMED",
       trainTicketRequired: true,
       passengers: khushiPassengers,
-      notes: "Payment Date: 08/07/2026, Txn ID: YAC, Umangiben Cancelled",
-      adminNotes: "08 SEP SPITI - Khushi Group (4 Pax - Umangiben Cancelled)",
+      notes:
+        "Excel: advance ₹21,000 YAC 08/07/2026; rem 18500+18500+15500 (Umangiben cancelled)",
+      adminNotes: "08 SEP SPITI - Khushi Group (Excel 3 pax; Umangiben cancelled)",
+      sourceMeta: {
+        tripId: trip.id,
+        tripName: trip.title,
+        excelReconcile: "2026-08-26",
+        bookingItems: [
+          {
+            id: "transport-p-khushi-1-0",
+            qty: 1,
+            name: "3 TIER AC TRAIN (Ahmedabad) [Khushi]",
+            rate: 25500,
+            category: "transport",
+            personId: "p-khushi-1",
+            variantName: "3 TIER AC TRAIN",
+          },
+          {
+            id: "transport-p-khushi-2-0",
+            qty: 1,
+            name: "3 TIER AC TRAIN (Ahmedabad) [Rushvi]",
+            rate: 25500,
+            category: "transport",
+            personId: "p-khushi-2",
+            variantName: "3 TIER AC TRAIN",
+          },
+          {
+            id: "transport-p-khushi-4-0",
+            qty: 1,
+            name: "3 TIER AC TRAIN (Ahmedabad) [Khushbuben]",
+            rate: 22500,
+            category: "transport",
+            personId: "p-khushi-4",
+            variantName: "3 TIER AC TRAIN",
+          },
+        ],
+      },
       createdAt: new Date("2026-07-08T10:00:00.000Z"),
     },
     create: {
@@ -145,11 +180,11 @@ async function main() {
       email: "khushi7069@gmail.com",
       age: 24,
       gender: "Female",
-      numberOfTravelers: 4,
-      totalAmount: 95000,
+      numberOfTravelers: 3,
+      totalAmount: 73500,
       amount: 21000,
       advancePaid: 21000,
-      remainingAmount: 74000,
+      remainingAmount: 52500,
       paymentMode: "YAC",
       payment_method: "upi",
       paymentStatus: "Partial",
@@ -159,8 +194,43 @@ async function main() {
       trainTicketStatus: "CONFIRMED",
       trainTicketRequired: true,
       passengers: khushiPassengers,
-      notes: "Payment Date: 08/07/2026, Txn ID: YAC, Umangiben Cancelled",
-      adminNotes: "08 SEP SPITI - Khushi Group (4 Pax - Umangiben Cancelled)",
+      notes:
+        "Excel: advance ₹21,000 YAC 08/07/2026; rem 18500+18500+15500 (Umangiben cancelled)",
+      adminNotes: "08 SEP SPITI - Khushi Group (Excel 3 pax; Umangiben cancelled)",
+      sourceMeta: {
+        tripId: trip.id,
+        tripName: trip.title,
+        excelReconcile: "2026-08-26",
+        bookingItems: [
+          {
+            id: "transport-p-khushi-1-0",
+            qty: 1,
+            name: "3 TIER AC TRAIN (Ahmedabad) [Khushi]",
+            rate: 25500,
+            category: "transport",
+            personId: "p-khushi-1",
+            variantName: "3 TIER AC TRAIN",
+          },
+          {
+            id: "transport-p-khushi-2-0",
+            qty: 1,
+            name: "3 TIER AC TRAIN (Ahmedabad) [Rushvi]",
+            rate: 25500,
+            category: "transport",
+            personId: "p-khushi-2",
+            variantName: "3 TIER AC TRAIN",
+          },
+          {
+            id: "transport-p-khushi-4-0",
+            qty: 1,
+            name: "3 TIER AC TRAIN (Ahmedabad) [Khushbuben]",
+            rate: 22500,
+            category: "transport",
+            personId: "p-khushi-4",
+            variantName: "3 TIER AC TRAIN",
+          },
+        ],
+      },
       createdAt: new Date("2026-07-08T10:00:00.000Z"),
     },
   });
