@@ -113,6 +113,7 @@ module.exports = {
   isUsableIdProofUrl,
   passengerHasIdProof,
   extractPassengerPersons,
+  isCancelledPassenger,
   findPassengersMissingIdProof,
   assertPassengersHaveIdProof,
 };

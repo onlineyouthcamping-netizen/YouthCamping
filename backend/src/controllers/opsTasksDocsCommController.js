@@ -1,6 +1,9 @@
 const { prisma } = require("../lib/prisma");
 const { normalizeDepartureDateIndia } = require("./opsController");
 const { resolveTaskAssigneeScope } = require("../utils/taskVisibility");
+const {
+  buildDeparturePassengerDocuments,
+} = require("../utils/departurePassengerDocuments");
 
 // Helper to construct departure filter
 async function parseDepartureFilter(req, res, requireDepartureDate = true) {
@@ -353,7 +356,88 @@ exports.getOpsDocuments = async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    return res.json({ success: true, data: docs });
+    // Person-wise identity docs + payment proofs from existing booking storage
+    let passengers = [];
+    let passengerSummary = {
+      totalPassengers: 0,
+      withIdentityDoc: 0,
+      missingIdentityDoc: 0,
+      withPaymentProof: 0,
+      missingPaymentProof: 0,
+    };
+
+    try {
+      const startOfDay = new Date(ctx.departureDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(ctx.departureDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+
+      const bookings = await prisma.booking.findMany({
+        where: {
+          tenantId: ctx.tenantId,
+          tripId: ctx.tripId,
+          departureDate: { gte: startOfDay, lte: endOfDay },
+          NOT: {
+            status: {
+              in: ["cancelled", "rejected", "CANCELLED", "REJECTED"],
+            },
+          },
+        },
+        select: {
+          id: true,
+          bookingId: true,
+          fullName: true,
+          name: true,
+          status: true,
+          passengers: true,
+          documents: {
+            select: {
+              id: true,
+              passengerId: true,
+              documentType: true,
+              originalFileName: true,
+              mimeType: true,
+              status: true,
+              storagePath: true,
+              createdAt: true,
+            },
+          },
+          opsClientPayments: {
+            select: {
+              id: true,
+              amount: true,
+              paymentMode: true,
+              status: true,
+              approvalStatus: true,
+              proofUrl: true,
+              proofFileUrl: true,
+              proofUrls: true,
+              proofFileName: true,
+              paymentDate: true,
+              createdAt: true,
+              transactionId: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      const built = buildDeparturePassengerDocuments(bookings);
+      passengers = built.passengers;
+      passengerSummary = built.summary;
+    } catch (paxErr) {
+      console.warn(
+        "[getOpsDocuments] passenger document aggregation failed:",
+        paxErr?.message || paxErr,
+      );
+    }
+
+    return res.json({
+      success: true,
+      data: docs,
+      passengers,
+      summary: passengerSummary,
+    });
   } catch (err) {
     console.error("getOpsDocuments error:", err);
     return res
