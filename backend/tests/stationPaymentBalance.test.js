@@ -89,4 +89,20 @@ describe("stationPaymentBalance", () => {
     expect(sanjay.paidAmount).toBe(5000);
     expect(sanjay.remainingAmount).toBe(18500);
   });
+
+  test("does not stack legacy Payment on cleared ops receipts", () => {
+    const gautam = computeEffectivePaid({
+      totalAmount: 23000,
+      opsClientPayments: [
+        { amount: 5000, status: "Verified", approvalStatus: "APPROVED_FOUNDER" },
+      ],
+      legacyPayments: [{ status: "success", amount: 5000 }],
+      stationPayments: [],
+      accountingEntries: [],
+    });
+    expect(gautam.paidAmount).toBe(5000);
+    expect(gautam.remainingAmount).toBe(18000);
+    expect(gautam.opsSum).toBe(5000);
+    expect(gautam.legacySum).toBe(5000);
+  });
 });

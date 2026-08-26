@@ -236,6 +236,23 @@ async function fixOne(t) {
     );
   }
 
+  let legacyRows = [];
+  try {
+    legacyRows = await prisma.payment.findMany({
+      where: { bookingId: { in: [t.bookingId, existing.id].filter(Boolean) } },
+      select: { id: true, amount: true, status: true, bookingId: true },
+    });
+  } catch (_e) {
+    legacyRows = [];
+  }
+  if (legacyRows.length > 0) {
+    gaps.push(
+      `legacy Payment → delete ${legacyRows.length} row(s) keyed by cuid/BK (amt=${legacyRows
+        .map((p) => p.amount)
+        .join(",")})`,
+    );
+  }
+
   const before = {
     totalAmount: existing.totalAmount,
     amount: existing.amount,
@@ -300,18 +317,26 @@ async function fixOne(t) {
       select: { id: true, amount: true, paymentMode: true },
     });
     console.log("  ✅ Replaced opsClientPayments with", row);
-    try {
-      const legacy = await prisma.payment.deleteMany({
-        where: { bookingId: t.bookingId },
-      });
-      if (legacy.count) {
-        console.log(`  ✅ Deleted ${legacy.count} legacy Payment row(s)`);
-      }
-    } catch (e) {
-      console.warn("  Legacy Payment cleanup skipped:", e.message);
-    }
   } else {
     console.log("  ✅ Cleared ops payment already correct; left unchanged");
+  }
+
+  // Always strip legacy Payment rows. They are often keyed by the booking cuid
+  // (not BK-…), so Departure Hub (ops + payments) double-counts the same ₹5k.
+  try {
+    const legacyKeys = [t.bookingId, existing.id].filter(Boolean);
+    const legacy = await prisma.payment.deleteMany({
+      where: { bookingId: { in: legacyKeys } },
+    });
+    if (legacy.count) {
+      console.log(
+        `  ✅ Deleted ${legacy.count} legacy Payment row(s) (keys: ${legacyKeys.join(", ")})`,
+      );
+    } else {
+      console.log("  ✅ No legacy Payment rows to delete");
+    }
+  } catch (e) {
+    console.warn("  Legacy Payment cleanup skipped:", e.message);
   }
 
   return {

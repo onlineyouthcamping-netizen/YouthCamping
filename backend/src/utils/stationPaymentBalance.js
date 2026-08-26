@@ -79,7 +79,10 @@ function computeEffectivePaid({
     .filter(isClearedLegacyPayment)
     .reduce((s, p) => s + Math.max(0, Number(p.amount) || 0), 0);
   const stationSum = sumActiveStationCollections(stationPayments);
-  const receiptStack = opsSum + legacySum + stationSum;
+  // Prefer ops receipts when present — legacy Payment often duplicates the same
+  // advance under the booking cuid and must not be stacked on top of ops.
+  const receiptStack =
+    (opsSum > 0 ? opsSum : legacySum) + stationSum;
 
   const accountingSum = (accountingEntries || [])
     .filter((e) => String(e.status || "").toUpperCase() === "APPROVED")

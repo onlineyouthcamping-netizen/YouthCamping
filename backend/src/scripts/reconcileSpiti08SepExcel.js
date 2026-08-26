@@ -148,8 +148,15 @@ async function upsertClearedPayments(bookingId, payments) {
     });
     report.actions.push({ created: row.id, amount: row.amount, mode: row.paymentMode });
   }
-  // Remove legacy Payment rows for this bookingId so they cannot double-count.
-  const legacy = await prisma.payment.deleteMany({ where: { bookingId } });
+  // Remove legacy Payment rows (BK-… and internal cuid keys) so they cannot double-count.
+  const booking = await prisma.booking.findUnique({
+    where: { bookingId },
+    select: { id: true },
+  });
+  const legacyKeys = [bookingId, booking?.id].filter(Boolean);
+  const legacy = await prisma.payment.deleteMany({
+    where: { bookingId: { in: legacyKeys } },
+  });
   if (legacy.count) report.actions.push({ deletedLegacyPayments: legacy.count });
   return report;
 }

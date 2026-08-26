@@ -265,7 +265,9 @@ async function main() {
     });
     console.log("✅ Replaced opsClientPayments with", row);
     try {
-      const legacy = await prisma.payment.deleteMany({ where: { bookingId: BOOKING_ID } });
+      const legacy = await prisma.payment.deleteMany({
+        where: { bookingId: { in: [BOOKING_ID, existing.id].filter(Boolean) } },
+      });
       if (legacy.count) console.log(`✅ Deleted ${legacy.count} legacy Payment row(s)`);
     } catch (e) {
       console.warn("Legacy Payment cleanup skipped:", e.message);
