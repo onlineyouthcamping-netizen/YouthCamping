@@ -1,6 +1,14 @@
 const { prisma } = require("../lib/prisma");
 
+/**
+ * @deprecated Prefer `reconcileSpiti08SepExcel.js` (Excel source of truth).
+ * This older upsert used stale Prince+Riddhi and Khushi totals.
+ */
 async function main() {
+  console.warn(
+    "⚠️  syncSpiti08SepBookings.js is deprecated. Use:\n" +
+      "    node src/scripts/reconcileSpiti08SepExcel.js --apply\n",
+  );
   console.log("Starting synchronization of 08 SEP SPITI bookings...");
 
   const trip = await prisma.trip.findFirst({
