@@ -11,6 +11,11 @@
  *   people → treat as GROUP remaining (not doubled), matching prior ops sync.
  * - Per-person rem that differs or repeats across a multi-pax package group
  *   (Khushi, Prince) is summed.
+ *
+ * Khushi (BK-SPITI-08SEP-KHUSHI): Excel "21000" is GROUP ADVANCE, not package
+ * price. total = 21000 + (18500+18500+15500) = 73500. Line items 25500/25500/
+ * 22500. For a Khushi-only repair use fixKhushiSpiti08SepAmounts.js instead of
+ * re-applying this full script.
  */
 "use strict";
 
@@ -185,7 +190,8 @@ async function main() {
       key: "KHUSHI",
       bookingId: "BK-SPITI-08SEP-KHUSHI",
       excelPassengers: ["KHUSHI", "RUSHVI", "KHUSHBUBEN"],
-      totalAmount: 73500, // 21000 + 18500+18500+15500
+      // 21000 = group advance (Excel first row), NOT per-person package price.
+      totalAmount: 73500, // advance 21000 + rem 18500+18500+15500
       advancePaid: 21000,
       remainingAmount: 52500,
       paymentMode: "YAC",

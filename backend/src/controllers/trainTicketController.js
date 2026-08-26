@@ -1,7 +1,58 @@
 const { prisma } = require("../lib/prisma");
 const { Prisma } = require("@prisma/client");
 const { logBookingActivity } = require("../utils/bookingActivityLogger");
+const {
+  travelerJourneyKey,
+  isActiveTicket,
+  findDuplicateGroups,
+  dedupeActiveTickets,
+  normalizeJourneyRef,
+  normalizeTravelerName,
+} = require("../utils/trainTicketDedupe");
 const ticketCountCache = new Map();
+
+/**
+ * Cancel superseded duplicate tickets for a booking (one active per traveler+journey).
+ * Keeps the best ticket (Done / PNR / filled fields / oldest).
+ */
+async function reconcileDuplicateTicketsForBooking(tickets, req) {
+  const groups = findDuplicateGroups(tickets);
+  if (groups.length === 0) {
+    return { cancelled: 0, tickets };
+  }
+
+  const cancelNote =
+    "Auto-cancelled duplicate — one active ticket per traveler per journey";
+  let cancelled = 0;
+
+  for (const group of groups) {
+    for (const dup of group.cancel) {
+      await prisma.trainTicket.update({
+        where: { id: dup.id },
+        data: {
+          ticketStatus: "CANCELLED",
+          cancellationReason: "DUPLICATE_SUPERSEDED",
+          internalNote: dup.internalNote
+            ? `${dup.internalNote} | ${cancelNote}`
+            : cancelNote,
+        },
+      });
+      await prisma.trainTicketHistory.create({
+        data: {
+          ticketId: dup.id,
+          action: "CANCEL",
+          fromStatus: dup.ticketStatus || null,
+          toStatus: "CANCELLED",
+          notes: `${cancelNote}. Kept ticket ${group.keepId}.`,
+          performedById: req?.user?.id || null,
+        },
+      });
+      cancelled += 1;
+    }
+  }
+
+  return { cancelled, tickets };
+}
 
 // Helper to check ownership of booking for sales role
 const checkBookingOwnership = async (bookingId, user) => {
@@ -68,14 +119,38 @@ exports.getTicketsByBooking = async (req, res) => {
     }
 
     // 2. Fetch train tickets matching custom bookingId OR CUID id
-    const tickets = await prisma.trainTicket.findMany({
+    let tickets = await prisma.trainTicket.findMany({
       where: {
         OR: [{ bookingId: booking.bookingId }, { bookingId: booking.id }],
       },
       orderBy: { createdAt: "asc" },
     });
 
-    return res.json({ success: true, data: tickets });
+    // 3. Collapse ghost duplicates (e.g. re-run auto-generate) so ops see one row per traveler
+    const { cancelled } = await reconcileDuplicateTicketsForBooking(
+      tickets,
+      req,
+    );
+    if (cancelled > 0) {
+      tickets = await prisma.trainTicket.findMany({
+        where: {
+          OR: [{ bookingId: booking.bookingId }, { bookingId: booking.id }],
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }
+
+    // Active list for the Ticketing tab: one per traveler+journey (cancelled hidden via filter)
+    const active = dedupeActiveTickets(tickets);
+
+    return res.json({
+      success: true,
+      data: active,
+      meta: {
+        totalIncludingCancelled: tickets.length,
+        duplicatesCancelled: cancelled,
+      },
+    });
   } catch (err) {
     console.error("getTicketsByBooking error:", err);
     return res
@@ -244,26 +319,28 @@ exports.createTicket = async (req, res) => {
     const actualCost = Number(ticketAmount) || 0;
     const variance = actualCost - expectedCost;
 
-    // Check for duplicate ticket for the same booking and traveler/PNR
-    if (pnr || travelerName) {
-      const existing = await prisma.trainTicket.findFirst({
+    // One active ticket per traveler + journey (DEPARTURE/RETURN)
+    if (travelerName) {
+      const journey = normalizeJourneyRef(passengerReference);
+      const existingTickets = await prisma.trainTicket.findMany({
         where: {
           tenantId: targetTenantId,
           bookingId: targetBookingId,
-          travelerName,
-          ...(pnr ? { pnr } : {}),
-          passengerReference: passengerReference || null,
           ticketStatus: { not: "CANCELLED" },
+          supersededByTicketId: null,
         },
       });
+      const existing = existingTickets.find(
+        (t) =>
+          travelerJourneyKey(t.travelerName, t.passengerReference) ===
+          travelerJourneyKey(travelerName, journey),
+      );
       if (existing) {
-        return res
-          .status(200)
-          .json({
-            success: true,
-            data: existing,
-            message: "Ticket already exists for this traveler",
-          });
+        return res.status(200).json({
+          success: true,
+          data: existing,
+          message: "Ticket already exists for this traveler",
+        });
       }
     }
 
@@ -272,7 +349,7 @@ exports.createTicket = async (req, res) => {
         tenantId: targetTenantId,
         bookingId: targetBookingId,
         travelerName,
-        passengerReference: passengerReference || null,
+        passengerReference: normalizeJourneyRef(passengerReference),
         pnr: pnr || null,
         trainName: trainName || null,
         trainNumber: trainNumber || null,
@@ -435,30 +512,40 @@ exports.autoGenerateTickets = async (req, res) => {
         });
     }
 
-    // Check for already-existing tickets to avoid duplicates
+    // One active ticket per traveler + journey. Do NOT key on stations —
+    // template station fallbacks used to mismatch stored nulls and recreate duplicates.
     const existingTickets = await prisma.trainTicket.findMany({
-      where: { bookingId: targetBookingId, tenantId: req.user.tenantId },
+      where: {
+        bookingId: { in: [targetBookingId, booking.id].filter(Boolean) },
+        tenantId: req.user.tenantId,
+      },
       select: {
+        id: true,
         travelerName: true,
-        sourceStation: true,
-        destinationStation: true,
         passengerReference: true,
+        ticketStatus: true,
+        supersededByTicketId: true,
       },
     });
-    const existingKey = (name, src, dst, ref) =>
-      `${(name || "").trim().toLowerCase()}|${(src || "").toLowerCase()}|${(dst || "").toLowerCase()}|${(ref || "").toLowerCase()}`;
     const existingSet = new Set(
-      existingTickets.map((t) =>
-        existingKey(t.travelerName, t.sourceStation, t.destinationStation, t.passengerReference),
-      ),
+      existingTickets
+        .filter(isActiveTicket)
+        .map((t) =>
+          travelerJourneyKey(t.travelerName, t.passengerReference),
+        ),
     );
 
     const createdTickets = [];
     const skippedCount = { value: 0 };
+    // Dedupe passenger list so the same name does not create twice in one run
+    const seenPassengerNames = new Set();
 
     for (const passenger of passengers) {
       const pName = (passenger.name || passenger.fullName || "").trim();
       if (!pName) continue;
+      const nameKey = normalizeTravelerName(pName);
+      if (seenPassengerNames.has(nameKey)) continue;
+      seenPassengerNames.add(nameKey);
 
       const pAge = passenger.age ? String(passenger.age) : null;
       const pGender = passenger.gender || null;
@@ -470,12 +557,7 @@ exports.autoGenerateTickets = async (req, res) => {
             : pGender || null;
 
       // 1. DEPARTURE TICKET
-      const depKey = existingKey(
-        pName,
-        depTmpl?.boardingStation || "Departure",
-        depTmpl?.destination || "",
-        "DEPARTURE",
-      );
+      const depKey = travelerJourneyKey(pName, "DEPARTURE");
       if (!existingSet.has(depKey)) {
         const depCost = depTmpl?.expectedCost ? Number(depTmpl.expectedCost) : 0;
         const ticket = await prisma.trainTicket.create({
@@ -515,12 +597,7 @@ exports.autoGenerateTickets = async (req, res) => {
       }
 
       // 2. RETURN TICKET
-      const retKey = existingKey(
-        pName,
-        retTmpl?.boardingStation || "Return",
-        retTmpl?.destination || "",
-        "RETURN",
-      );
+      const retKey = travelerJourneyKey(pName, "RETURN");
       if (!existingSet.has(retKey)) {
         const retCost = retTmpl?.expectedCost ? Number(retTmpl.expectedCost) : 0;
         const ticket = await prisma.trainTicket.create({
