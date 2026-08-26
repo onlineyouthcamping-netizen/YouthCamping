@@ -741,14 +741,55 @@ exports.getBookings = async (req, res, next) => {
     ]);
     const queryDuration = Date.now() - queryStart;
 
+    // Attach legacy Payment rows (no Prisma relation on Booking). Departure Hub
+    // and booking CLEARED views need these so website/UPI success receipts count.
+    const bookingKeySet = new Set();
+    bookings.forEach((b) => {
+      if (b?.id) bookingKeySet.add(b.id);
+      if (b?.bookingId) bookingKeySet.add(b.bookingId);
+    });
+    const bookingKeys = Array.from(bookingKeySet);
+    let legacyPayments = [];
+    if (bookingKeys.length > 0) {
+      try {
+        legacyPayments = await prisma.payment.findMany({
+          where: { bookingId: { in: bookingKeys } },
+          orderBy: { createdAt: "desc" },
+        });
+      } catch (payErr) {
+        console.warn("[getBookings] Failed to load legacy payments:", payErr?.message || payErr);
+        legacyPayments = [];
+      }
+    }
+    const paymentsByBookingKey = new Map();
+    legacyPayments.forEach((p) => {
+      const key = p.bookingId;
+      if (!paymentsByBookingKey.has(key)) paymentsByBookingKey.set(key, []);
+      paymentsByBookingKey.get(key).push(p);
+    });
+    const bookingsWithPayments = bookings.map((b) => {
+      const fromId = paymentsByBookingKey.get(b.id) || [];
+      const fromRef = b.bookingId && b.bookingId !== b.id
+        ? paymentsByBookingKey.get(b.bookingId) || []
+        : [];
+      const seenPay = new Set();
+      const merged = [];
+      [...fromId, ...fromRef].forEach((p) => {
+        if (seenPay.has(p.id)) return;
+        seenPay.add(p.id);
+        merged.push(p);
+      });
+      return { ...b, payments: merged };
+    });
+
     const totalPages = Math.ceil(totalCount / limit);
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1;
 
     const resBody = {
       success: true,
-      count: bookings.length,
-      data: bookings,
+      count: bookingsWithPayments.length,
+      data: bookingsWithPayments,
       pagination: {
         page,
         limit,
@@ -878,12 +919,25 @@ exports.getBookingById = async (req, res, next) => {
       console.error("Failed to build opsSummary:", opsErr);
     }
 
+    // Legacy Payment rows (no Booking relation) — keep CLEARED / departure money aligned
+    let legacyPayments = [];
+    try {
+      const payKeys = [booking.id, booking.bookingId].filter(Boolean);
+      legacyPayments = await prisma.payment.findMany({
+        where: { bookingId: { in: payKeys } },
+        orderBy: { createdAt: "desc" },
+      });
+    } catch (payErr) {
+      console.warn("[getBookingById] Failed to load legacy payments:", payErr?.message || payErr);
+    }
+
     const mappedBooking = {
       ...booking,
       ...extra,
       ticketStatus:
         booking.trainTicketStatus || extra.ticketStatus || "NOT BOOKED",
       passengers: persons,
+      payments: legacyPayments,
       opsSummary,
     };
 
