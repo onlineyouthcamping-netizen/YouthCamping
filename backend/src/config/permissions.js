@@ -203,6 +203,9 @@ const PERMISSIONS = [
   "finance.vendor.reject",
   "finance.proof.upload",
   "finance.reconciliation.view",
+
+  // Company announcements (dashboard widget; create stays admin/superadmin)
+  "announcements.view",
 ];
 
 const { isProtectedSuperadminIdentity } = require("./superadmin");
@@ -318,6 +321,7 @@ const ROLE_PERMISSIONS = {
     "activity.view",
     "recurring_tasks.view",
     "customers.timeline.view",
+    "announcements.view",
   ],
 
   sales: [
@@ -357,6 +361,7 @@ const ROLE_PERMISSIONS = {
     "recurring_tasks.view",
     // Station Payment Collection - sales view own bookings
     "station_payments.view",
+    "announcements.view",
   ],
 
   operations: [
@@ -429,6 +434,7 @@ const ROLE_PERMISSIONS = {
     "station_payments.verify_upi",
     "station_payments.receive",
     "station_payments.reconcile",
+    "announcements.view",
   ],
 
   finance: [
@@ -449,6 +455,7 @@ const ROLE_PERMISSIONS = {
     "station_payments.export",
     "station_payments.manage_accounts",
     "station_payments.verify_upi",
+    "announcements.view",
   ],
 
   finance_controller: [
@@ -522,9 +529,11 @@ const ROLE_PERMISSIONS = {
     "finance.vendor.reject",
     "finance.proof.upload",
     "finance.reconciliation.view",
+    "announcements.view",
   ],
 
   guide: [
+    "dashboard.view",
     "trips.view",
     "departures.view",
     "bookings.view",
@@ -533,6 +542,7 @@ const ROLE_PERMISSIONS = {
     // Station Payment Collection - guides can view and collect for assigned departures
     "station_payments.view",
     "station_payments.collect",
+    "announcements.view",
   ],
 
   viewer: [
@@ -542,6 +552,7 @@ const ROLE_PERMISSIONS = {
     "inquiries.view",
     "quotations.view",
     "reports.view",
+    "announcements.view",
   ],
 
   BOOKING_VERIFIER: [
@@ -561,6 +572,7 @@ const ROLE_PERMISSIONS = {
     "emails.view",
     "emails.send",
     "emails.view_logs",
+    "announcements.view",
   ],
 };
 

@@ -56,4 +56,20 @@ describe('Backend Auth & Founder Security Protection Suite', () => {
     expect(hasPermission('superadmin', 'staff_profiles.view')).toBe(true);
     expect(hasPermission('superadmin', 'roles_permissions.manage')).toBe(true);
   });
+
+  test('staff roles can read announcements.view for the dashboard widget', () => {
+    const staffRoles = [
+      'operations',
+      'sales',
+      'finance',
+      'finance_controller',
+      'admin',
+      'viewer',
+      'guide',
+    ];
+
+    for (const role of staffRoles) {
+      expect(hasPermission(role, 'announcements.view')).toBe(true);
+    }
+  });
 });
