@@ -2,6 +2,7 @@ const { prisma } = require('../lib/prisma');
 const { runAutoAllocation } = require('../utils/autoAllocationEngine');
 const { calculateHotelStayCost } = require('../utils/hotelStayCost');
 const { mirrorConfirmedRooms } = require('../utils/roomAllocationAuthority');
+const { withProfitFields } = require('../utils/profitVisibility');
 const opsSummaryCache = new Map();
 
 /**
@@ -1003,31 +1004,38 @@ exports.getOpsAccountingSummary = async (req, res) => {
 
     return res.json({
       success: true,
-      data: {
-        hotelCost,
-        transportCost,
-        guideCost,
-        miscCost,
-        detailedExpensesCost,
-        totalOpsCost,
-        travelerCount,
-        perPersonOpsCost,
-        totalRevenueCollected,
-        profitPerTrip,
-        ticketReadiness,
-        accountingReadiness
-      }
+      data: withProfitFields(
+        req.user || req.admin,
+        {
+          hotelCost,
+          transportCost,
+          guideCost,
+          miscCost,
+          detailedExpensesCost,
+          totalOpsCost,
+          travelerCount,
+          perPersonOpsCost,
+          totalRevenueCollected,
+          ticketReadiness,
+          accountingReadiness
+        },
+        { profitPerTrip },
+      )
     });
   } catch (err) {
     console.error('getOpsAccountingSummary fatal error:', err);
     return res.json({
       success: true,
-      data: {
-        hotelCost: 0, transportCost: 0, guideCost: 0, miscCost: 0, detailedExpensesCost: 0,
-        totalOpsCost: 0, travelerCount: 1, perPersonOpsCost: 0, totalRevenueCollected: 0, profitPerTrip: 0,
-        ticketReadiness: { pending: 0, approved: 0, cancelled: 0 },
-        accountingReadiness: { approvedCollected: 0, pendingCollection: 0, remainingCollection: 0, totalBookingAmount: 0 }
-      }
+      data: withProfitFields(
+        req.user || req.admin,
+        {
+          hotelCost: 0, transportCost: 0, guideCost: 0, miscCost: 0, detailedExpensesCost: 0,
+          totalOpsCost: 0, travelerCount: 1, perPersonOpsCost: 0, totalRevenueCollected: 0,
+          ticketReadiness: { pending: 0, approved: 0, cancelled: 0 },
+          accountingReadiness: { approvedCollected: 0, pendingCollection: 0, remainingCollection: 0, totalBookingAmount: 0 }
+        },
+        { profitPerTrip: 0 },
+      )
     });
   }
 };
