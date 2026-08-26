@@ -107,6 +107,9 @@ const guardBookingUpdateFields = (req, res, next) => {
     // Allow updating operational & passenger manifest fields
     // Confirmed room numbers / whole-departure date moves are not allowed here.
     // Use ops manual-save for rooms and /departures/reschedule for date moves.
+    // Accounting tab Save sends baseAmount/gstAmount/discountAmount together with
+    // totalAmount + sourceMeta.bookingItems — those companion fields must be allowed
+    // or the whole update is rejected (403) and edits appear not to persist.
     const OPERATIONS_ALLOWED = [
       "passengers",
       "numberOfTravelers",
@@ -138,7 +141,10 @@ const guardBookingUpdateFields = (req, res, next) => {
       "remainingAmount",
       "invoiceStatus",
       "totalAmount",
+      "baseAmount",
+      "gstAmount",
       "discount",
+      "discountAmount",
       "couponCode",
     ];
 
