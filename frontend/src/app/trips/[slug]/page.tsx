@@ -1,6 +1,7 @@
-import { fetchTripBySlug } from "@/lib/api";
+import { fetchTripBySlugResult } from "@/lib/api";
 import { formatDuration } from "@/lib/utils";
 import { notFound } from "next/navigation";
+import ServiceUnavailable from "@/components/ServiceUnavailable";
 export const revalidate = 30;
 
 import {
@@ -23,8 +24,13 @@ export default async function TripDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const trip = await fetchTripBySlug(slug);
+  const tripResult = await fetchTripBySlugResult(slug);
 
+  if (!tripResult.ok) {
+    return <ServiceUnavailable title="This trip is temporarily unavailable" />;
+  }
+
+  const trip = tripResult.data;
   if (!trip) {
     notFound();
   }
@@ -50,8 +56,7 @@ export default async function TripDetailPage({
         {/* 2. Title Section (Below photos) */}
         <div>
           {(() => {
-            const fullTitle =
-              trip.title || "Manali Kasol Amritsar Backpacking Trip";
+            const fullTitle = trip.title || "";
             const keywords = [
               "Backpacking Trip",
               "Road Trip",

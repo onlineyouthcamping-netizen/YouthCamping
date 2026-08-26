@@ -66,7 +66,9 @@ export default function BookingLinkResolvePage({
 
         router.replace(`/book?${qs.toString()}`);
       } catch {
-        setError("Failed to load booking link. Please try again.");
+        setError(
+          "Our servers are temporarily unavailable. Please try again shortly.",
+        );
       }
     };
 

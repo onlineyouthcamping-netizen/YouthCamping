@@ -323,7 +323,6 @@ export const DynamicThemeProvider = ({
       }
     };
 
-    // Only fetch client-side when SSR fetch didn't complete in time
     if (!initialTheme) loadTheme();
     if (!initialSettings) loadSettings();
 

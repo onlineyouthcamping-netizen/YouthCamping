@@ -1,26 +1,25 @@
 /**
- * Fetch wrapper with exponential backoff retry for 5xx errors.
- * Returns response on 2xx/3xx/4xx (4xx is client error, no retry needed).
- * Retries up to `maxRetries` times for 5xx server errors or network drops.
+ * Fetch wrapper with a short retry for transient 5xx and network drops.
+ * Timeouts are not retried (would double wait). 4xx is returned as-is.
  */
 export async function fetchWithRetry(
   url: string,
   options?: RequestInit,
-  maxRetries = 1,
-  baseDelayMs = 300,
+  maxRetries = 2,
+  baseDelayMs = 250,
 ): Promise<Response | null> {
+  const attempts = Math.max(1, maxRetries);
   let attempt = 0;
 
-  while (attempt < maxRetries) {
+  while (attempt < attempts) {
     try {
       const response = await fetch(url, options);
 
-      // If status is 5xx, retry with exponential backoff
-      if (response.status >= 500 && attempt < maxRetries - 1) {
+      if (response.status >= 500 && attempt < attempts - 1) {
         attempt++;
         const delay = baseDelayMs * Math.pow(2, attempt - 1);
         console.warn(
-          `[fetchWithRetry] Received HTTP ${response.status} for ${url}. Retrying in ${delay}ms (Attempt ${attempt}/${maxRetries})...`,
+          `[fetchWithRetry] HTTP ${response.status} for ${url}. Retrying in ${delay}ms (${attempt}/${attempts})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
@@ -28,8 +27,13 @@ export async function fetchWithRetry(
 
       return response;
     } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      if (name === "TimeoutError" || name === "AbortError") {
+        throw error;
+      }
+
       attempt++;
-      if (attempt >= maxRetries) {
+      if (attempt >= attempts) {
         console.error(
           `[fetchWithRetry] Network request failed permanently for ${url}:`,
           error,
@@ -38,15 +42,11 @@ export async function fetchWithRetry(
       }
       const delay = baseDelayMs * Math.pow(2, attempt - 1);
       console.warn(
-        `[fetchWithRetry] Network error for ${url}. Retrying in ${delay}ms (Attempt ${attempt}/${maxRetries})...`,
+        `[fetchWithRetry] Network error for ${url}. Retrying in ${delay}ms (${attempt}/${attempts})...`,
       );
-      await new Promise((resolve) => setTimeout(resolve, resolveDelay(delay)));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
   return null;
-}
-
-function resolveDelay(delay: number) {
-  return delay;
 }

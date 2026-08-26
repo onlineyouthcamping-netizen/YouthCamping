@@ -72,7 +72,9 @@ function ConfirmationContent() {
         setPaymentSuccess(true);
       }
     } catch {
-      setPaymentError("Connection error. Please try again.");
+      setPaymentError(
+        "Our servers are temporarily unavailable. Please try again shortly.",
+      );
     } finally {
       setIsPaying(false);
     }

@@ -21,7 +21,6 @@ export default function CTASlider({
   showTitle = false,
   videoUrl,
   mediaList = [],
-  videoPosterUrl = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1600&q=85",
   borderRadius = "rounded-[24px]",
   topColor = "#ffffff",
   bottomColor = "#ffffff",
@@ -42,18 +41,10 @@ export default function CTASlider({
       const norm = normalizeImageUrl(videoUrl);
       if (norm && !list.includes(norm)) list.unshift(norm);
     }
-    if (list.length === 0) {
-      list.push(
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1600&q=85",
-      );
-      list.push(
-        "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=1600&q=85",
-      );
-    }
     return list;
   })();
 
-  const currentMedia = items[activeIdx % items.length];
+  const currentMedia = items.length > 0 ? items[activeIdx % items.length] : "";
   const isVideo = (url: string) =>
     url && (/\.(mp4|webm|mov|ogg)$/i.test(url) || url.includes("/video/"));
   const isYouTube = (url: string) => url && /youtube\.com|youtu\.be/.test(url);
@@ -65,7 +56,6 @@ export default function CTASlider({
     return match && match[2].length === 11 ? match[2] : null;
   };
 
-  // Cycle media if multiple slides exist
   useEffect(() => {
     if (items.length <= 1) return;
     const timer = setInterval(() => {
@@ -73,6 +63,8 @@ export default function CTASlider({
     }, 6000);
     return () => clearInterval(timer);
   }, [items.length]);
+
+  if (items.length === 0) return null;
 
   return (
     <section className="relative overflow-hidden font-sans bg-white pt-6 pb-6 sm:pt-10 sm:pb-10">
@@ -118,7 +110,9 @@ export default function CTASlider({
                   loop
                   muted
                   playsInline
-                  className="w-full h-full object-cover object-center"
+                  controls={false}
+                  disablePictureInPicture
+                  className="hide-native-video-play w-full h-full object-cover object-center"
                 />
               ) : (
                 <img

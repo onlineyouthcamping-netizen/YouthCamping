@@ -32,7 +32,7 @@ export default function ContactPage() {
     setError(null);
 
     try {
-      await submitInquiry({
+      const result = await submitInquiry({
         name: formData.name,
         phone: formData.mobile,
         email: formData.email,
@@ -40,6 +40,14 @@ export default function ContactPage() {
         message: formData.message,
         source: "contact_page_form",
       });
+
+      if (!result.success) {
+        setError(
+          result.message ||
+            "Our servers are temporarily unavailable. Please try again shortly.",
+        );
+        return;
+      }
 
       setIsSuccess(true);
       setFormData({

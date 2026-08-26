@@ -1,11 +1,16 @@
 import { Quotation } from "@/types";
 import { API_BASE_URL } from "./api";
 
-export async function getQuotationSmart(
+export type QuotationLoadResult =
+  | { ok: true; data: Quotation }
+  | { ok: true; data: null; notFound: true }
+  | { ok: false };
+
+export async function getQuotationSmartResult(
   idOrSlug: string,
   isAdmin: boolean = false,
   token: string = "",
-): Promise<Quotation | null> {
+): Promise<QuotationLoadResult> {
   console.log(
     `[db-smart] Fetching: "${idOrSlug}" (isAdmin: ${isAdmin}, token: ${token})`,
   );
@@ -27,8 +32,16 @@ export async function getQuotationSmart(
   const finalUrl = `${CRM_BASE.replace(/\/api\/api$/, "/api")}/quotations/${idOrSlug}?isAdmin=${isAdmin}&token=${token}`;
   console.log(`[db-smart] Checking CRM API at: ${finalUrl}`);
   try {
-    const crmRes = await fetch(finalUrl, { cache: "no-store" });
-    if (crmRes.ok) {
+    const crmRes = await fetch(finalUrl, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (crmRes.status === 404) {
+      return { ok: true, data: null, notFound: true };
+    }
+    if (!crmRes.ok) {
+      return { ok: false };
+    }
       const crmData = await crmRes.json();
       if (crmData.success && crmData.data) {
         console.log(`[db-smart] Found in CRM API: "${idOrSlug}"`, crmData.data);
@@ -40,7 +53,7 @@ export async function getQuotationSmart(
           high: record.highLevelHotels?.length,
         });
 
-        return {
+        const mapped = {
           ...record,
           tripTitle: record.tripTitle || record.destination || "Premium Trip",
           id: record.id,
@@ -104,12 +117,21 @@ export async function getQuotationSmart(
           status: (record.status || "draft").toLowerCase(),
           expired: record.isExpired || false,
         } as any;
+        return { ok: true, data: mapped };
       }
+      return { ok: true, data: null, notFound: true };
+    } catch (e: any) {
+      console.warn(`[db-smart] CRM API fetch failed: ${e.message}`);
+      return { ok: false };
     }
-  } catch (e: any) {
-    console.warn(`[db-smart] CRM API fetch failed: ${e.message}`);
-  }
-
-  // Never invent a quotation. Missing API data is empty, not demo Kashmir/Parth.
-  return null;
 }
+
+export async function getQuotationSmart(
+  idOrSlug: string,
+  isAdmin: boolean = false,
+  token: string = "",
+): Promise<Quotation | null> {
+  const result = await getQuotationSmartResult(idOrSlug, isAdmin, token);
+  return result.ok ? result.data : null;
+}
+

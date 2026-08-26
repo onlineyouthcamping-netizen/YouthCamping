@@ -897,7 +897,9 @@ function BookingForm() {
         }
       }
     } catch (err) {
-      setError("Connection to booking engine failed. Please try again.");
+      setError(
+        "Our servers are temporarily unavailable. Please try again shortly.",
+      );
     } finally {
       setLoading(false);
     }

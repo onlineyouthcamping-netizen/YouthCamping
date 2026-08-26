@@ -20,49 +20,6 @@ export default function PhotoSlider({
   slides = [],
   title = "GLIMPSES OF ADVENTURE",
 }: PhotoSliderProps) {
-  const defaultSlides: Slide[] = [
-    {
-      image:
-        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80",
-      title: "Alpine Lakes",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1472396961693-142e6e269027?w=800&q=80",
-      title: "Sunset Valleys",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1493246507139-91e8bef99c17?w=800&q=80",
-      title: "High Pass Treks",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80",
-      title: "Spiti Expeditions",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80",
-      title: "Himalayan Ridge",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&q=80",
-      title: "Stargazing Nights",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1526772662000-3f88f10405ff?w=800&q=80",
-      title: "Summit Trails",
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=800&q=80",
-      title: "Group Memories",
-    },
-  ];
-
   const list = slides;
   if (!list || list.length === 0) return null;
   const infiniteList = list;

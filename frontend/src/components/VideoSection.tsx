@@ -23,25 +23,6 @@ interface VideoSectionProps {
   bottomColor?: string;
 }
 
-const VIDEOS: VideoItem[] = [
-  {
-    id: "j6hb-iOZalE",
-    title: "Spiti Valley - A Cinematic Journey",
-  },
-  {
-    id: "8XJ9kU4WJTo",
-    title: "Winter Spiti in 4K",
-  },
-  {
-    id: "X2X5nC5yC6w",
-    title: "What to Carry for Spiti Expedition",
-  },
-  {
-    id: "r7PzL7H8T8A",
-    title: "Culture and People of Spiti",
-  },
-];
-
 export default function VideoSection({
   title = "Videos",
   subtitle = "Exclusive footage from our expeditions",
@@ -49,7 +30,8 @@ export default function VideoSection({
   topColor = "#ffffff",
   bottomColor = "#f3f4f6",
 }: VideoSectionProps) {
-  const activeVideos = videos && videos.length > 0 ? videos : VIDEOS;
+  const activeVideos = videos && videos.length > 0 ? videos : [];
+  if (activeVideos.length === 0) return null;
   const [activeVideo, setActiveVideo] = useState<{
     url: string;
     poster?: string;
@@ -125,7 +107,7 @@ export default function VideoSection({
 
                       {/* Play Button */}
                       {hasSelfHosted && (
-                        <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="absolute inset-0 hidden md:flex items-center justify-center">
                           <div className="w-14 h-10 md:w-16 md:h-12 bg-[#FF0000] rounded-xl flex items-center justify-center text-white transition-transform duration-300 group-hover/video:scale-110 shadow-2xl">
                             <Play className="w-5 h-5 md:w-6 md:h-6 fill-current" />
                           </div>

@@ -20,6 +20,7 @@ export default function TripBookingPage() {
 
   const [tripName, setTripName] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -39,15 +40,20 @@ export default function TripBookingPage() {
   useEffect(() => {
     if (!tripCode) return;
     fetch(`${API}/bookings/trip-info/${tripCode}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        if (!r.ok) {
+          if (r.status === 404) setNotFound(true);
+          else setUnavailable(true);
+          return;
+        }
+        const d = await r.json();
         if (d.success) {
           setTripName(d.data.tripName);
         } else {
           setNotFound(true);
         }
       })
-      .catch(() => setNotFound(true))
+      .catch(() => setUnavailable(true))
       .finally(() => setLoading(false));
   }, [tripCode]);
 
@@ -73,7 +79,9 @@ export default function TripBookingPage() {
         setBookingId(data.data.bookingId);
       } else alert(data.message);
     } catch {
-      alert("Submission failed. Please try again.");
+      alert(
+        "Our servers are temporarily unavailable. Please try again shortly.",
+      );
     }
     setSubmitting(false);
   };
@@ -82,6 +90,22 @@ export default function TripBookingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
         <Loader2 className="w-8 h-8 animate-spin text-[#D4541A]" />
+      </div>
+    );
+
+  if (unavailable)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-6">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-[#D4541A] mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white capitalize">
+            Temporarily unavailable
+          </h1>
+          <p className="text-gray-400 mt-2">
+            Our booking servers are busy right now. Please try again in a few
+            minutes.
+          </p>
+        </div>
       </div>
     );
 

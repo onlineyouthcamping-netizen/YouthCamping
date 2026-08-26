@@ -159,7 +159,7 @@ export default function RealitySection({
                     <motion.div
                       whileHover={reduceMotion ? {} : { scale: 1.1 }}
                       whileTap={reduceMotion ? {} : { scale: 0.9 }}
-                      className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center text-white mb-6 shadow-2xl shadow-red-600/40"
+                      className="hidden md:flex w-20 h-20 bg-red-600 rounded-full items-center justify-center text-white mb-6 shadow-2xl shadow-red-600/40"
                     >
                       <Play className="w-10 h-10 fill-white" />
                     </motion.div>

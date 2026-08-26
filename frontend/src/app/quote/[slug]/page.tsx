@@ -1,5 +1,6 @@
-import { getQuotationSmart } from "@/lib/db-smart";
+import { getQuotationSmartResult } from "@/lib/db-smart";
 import PremiumQuoteLanding from "@/components/PremiumQuoteLanding";
+import ServiceUnavailable from "@/components/ServiceUnavailable";
 import { notFound } from "next/navigation";
 
 export default async function Page({
@@ -14,18 +15,20 @@ export default async function Page({
   const isAdmin = sParams.isAdmin === "true";
   const token = typeof sParams.token === "string" ? sParams.token : "";
 
-  const data = await getQuotationSmart(slug, isAdmin, token);
+  const result = await getQuotationSmartResult(slug, isAdmin, token);
 
+  if (!result.ok) {
+    return (
+      <ServiceUnavailable title="This quote is temporarily unavailable" />
+    );
+  }
+
+  const data = result.data;
   if (!data) {
-    console.log(`[Page: /quote/${slug}] Data not found. Triggering 404.`);
     return notFound();
   }
 
-  // Block access to draft quotes unless user is admin or has preview token
   if (data.status?.toLowerCase() === "draft" && !isAdmin && !token) {
-    console.log(
-      `[Page: /quote/${slug}] Attempt to access draft quote blocked.`,
-    );
     return notFound();
   }
 

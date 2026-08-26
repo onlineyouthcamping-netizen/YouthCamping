@@ -1,5 +1,5 @@
 const { TERMINAL_APPROVED } = require("../src/utils/collectionVerification");
-const { istMidnightUtc, istEndOfDayUtc } = require("../src/utils/istDateRange");
+const { istMidnightUtc, istEndOfDayUtc, formatYmdIst } = require("../src/utils/istDateRange");
 
 const cacheStore = new Map();
 
@@ -87,12 +87,16 @@ describe("dashboard permission strip (never share stripped cache)", () => {
     bookings: 12,
     trips: 2,
     totalBookings: 12,
+    todayBookings: 2,
+    bookingsThisMonth: 5,
+    pendingBookingsCount: 4,
     totalTrips: 2,
     totalRevenue: 5000,
+    currentMonthRevenue: 3000,
     pendingPayments: 79000,
     pendingVendorsCost: 100,
     pendingVendorsCount: 1,
-    monthlyRevenue: [{ month: "2026-08", revenue: 5000 }],
+    monthlyRevenue: [{ month: "2026-08", revenue: 3000 }],
     recentBookings: [{ id: "b1" }],
     cashFlow: { collectionToday: 5000, paymentsToday: 0, netCashInflow: 5000 },
     tripsRunningNow: [{ name: "Spiti" }],
@@ -215,7 +219,18 @@ describe("dashboard period + finance KPI wiring", () => {
   });
 
   it("wires period bookings, verified revenue, outstanding, collection today, and cash-out", async () => {
-    prismaMock.booking.count.mockResolvedValue(7);
+    prismaMock.booking.count.mockImplementation(async ({ where } = {}) => {
+      if (where?.remainingAmount?.gt === 0) return 4;
+      if (where?.opsRoomAllocations) return 0;
+      if (where?.trainTicketRequired) return 0;
+      if (where?.NOT?.documents) return 0;
+      if (where?.createdAt?.gte) {
+        const ymd = formatYmdIst(where.createdAt.gte);
+        if (ymd === "2026-08-26") return 2;
+        if (ymd === "2026-08-01") return 5;
+      }
+      return 7;
+    });
     prismaMock.booking.aggregate.mockResolvedValue({ _sum: { totalAmount: 20000 } });
     let receiptCall = 0;
     prismaMock.opsClientPayment.aggregate.mockImplementation(async () => {
@@ -239,12 +254,35 @@ describe("dashboard period + finance KPI wiring", () => {
     prismaMock.opsVendorPayment.aggregate.mockResolvedValue({ _sum: { advancePaid: 1200 } });
     prismaMock.opsMiscExpense.aggregate.mockResolvedValue({ _sum: { amount: 300 } });
     const approved = await computeRawDashboardStats("t1", "today", now);
-    expect(approved.totalBookings).toBe(7);
+    expect(approved.totalBookings).toBe(2);
+    expect(approved.todayBookings).toBe(2);
+    expect(approved.bookingsThisMonth).toBe(5);
+    expect(approved.pendingBookingsCount).toBe(4);
     expect(approved.totalRevenue).toBe(5000);
     expect(approved.pendingPayments).toBe(15000);
     expect(approved.cashFlow.collectionToday).toBe(5000);
     expect(approved.cashFlow.paymentsToday).toBe(1500);
     expect(approved.totalTrips).toBe(approved.tripsRunningNow.length);
+  });
+
+  it("always counts today's and this month's bookings independent of All-time filter", async () => {
+    prismaMock.booking.count.mockImplementation(async ({ where } = {}) => {
+      if (where?.remainingAmount?.gt === 0) return 9;
+      if (where?.opsRoomAllocations) return 0;
+      if (where?.trainTicketRequired) return 0;
+      if (where?.NOT?.documents) return 0;
+      if (where?.createdAt?.gte) {
+        const ymd = formatYmdIst(where.createdAt.gte);
+        if (ymd === "2026-08-26") return 3;
+        if (ymd === "2026-08-01") return 11;
+      }
+      return 35;
+    });
+    const raw = await computeRawDashboardStats("default", "all", now);
+    expect(raw.totalBookings).toBe(35);
+    expect(raw.todayBookings).toBe(3);
+    expect(raw.bookingsThisMonth).toBe(11);
+    expect(raw.pendingBookingsCount).toBe(9);
   });
 
   it("counts vendors due today from fleet paymentDueDate, not all unpaid vendors", async () => {

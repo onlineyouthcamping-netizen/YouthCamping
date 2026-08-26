@@ -11,8 +11,9 @@ import {
   ChevronRight,
   ShieldCheck,
 } from "lucide-react";
-import { normalizeImageUrl, fetchAttractionBySlug } from "@/lib/api";
+import { normalizeImageUrl, fetchAttractionBySlugResult } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import ServiceUnavailable from "@/components/ServiceUnavailable";
 
 export default async function AttractionPage({
   params,
@@ -20,8 +21,15 @@ export default async function AttractionPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const attraction = await fetchAttractionBySlug(slug);
+  const attractionResult = await fetchAttractionBySlugResult(slug);
 
+  if (!attractionResult.ok) {
+    return (
+      <ServiceUnavailable title="This page is temporarily unavailable" />
+    );
+  }
+
+  const attraction = attractionResult.data;
   if (!attraction) {
     notFound();
   }

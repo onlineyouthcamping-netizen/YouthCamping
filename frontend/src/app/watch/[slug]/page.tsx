@@ -1,7 +1,8 @@
 import { Metadata } from "next";
-import { fetchBlogBySlug, normalizeImageUrl } from "@/lib/api";
+import { fetchBlogBySlugResult, normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { notFound } from "next/navigation";
+import ServiceUnavailable from "@/components/ServiceUnavailable";
 import {
   Play,
   User,
@@ -20,8 +21,11 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const blog = await fetchBlogBySlug(slug);
-  if (!blog) return { title: "Not Found" };
+  const blogResult = await fetchBlogBySlugResult(slug);
+  if (!blogResult.ok || !blogResult.data)
+    return { title: blogResult.ok ? "Not Found" : "Temporarily unavailable" };
+
+  const blog = blogResult.data;
 
   const excerpt = "Watch this exclusive travel documentary by Youthcamping.";
   const imageUrl = normalizeImageUrl(blog.image);
@@ -40,18 +44,18 @@ export async function generateMetadata({
 
 export default async function VideoWatchPage({ params }: PageProps) {
   const { slug } = await params;
-  const blog = await fetchBlogBySlug(slug);
-
+  const blogResult = await fetchBlogBySlugResult(slug);
+  if (!blogResult.ok) {
+    return <ServiceUnavailable title="This video is temporarily unavailable" />;
+  }
+  const blog = blogResult.data;
   if (!blog) {
     notFound();
   }
 
-  // Extract video URL if it exists in content or use a default if it's a "video blog"
-  // For now, let's look for iframe in content or use a placeholder
-  const videoMatch = blog.content.match(/src="([^"]+)"/);
-  const videoUrl = videoMatch
-    ? videoMatch[1]
-    : "https://www.youtube.com/embed/j6hb-iOZalE";
+  const videoMatch =
+    typeof blog.content === "string" ? blog.content.match(/src="([^"]+)"/) : null;
+  const videoUrl = videoMatch ? videoMatch[1] : null;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -72,12 +76,14 @@ export default async function VideoWatchPage({ params }: PageProps) {
       {/* Main Video Content */}
       <div className="w-full h-screen flex flex-col">
         <div className="flex-1 relative flex items-center justify-center">
-          <iframe
-            className="w-full h-full"
-            src={`${videoUrl}?autoplay=1&mute=0&rel=0`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          {videoUrl ? (
+            <iframe
+              className="w-full h-full"
+              src={`${videoUrl}?autoplay=1&mute=0&rel=0`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : null}
         </div>
 
         {/* Video Info Footer */}

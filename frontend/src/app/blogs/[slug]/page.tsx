@@ -1,5 +1,6 @@
-import { fetchBlogBySlug, normalizeImageUrl } from "@/lib/api";
+import { fetchBlogBySlugResult, normalizeImageUrl } from "@/lib/api";
 import { notFound } from "next/navigation";
+import ServiceUnavailable from "@/components/ServiceUnavailable";
 export const revalidate = 30;
 
 import {
@@ -27,8 +28,13 @@ export default async function BlogDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const blog = await fetchBlogBySlug(slug);
+  const blogResult = await fetchBlogBySlugResult(slug);
 
+  if (!blogResult.ok) {
+    return <ServiceUnavailable title="This story is temporarily unavailable" />;
+  }
+
+  const blog = blogResult.data;
   if (!blog) {
     notFound();
   }

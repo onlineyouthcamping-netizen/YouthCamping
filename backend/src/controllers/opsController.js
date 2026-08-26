@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { runAutoAllocation } = require('../utils/autoAllocationEngine');
+const { calculateHotelStayCost } = require('../utils/hotelStayCost');
 const opsSummaryCache = new Map();
 
 /**
@@ -458,16 +459,22 @@ exports.createHotelBooking = async (req, res) => {
         const qRate = parseFloat(h.quadRate ?? 0);
         const exRate = parseFloat(h.extraBedRate ?? h.extraPersonRate ?? 0);
 
-        let calculatedCost = 0;
-        if (h.pricingMethod === 'manual') {
-          calculatedCost = parseFloat(h.totalAmount || 0);
-        } else {
-          const twinCost = dRooms * dRate * nights;
-          const tripleCost = tRooms * tRate * nights;
-          const quadCost = qRooms * qRate * nights;
-          const extraBedCost = exPax * exRate * nights;
-          calculatedCost = twinCost + tripleCost + quadCost + extraBedCost;
-        }
+        // Must match Hotel Assignment wizard:
+        // per-person = rooms × occupancy × rate × nights
+        // room-wise  = rooms × rate × nights
+        let calculatedCost = calculateHotelStayCost({
+          pricingMethod: h.pricingMethod,
+          totalAmount: h.totalAmount,
+          doubleRoomsCount: dRooms,
+          tripleRoomsCount: tRooms,
+          quadRoomsCount: qRooms,
+          extraPersonsCount: exPax,
+          nightsCount: nights,
+          doubleRate: dRate,
+          tripleRate: tRate,
+          quadRate: qRate,
+          extraBedRate: exRate,
+        });
 
         // Apply overrides if existing
         if (h.id && !h.id.startsWith('stay')) {
@@ -3104,18 +3111,21 @@ exports.resetHotelOverride = async (req, res) => {
       const exPax = booking.extraPersonsCount || 0;
       const nights = booking.nightsCount || 1;
 
-      let baseCost = 0;
-      if (booking.rateType === 'PER_PERSON_PER_NIGHT') {
-        const totalPaxCovered = (dRooms * 2) + (tRooms * 3) + (qRooms * 4) + exPax;
-        baseCost = totalPaxCovered * dRate * nights;
-      } else {
-        baseCost = (
-          (dRooms * dRate) +
-          (tRooms * tRate) +
-          (qRooms * qRate) +
-          (exPax * exRate)
-        ) * nights;
-      }
+      let baseCost = calculateHotelStayCost({
+        pricingMethod:
+          booking.rateType === "PER_PERSON_PER_NIGHT"
+            ? "per-person"
+            : booking.pricingMethod || "room-wise",
+        doubleRoomsCount: dRooms,
+        tripleRoomsCount: tRooms,
+        quadRoomsCount: qRooms,
+        extraPersonsCount: exPax,
+        nightsCount: nights,
+        doubleRate: dRate,
+        tripleRate: tRate,
+        quadRate: qRate,
+        extraBedRate: exRate,
+      });
 
       const taxAmount = baseCost * (booking.taxPercent || 0) / 100;
       const restoredCost = baseCost + taxAmount;

@@ -59,7 +59,9 @@ export default function MyBookingsPage() {
         setError(data.message || "Failed to fetch bookings");
       }
     } catch (err) {
-      setError("Connection error. Please try again.");
+      setError(
+        "Our servers are temporarily unavailable. Please try again shortly.",
+      );
     } finally {
       setLoading(false);
     }

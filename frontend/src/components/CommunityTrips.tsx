@@ -144,11 +144,12 @@ export default function CommunityTrips({
       ? backgroundImages
       : backgroundImage
         ? [backgroundImage]
-        : [
-            "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=1800&q=85",
-          ];
+      : [];
 
-  const currentBgPhoto = bgPhotosList[bgIdx % bgPhotosList.length];
+  const currentBgPhoto =
+    bgPhotosList.length > 0
+      ? bgPhotosList[bgIdx % bgPhotosList.length]
+      : "";
 
   const activeHeadlinePrefix =
     headlinePrefix !== undefined ? headlinePrefix : headline;
@@ -371,7 +372,9 @@ export default function CommunityTrips({
                   loop
                   muted
                   playsInline
-                  className="w-full h-full object-cover object-center"
+                  controls={false}
+                  disablePictureInPicture
+                  className="hide-native-video-play w-full h-full object-cover object-center"
                 />
               ) : (
                 <img

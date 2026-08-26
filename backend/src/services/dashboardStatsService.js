@@ -5,6 +5,7 @@ const {
   getPeriodBounds,
   createdAtInPeriod,
   collectionOccurredInPeriod,
+  istMidnightUtc,
 } = require("../utils/istDateRange");
 
 const LIVE_BOOKING_STATUS = {
@@ -90,8 +91,13 @@ async function computeRawDashboardStats(tenantId, dateFilter, now = new Date()) 
   const sevenDaysLater = new Date(bounds.endToday.getTime() + 7 * 24 * 60 * 60 * 1000);
   const fifteenDaysAgo = new Date(bounds.startToday.getTime() - 15 * 24 * 60 * 60 * 1000);
 
+  const monthStart = istMidnightUtc(`${bounds.todayYmd.slice(0, 7)}-01`);
+
   const [
     periodBookings,
+    todayBookings,
+    bookingsThisMonth,
+    pendingBookingsCount,
     liveBookingTotals,
     verifiedAllLive,
     verifiedInPeriod,
@@ -121,6 +127,27 @@ async function computeRawDashboardStats(tenantId, dateFilter, now = new Date()) 
     todayTasks,
   ] = await Promise.all([
     prisma.booking.count({ where: bookingPeriodWhere }),
+    prisma.booking.count({
+      where: {
+        tenantId,
+        status: LIVE_BOOKING_STATUS,
+        createdAt: { gte: bounds.startToday, lte: bounds.endToday },
+      },
+    }),
+    prisma.booking.count({
+      where: {
+        tenantId,
+        status: LIVE_BOOKING_STATUS,
+        createdAt: { gte: monthStart, lte: bounds.now },
+      },
+    }),
+    prisma.booking.count({
+      where: {
+        tenantId,
+        status: LIVE_BOOKING_STATUS,
+        remainingAmount: { gt: 0 },
+      },
+    }),
     prisma.booking.aggregate({
       where: { tenantId, status: LIVE_BOOKING_STATUS },
       _sum: { totalAmount: true },
@@ -372,6 +399,7 @@ async function computeRawDashboardStats(tenantId, dateFilter, now = new Date()) 
   const formattedMonthlyRevenue = Object.entries(monthMap)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, revenue]) => ({ month, revenue }));
+  const currentMonthRevenue = monthMap[currentMonthKey] || 0;
 
   const mappedRecentBookings = (recentBookings || []).map((b) => ({
     id: b.id,
@@ -510,8 +538,12 @@ async function computeRawDashboardStats(tenantId, dateFilter, now = new Date()) 
     bookings: periodBookings,
     trips: tripsRunningNow.length,
     totalBookings: periodBookings,
+    todayBookings,
+    bookingsThisMonth,
+    pendingBookingsCount,
     totalTrips: tripsRunningNow.length,
     totalRevenue,
+    currentMonthRevenue,
     pendingPayments,
     pendingVendorsCost,
     pendingVendorsCount: pendingVendorsCountResult || 0,
@@ -614,8 +646,16 @@ function applyDashboardPermissions(raw, user) {
     bookings: hasPerm(user, "bookings.view") ? raw.bookings : undefined,
     trips: hasPerm(user, "trips.view") ? raw.trips : undefined,
     totalBookings: hasPerm(user, "bookings.view") ? raw.totalBookings : undefined,
+    todayBookings: hasPerm(user, "bookings.view") ? raw.todayBookings : undefined,
+    bookingsThisMonth: hasPerm(user, "bookings.view") ? raw.bookingsThisMonth : undefined,
+    pendingBookingsCount: hasPerm(user, "bookings.view")
+      ? raw.pendingBookingsCount
+      : undefined,
     totalTrips: hasPerm(user, "trips.view") ? raw.totalTrips : undefined,
     totalRevenue: hasPerm(user, "accounting.view") ? raw.totalRevenue : undefined,
+    currentMonthRevenue: hasPerm(user, "accounting.view")
+      ? raw.currentMonthRevenue
+      : undefined,
     pendingPayments: hasPerm(user, "accounting.view") ? raw.pendingPayments : undefined,
     pendingVendorsCost:
       hasPerm(user, "accounting.view") || hasPerm(user, "vendors.view")

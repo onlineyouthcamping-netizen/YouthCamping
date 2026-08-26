@@ -1,7 +1,8 @@
 import { Metadata } from "next";
-import { fetchBlogBySlug, normalizeImageUrl } from "@/lib/api";
+import { fetchBlogBySlugResult, normalizeImageUrl } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import { notFound } from "next/navigation";
+import ServiceUnavailable from "@/components/ServiceUnavailable";
 import {
   Clock,
   User,
@@ -20,9 +21,11 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const blog = await fetchBlogBySlug(slug);
-  if (!blog) return { title: "Not Found" };
+  const blogResult = await fetchBlogBySlugResult(slug);
+  if (!blogResult.ok || !blogResult.data)
+    return { title: blogResult.ok ? "Not Found" : "Temporarily unavailable" };
 
+  const blog = blogResult.data;
   const excerpt = blog.content.replace(/<[^>]*>/g, "").slice(0, 160);
   const imageUrl = normalizeImageUrl(blog.image);
 
@@ -46,8 +49,11 @@ export async function generateMetadata({
 
 export default async function BlogReadPage({ params }: PageProps) {
   const { slug } = await params;
-  const blog = await fetchBlogBySlug(slug);
-
+  const blogResult = await fetchBlogBySlugResult(slug);
+  if (!blogResult.ok) {
+    return <ServiceUnavailable title="This story is temporarily unavailable" />;
+  }
+  const blog = blogResult.data;
   if (!blog) {
     notFound();
   }
