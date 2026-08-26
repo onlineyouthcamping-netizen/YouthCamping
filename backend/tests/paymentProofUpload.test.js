@@ -264,6 +264,84 @@ describe("getBookingPayments proof contract", () => {
     expect(res.body.data[0].proofFileName).toBe("receipt.jpg");
     expect(res.body.data[0].transactionId).toBe("BK-UULNHHB11LUU-gtqoyw");
   });
+
+  it("appends additional proof files to proofUrls without dropping the existing primary", async () => {
+    persistPaymentProofFile
+      .mockResolvedValueOnce("/uploads/payment-proofs/second.jpg")
+      .mockResolvedValueOnce("/uploads/payment-proofs/third.jpg");
+
+    const existingPayment = {
+      id: "pay_1",
+      tenantId: "tenant-a",
+      proofFileUrl: "/uploads/payment-proofs/first.jpg",
+      proofUrl: "/uploads/payment-proofs/first.jpg",
+      proofUrls: ["/uploads/payment-proofs/first.jpg"],
+      booking: { tripId: "trip_1" },
+    };
+    const updatedPayment = {
+      ...existingPayment,
+      proofFileUrl: "/uploads/payment-proofs/first.jpg",
+      proofUrl: "/uploads/payment-proofs/first.jpg",
+      proofUrls: [
+        "/uploads/payment-proofs/first.jpg",
+        "/uploads/payment-proofs/second.jpg",
+        "/uploads/payment-proofs/third.jpg",
+      ],
+    };
+
+    const updateMock = jest.fn().mockResolvedValue(updatedPayment);
+    prisma.$transaction.mockImplementation(async (fn) =>
+      fn({
+        opsClientPayment: {
+          findFirst: jest.fn().mockResolvedValue(existingPayment),
+          update: updateMock,
+        },
+        financeAuditLog: { create: jest.fn().mockResolvedValue({}) },
+      }),
+    );
+
+    const req = createReq({
+      files: {
+        document: [
+          {
+            buffer: Buffer.from("fake-image-2"),
+            originalname: "second.jpg",
+            mimetype: "image/jpeg",
+            size: 128,
+          },
+          {
+            buffer: Buffer.from("fake-image-3"),
+            originalname: "third.jpg",
+            mimetype: "image/jpeg",
+            size: 128,
+          },
+        ],
+      },
+    });
+    const res = createRes();
+
+    await uploadCollectionProof(req, res);
+
+    expect(persistPaymentProofFile).toHaveBeenCalledTimes(2);
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          proofFileUrl: "/uploads/payment-proofs/first.jpg",
+          proofUrls: [
+            "/uploads/payment-proofs/first.jpg",
+            "/uploads/payment-proofs/second.jpg",
+            "/uploads/payment-proofs/third.jpg",
+          ],
+        }),
+      }),
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.proof_urls).toEqual([
+      "/uploads/payment-proofs/first.jpg",
+      "/uploads/payment-proofs/second.jpg",
+      "/uploads/payment-proofs/third.jpg",
+    ]);
+  });
 });
 
 describe("payment proof RBAC", () => {

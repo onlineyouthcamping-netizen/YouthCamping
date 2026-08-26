@@ -462,8 +462,9 @@ router.post(
   ]),
   (req, res, next) => {
     documentUpload.fields([
-      { name: "document", maxCount: 1 },
-      { name: "proof", maxCount: 1 },
+      { name: "document", maxCount: 10 },
+      { name: "proof", maxCount: 10 },
+      { name: "proofs", maxCount: 10 },
     ])(req, res, (err) => {
       if (err) {
         return res.status(400).json({

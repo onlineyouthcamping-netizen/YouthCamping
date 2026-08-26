@@ -3362,6 +3362,7 @@ model OpsClientPayment {
   
   // Proof Tracking Metadata
   proofFileUrl          String?
+  proofUrls             Json? // string[] — all receipt/screenshot URLs; proofFileUrl/proofUrl remain primary
   proofUploadedAt       DateTime?
   proofFileName         String?
   proofFileType         String?

@@ -2,6 +2,8 @@ const { prisma } = require("../lib/prisma");
 const {
   persistPaymentProofFile,
   resolveUploadedProofFile,
+  resolveUploadedProofFiles,
+  mergeProofUrls,
 } = require("../utils/paymentProofStorage");
 const {
   TERMINAL_APPROVED,
@@ -627,7 +629,7 @@ exports.rejectCollection = async (req, res) => {
 
 /**
  * 4️⃣ Upload Proof / Receipt for Collection
- * Validates URLs and file types securely
+ * Validates URLs and file types securely. Supports multiple files — appends to proofUrls.
  * POST /api/finance/collections/:paymentId/upload-proof
  */
 exports.uploadCollectionProof = async (req, res) => {
@@ -636,27 +638,35 @@ exports.uploadCollectionProof = async (req, res) => {
     const user = resolveUser(req);
     const tenantId = resolveTenantId(req);
 
-    const uploadedFile = resolveUploadedProofFile(req);
-    let rawUrl =
-      req.body?.proofFileUrl ||
-      req.body?.proofUrl ||
-      uploadedFile?.path ||
-      uploadedFile?.location;
+    const uploadedFiles = resolveUploadedProofFiles(req);
+    const bodyUrls = mergeProofUrls(
+      req.body?.proofUrls,
+      req.body?.proofFileUrl,
+      req.body?.proofUrl,
+    );
 
-    if (uploadedFile && uploadedFile.buffer) {
-      try {
-        rawUrl = await persistPaymentProofFile(uploadedFile);
-      } catch (storageErr) {
-        return res.status(storageErr.statusCode || 500).json({
-          success: false,
-          message: storageErr.message || "Failed to store payment proof",
-        });
+    const persistedFromFiles = [];
+    for (const uploadedFile of uploadedFiles) {
+      let rawUrl = uploadedFile?.path || uploadedFile?.location || null;
+      if (uploadedFile && uploadedFile.buffer) {
+        try {
+          rawUrl = await persistPaymentProofFile(uploadedFile);
+        } catch (storageErr) {
+          return res.status(storageErr.statusCode || 500).json({
+            success: false,
+            message: storageErr.message || "Failed to store payment proof",
+          });
+        }
       }
+      const validated = sanitizeProofUrl(rawUrl);
+      if (validated) persistedFromFiles.push(validated);
     }
 
-    const validatedUrl = sanitizeProofUrl(rawUrl);
+    const incomingUrls = mergeProofUrls(bodyUrls, persistedFromFiles).map(
+      (u) => sanitizeProofUrl(u),
+    ).filter(Boolean);
 
-    if (!validatedUrl) {
+    if (incomingUrls.length === 0) {
       return res.status(400).json({
         success: false,
         error: "Invalid or insecure proof URL provided. Must be a valid HTTPS/HTTP or upload path.",
@@ -664,10 +674,15 @@ exports.uploadCollectionProof = async (req, res) => {
       });
     }
 
+    const primaryFile = uploadedFiles[0] || null;
     const fileName =
-      req.body?.proofFileName || uploadedFile?.originalname || "receipt.png";
+      req.body?.proofFileName ||
+      primaryFile?.originalname ||
+      "receipt.png";
     const fileType =
-      req.body?.proofFileType || uploadedFile?.mimetype || "image/png";
+      req.body?.proofFileType ||
+      primaryFile?.mimetype ||
+      "image/png";
 
     const result = await prisma.$transaction(async (tx) => {
       const payment = await resolveCollectionPayment(tx, paymentId, tenantId);
@@ -676,11 +691,20 @@ exports.uploadCollectionProof = async (req, res) => {
         throw { statusCode: 404, message: "Collection payment not found or access denied" };
       }
 
+      const existingUrls = mergeProofUrls(
+        payment.proofUrls,
+        payment.proofFileUrl,
+        payment.proofUrl,
+      );
+      const mergedUrls = mergeProofUrls(existingUrls, incomingUrls);
+      const primaryUrl = mergedUrls[0];
+
       const updated = await tx.opsClientPayment.update({
         where: { id: payment.id },
         data: {
-          proofFileUrl: validatedUrl,
-          proofUrl: validatedUrl,
+          proofFileUrl: primaryUrl,
+          proofUrl: primaryUrl,
+          proofUrls: mergedUrls,
           proofUploadedAt: new Date(),
           proofFileName: fileName.substring(0, 255),
           proofFileType: fileType.substring(0, 50),
@@ -702,9 +726,15 @@ exports.uploadCollectionProof = async (req, res) => {
           performedBy: user.id,
           performedByName: user.name,
           performedAt: new Date(),
-          oldValue: JSON.stringify({ proofFileUrl: payment.proofFileUrl }),
-          newValue: JSON.stringify({ proofFileUrl: validatedUrl }),
-          changeDescription: `Receipt proof uploaded: ${fileName}`,
+          oldValue: JSON.stringify({
+            proofFileUrl: payment.proofFileUrl,
+            proofUrls: existingUrls,
+          }),
+          newValue: JSON.stringify({
+            proofFileUrl: primaryUrl,
+            proofUrls: mergedUrls,
+          }),
+          changeDescription: `Receipt proof uploaded (${mergedUrls.length}): ${fileName}`,
           reason: null,
           ipAddress: req.ip || null,
           userAgent: req.get("user-agent") || null,
@@ -718,7 +748,8 @@ exports.uploadCollectionProof = async (req, res) => {
       success: true,
       status: "success",
       message: "Proof uploaded. Ready for approval.",
-      proof_url: validatedUrl,
+      proof_url: result.proofFileUrl || result.proofUrl,
+      proof_urls: Array.isArray(result.proofUrls) ? result.proofUrls : incomingUrls,
       payment: result,
     });
   } catch (err) {

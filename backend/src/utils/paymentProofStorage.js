@@ -120,9 +120,66 @@ function resolveUploadedProofFile(req) {
   return (files.document && files.document[0]) || (files.proof && files.proof[0]) || null;
 }
 
+/**
+ * Collect all uploaded proof files from multer (single or multi field).
+ */
+function resolveUploadedProofFiles(req) {
+  const out = [];
+  if (req.file) out.push(req.file);
+  const files = req.files;
+  if (!files) return out;
+  if (Array.isArray(files)) {
+    files.forEach((f) => {
+      if (f) out.push(f);
+    });
+    return out;
+  }
+  const fromFields = [
+    ...(files.document || []),
+    ...(files.proof || []),
+    ...(files.proofs || []),
+    ...(files.images || []),
+  ];
+  fromFields.forEach((f) => {
+    if (f) out.push(f);
+  });
+  return out;
+}
+
+/**
+ * Merge existing + incoming proof URL lists, de-dupe, keep order.
+ * Accepts string, string[], or JSON-ish arrays from Prisma Json columns.
+ */
+function mergeProofUrls(...sources) {
+  const seen = new Set();
+  const result = [];
+  for (const source of sources) {
+    let list = source;
+    if (typeof list === "string") {
+      try {
+        const parsed = JSON.parse(list);
+        list = Array.isArray(parsed) ? parsed : [list];
+      } catch {
+        list = [list];
+      }
+    }
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      if (typeof item !== "string") continue;
+      const trimmed = item.trim();
+      if (!trimmed || seen.has(trimmed)) continue;
+      seen.add(trimmed);
+      result.push(trimmed);
+    }
+  }
+  return result;
+}
+
 module.exports = {
   persistPaymentProofFile,
   resolveUploadedProofFile,
+  resolveUploadedProofFiles,
+  mergeProofUrls,
   ALLOWED_MIMES,
   MAX_BYTES,
 };

@@ -16,6 +16,34 @@ const {
   findConfirmedRoomFields,
   mergePassengerPreferences,
 } = require("../utils/roomAllocationAuthority");
+const { mergeProofUrls } = require("../utils/paymentProofStorage");
+
+function sanitizeConfirmProofUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (trimmed.length > 2048) return null;
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:") ||
+    lower.startsWith("file:") ||
+    lower.includes("<script") ||
+    lower.includes("..")
+  ) {
+    return null;
+  }
+  if (
+    lower.startsWith("http://") ||
+    lower.startsWith("https://") ||
+    lower.startsWith("/uploads/") ||
+    lower.startsWith("/media/") ||
+    lower.startsWith("/api/")
+  ) {
+    return trimmed;
+  }
+  return null;
+}
 
 // Helper to safely parse dates and avoid crashes with "Invalid Date"
 const safeParseDate = (dateVal) => {
@@ -2128,7 +2156,15 @@ exports.confirmBooking = async (req, res, next) => {
       collectionAccountId,
       transactionId,
       notes,
+      proofUrl,
+      proofUrls,
+      proofFileUrl,
     } = req.body;
+
+    const normalizedProofUrls = mergeProofUrls(proofUrls, proofFileUrl, proofUrl)
+      .map((u) => sanitizeConfirmProofUrl(u))
+      .filter(Boolean);
+    const primaryProofUrl = normalizedProofUrls[0] || null;
 
     let targetTotal, targetAdvance;
     try {
@@ -2273,13 +2309,45 @@ exports.confirmBooking = async (req, res, next) => {
             collectedBy: req.user?.name || req.user?.email || "Admin",
             recordedByUserId: req.user?.id || null,
             remarks: notes || `Advance payment on booking confirmation via ${paymentMode || "UPI"}`,
+            ...(primaryProofUrl
+              ? {
+                  proofUrl: primaryProofUrl,
+                  proofFileUrl: primaryProofUrl,
+                  proofUrls: normalizedProofUrls,
+                  proofUploadedAt: new Date(),
+                  proofFileName: "payment_proof",
+                  proofFileType: "image/jpeg",
+                }
+              : {}),
           },
         });
-      } else if (!existingClientPayment.collectionAccountId && targetAccountId) {
-        await prisma.opsClientPayment.update({
-          where: { id: existingClientPayment.id },
-          data: { collectionAccountId: targetAccountId },
-        });
+      } else {
+        const patch = {};
+        if (!existingClientPayment.collectionAccountId && targetAccountId) {
+          patch.collectionAccountId = targetAccountId;
+        }
+        if (primaryProofUrl) {
+          const existingUrls = mergeProofUrls(
+            existingClientPayment.proofUrls,
+            existingClientPayment.proofFileUrl,
+            existingClientPayment.proofUrl,
+          );
+          const merged = mergeProofUrls(existingUrls, normalizedProofUrls);
+          patch.proofUrl = merged[0] || primaryProofUrl;
+          patch.proofFileUrl = merged[0] || primaryProofUrl;
+          patch.proofUrls = merged;
+          patch.proofUploadedAt = new Date();
+          if (!existingClientPayment.proofFileName) {
+            patch.proofFileName = "payment_proof";
+            patch.proofFileType = "image/jpeg";
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          await prisma.opsClientPayment.update({
+            where: { id: existingClientPayment.id },
+            data: patch,
+          });
+        }
       }
 
       // 3. Mirror into AccountingEntry as PENDING for Finance → Incoming queue

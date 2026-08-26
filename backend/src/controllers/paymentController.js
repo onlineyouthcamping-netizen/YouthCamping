@@ -15,6 +15,40 @@ const {
   syncOperationalVendorRecord: syncOperationalBySource,
   formatVendorDisplayName,
 } = require("../utils/vendorOperationalSource");
+const { mergeProofUrls } = require("../utils/paymentProofStorage");
+
+function sanitizeClientProofUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (trimmed.length > 2048) return null;
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:") ||
+    lower.startsWith("file:") ||
+    lower.includes("<script") ||
+    lower.includes("..")
+  ) {
+    return null;
+  }
+  if (
+    lower.startsWith("http://") ||
+    lower.startsWith("https://") ||
+    lower.startsWith("/uploads/") ||
+    lower.startsWith("/media/") ||
+    lower.startsWith("/api/")
+  ) {
+    return trimmed;
+  }
+  return null;
+}
+
+function normalizeIncomingProofUrls({ proofUrl, proofUrls, proofFileUrl }) {
+  return mergeProofUrls(proofUrls, proofFileUrl, proofUrl)
+    .map((u) => sanitizeClientProofUrl(u))
+    .filter(Boolean);
+}
 
 async function resolveLedgerSalespersonId(tenantId, userId, salesAdminId) {
   if (userId) return userId;
@@ -221,6 +255,8 @@ exports.addClientPayment = async (req, res) => {
       transactionId,
       paymentDate,
       proofUrl,
+      proofUrls,
+      proofFileUrl,
       remarks,
     } = req.body;
     const tenantId = resolveTenantId(req);
@@ -277,6 +313,12 @@ exports.addClientPayment = async (req, res) => {
     // Finance workflow: new receipts start recorded + PENDING approval.
     // Never auto-verify/approve on create (mode/amount/proof/booking accepted).
     const receiptStatus = "Pending Verification";
+    const normalizedProofUrls = normalizeIncomingProofUrls({
+      proofUrl,
+      proofUrls,
+      proofFileUrl,
+    });
+    const primaryProofUrl = normalizedProofUrls[0] || null;
 
     const receipt = await prisma.opsClientPayment.create({
       data: {
@@ -287,7 +329,16 @@ exports.addClientPayment = async (req, res) => {
         collectionAccountId: targetAccountId,
         transactionId,
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-        proofUrl,
+        proofUrl: primaryProofUrl,
+        proofFileUrl: primaryProofUrl,
+        ...(normalizedProofUrls.length > 0
+          ? {
+              proofUrls: normalizedProofUrls,
+              proofUploadedAt: new Date(),
+              proofFileName: "payment_proof",
+              proofFileType: "image/jpeg",
+            }
+          : {}),
         status: receiptStatus,
         // approvalStatus omitted → Prisma default "PENDING"
         collectedBy: req.user?.name || req.user?.email || "Staff",
@@ -732,6 +783,7 @@ exports.getBookingPayments = async (req, res) => {
       seenAmounts.add(`${r.amount}-${new Date(r.paymentDate || r.createdAt).toISOString().slice(0, 10)}`);
       const display = canonicalCollectionStatus(r.approvalStatus, r.status);
       const proofUrl = r.proofFileUrl || r.proofUrl || null;
+      const proofUrls = mergeProofUrls(r.proofUrls, r.proofFileUrl, r.proofUrl);
       allPayments.push({
         id: r.id,
         amount: r.amount,
@@ -746,6 +798,7 @@ exports.getBookingPayments = async (req, res) => {
         transactionId: r.transactionId || null,
         proofUrl,
         proofFileUrl: proofUrl,
+        proofUrls,
         proofFileName: r.proofFileName || null,
         proofFileType: r.proofFileType || null,
         proofUploadedAt: r.proofUploadedAt || null,

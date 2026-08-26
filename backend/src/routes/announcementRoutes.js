@@ -10,7 +10,7 @@ router.get("/", authenticate, getAnnouncements);
 router.post(
   "/",
   authenticate,
-  requireRole("admin", "superadmin"),
+  requireRole("admin", "superadmin", "founder"),
   createAnnouncement,
 );
 
