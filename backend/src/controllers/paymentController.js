@@ -353,7 +353,6 @@ exports.addClientPayment = async (req, res) => {
     });
 
     // Pending receipts must not move booking.advancePaid / remainingAmount.
-    const updatedBooking = booking;
 
     // Mirror into ledger as PENDING so Finance → Incoming queue can clear it.
     // Do not create APPROVED entries on record.
@@ -400,34 +399,6 @@ exports.addClientPayment = async (req, res) => {
       }
     } catch (entryErr) {
       console.warn("AccountingEntry auto-sync skipped:", entryErr.message);
-    }
-
-    // Auto-log confirmation email if booking just became confirmed via verified payment
-    if (
-      receipt.status === "Verified" &&
-      updatedBooking.status === "confirmed" &&
-      booking.status !== "confirmed"
-    ) {
-      try {
-        const templates = require("../lib/email");
-        if (templates && templates.confirmation) {
-          const templateData = templates.confirmation(updatedBooking);
-          await prisma.emailLog.create({
-            data: {
-              tenantId,
-              bookingId: updatedBooking.bookingId || updatedBooking.id,
-              recipientEmail: updatedBooking.email || "",
-              subject: templateData.subject,
-              body: templateData.html,
-              status: "SENT",
-              sentAt: new Date(),
-              metadata: { type: "confirmation", autoTriggeredOnPayment: true },
-            },
-          });
-        }
-      } catch (emailErr) {
-        console.error("Auto email log on payment error:", emailErr);
-      }
     }
 
     return res.json({ success: true, data: receipt });

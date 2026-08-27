@@ -127,6 +127,57 @@ const sumVerifiedPaymentsForBooking = async (prisma, bookingId, extraId) => {
   };
 };
 
+const REJECTED_COLLECTION_STATUSES = [
+  "Rejected",
+  "Refunded",
+  "REJECTED",
+  "REFUNDED",
+];
+
+/**
+ * Sum of customer collections recorded at booking time (pending finance
+ * verification plus already-verified receipts). Used for customer-facing
+ * confirmation emails so the salesperson's entered amount is shown even
+ * before finance certifies the payment.
+ */
+const sumRecordedCollectionsForBooking = async (prisma, bookingId, extraId) => {
+  const ids = Array.from(new Set([bookingId, extraId].filter(Boolean)));
+  if (ids.length === 0) return 0;
+
+  const receipts = await prisma.opsClientPayment.findMany({
+    where: {
+      bookingId: { in: ids },
+      NOT: { status: { in: REJECTED_COLLECTION_STATUSES } },
+    },
+    select: { amount: true },
+  });
+
+  return receipts.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+};
+
+/**
+ * Overlay the customer-facing collected amount onto a booking object for
+ * confirmation emails. Finance still stores only verified money on
+ * booking.advancePaid; this does not write to the database.
+ */
+const overlayCustomerFacingCollection = (
+  booking,
+  recordedSum = 0,
+  extraCollected = 0,
+) => {
+  const collected = Math.max(
+    Number(booking?.advancePaid) || 0,
+    Number(recordedSum) || 0,
+    Number(extraCollected) || 0,
+  );
+  const total = Number(booking?.totalAmount) || 0;
+  return {
+    ...booking,
+    advancePaid: collected,
+    remainingAmount: Math.max(0, total - collected),
+  };
+};
+
 const isPaymentStatus = (value) => PAYMENT_STATUSES.includes(value);
 
 module.exports = {
@@ -135,5 +186,7 @@ module.exports = {
   normalizePaymentStatus,
   derivePaymentStatus,
   sumVerifiedPaymentsForBooking,
+  sumRecordedCollectionsForBooking,
+  overlayCustomerFacingCollection,
   isPaymentStatus,
 };

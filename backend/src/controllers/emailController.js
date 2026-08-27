@@ -1,5 +1,9 @@
 const { prisma } = require("../lib/prisma");
 const { sendEmail, templates } = require("../lib/email");
+const {
+  sumRecordedCollectionsForBooking,
+  overlayCustomerFacingCollection,
+} = require("../utils/paymentStatus");
 
 const sendBookingEmail = async (req, res) => {
   const {
@@ -44,6 +48,18 @@ const sendBookingEmail = async (req, res) => {
     if (!booking.email) {
       console.warn("⚠️ [Backend] Booking has no email address:", bookingId);
       return res.status(400).json({ message: "Booking has no email address" });
+    }
+
+    if (type === "confirmation" || type === "invoice" || type === "payment") {
+      const recorded = await sumRecordedCollectionsForBooking(
+        prisma,
+        booking.id,
+        booking.bookingId,
+      );
+      Object.assign(
+        booking,
+        overlayCustomerFacingCollection(booking, recorded),
+      );
     }
 
     let templateData;

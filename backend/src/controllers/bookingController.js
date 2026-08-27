@@ -13,7 +13,13 @@ const {
   resolveTaskAssigneeScope,
   canAccessAssignedTask,
 } = require("../utils/taskVisibility");
-const { PAYMENT_STATUS, normalizePaymentStatus, sumVerifiedPaymentsForBooking } = require("../utils/paymentStatus");
+const {
+  PAYMENT_STATUS,
+  normalizePaymentStatus,
+  sumVerifiedPaymentsForBooking,
+  sumRecordedCollectionsForBooking,
+  overlayCustomerFacingCollection,
+} = require("../utils/paymentStatus");
 const { validateBookingStatusTransition, BOOKING_STATUS } = require("../utils/bookingStatus");
 const { resolveTenantId } = require("../utils/tenantContext");
 const {
@@ -51,6 +57,38 @@ function sanitizeConfirmProofUrl(url) {
     return trimmed;
   }
   return null;
+}
+
+async function sendBookingConfirmationEmail(booking, extraCollected = 0) {
+  if (!booking?.email) return;
+  try {
+    const { sendEmail, templates } = require("../lib/email");
+    const recorded = await sumRecordedCollectionsForBooking(
+      prisma,
+      booking.id,
+      booking.bookingId,
+    );
+    const payload = overlayCustomerFacingCollection(
+      booking,
+      recorded,
+      extraCollected,
+    );
+    const templateData = templates.confirmation(payload);
+    await sendEmail({
+      to: booking.email,
+      subject: templateData.subject,
+      html: templateData.html,
+      type: "confirmation",
+      bookingId: booking.id,
+      prisma,
+      attachments: [],
+    });
+  } catch (emailErr) {
+    console.error(
+      "Failed to send booking confirmation email:",
+      emailErr.message,
+    );
+  }
 }
 
 // Helper to safely parse dates and avoid crashes with "Invalid Date"
@@ -1588,33 +1626,6 @@ exports.createBooking = async (req, res, next) => {
       performedByAdminId: req.user ? req.user.id : null,
     });
 
-    // Trigger simulated email confirmation log automatically on booking creation ONLY if confirmed
-    if (
-      booking.status === "Confirmed" ||
-      booking.status === "confirmed" ||
-      booking.paymentStatus === "Paid" ||
-      booking.paymentStatus === "paid"
-    ) {
-      try {
-        const { sendEmail, templates } = require("../lib/email");
-        const templateData = templates.confirmation(booking);
-        await sendEmail({
-          to: booking.email || "info@youthcamping.com",
-          subject: templateData.subject,
-          html: templateData.html,
-          type: "confirmation",
-          bookingId: booking.id,
-          prisma,
-          attachments: [],
-        });
-      } catch (emailErr) {
-        console.error(
-          "Failed to trigger automatic booking confirmation email:",
-          emailErr.message,
-        );
-      }
-    }
-
     res
       .status(201)
       .json({
@@ -2542,11 +2553,18 @@ exports.confirmBooking = async (req, res, next) => {
     // Sync to Google Sheets
     const updatedBooking = await prisma.booking.findUnique({
       where: { id: req.params.id },
+      include: { tripRef: true },
     });
     if (updatedBooking) {
       syncBookingToSheets(updatedBooking).catch((err) =>
         console.error("[SHEETS_SYNC_SILENT_ERR]", err.message),
       );
+    }
+
+    const wasAlreadyConfirmed =
+      String(beforeBooking.status || "").toLowerCase() === "confirmed";
+    if (!wasAlreadyConfirmed && updatedBooking) {
+      await sendBookingConfirmationEmail(updatedBooking, targetAdvance);
     }
 
     res.json({ success: true, message: "Booking confirmed" });
@@ -3020,33 +3038,6 @@ exports.submitBookingForm = async (req, res, next) => {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: `/api/bookings/lookup/${booking.bookingId}`,
     });
-
-    // Trigger simulated email confirmation log automatically on booking submission ONLY if confirmed
-    if (
-      booking.status === "Confirmed" ||
-      booking.status === "confirmed" ||
-      booking.paymentStatus === "Paid" ||
-      booking.paymentStatus === "paid"
-    ) {
-      try {
-        const { sendEmail, templates } = require("../lib/email");
-        const templateData = templates.confirmation(booking);
-        await sendEmail({
-          to: booking.email || "info@youthcamping.com",
-          subject: templateData.subject,
-          html: templateData.html,
-          type: "confirmation",
-          bookingId: booking.id,
-          prisma,
-          attachments: [],
-        });
-      } catch (emailErr) {
-        console.error(
-          "Failed to trigger automatic booking confirmation email:",
-          emailErr.message,
-        );
-      }
-    }
 
     res.status(201).json({ success: true, data: booking });
   } catch (error) {

@@ -1,5 +1,9 @@
 const { prisma } = require("../lib/prisma");
 const SibApiV3Sdk = require("sib-api-v3-sdk");
+const {
+  sumRecordedCollectionsForBooking,
+  overlayCustomerFacingCollection,
+} = require("../utils/paymentStatus");
 
 const defaultClient = SibApiV3Sdk.ApiClient.instance;
 const apiKey = defaultClient.authentications["api-key"];
@@ -486,6 +490,12 @@ async function getContextData(contextType, contextId, tenantId) {
       include: { tripRef: true, salesAdmin: true },
     });
     if (booking) {
+      const recorded = await sumRecordedCollectionsForBooking(
+        prisma,
+        booking.id,
+        booking.bookingId,
+      );
+      const facing = overlayCustomerFacingCollection(booking, recorded);
       data = {
         recipient: {
           full_name: booking.fullName,
@@ -498,9 +508,9 @@ async function getContextData(contextType, contextId, tenantId) {
             ? booking.createdAt.toLocaleDateString()
             : "",
           status: booking.status,
-          total_amount: booking.totalAmount,
-          paid_amount: booking.advancePaid,
-          remaining_balance: booking.remainingAmount,
+          total_amount: facing.totalAmount,
+          paid_amount: facing.advancePaid,
+          remaining_balance: facing.remainingAmount,
         },
         trip: {
           name: booking.tripName || booking.tripRef?.tripName || "",
