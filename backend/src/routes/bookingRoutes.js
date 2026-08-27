@@ -191,21 +191,34 @@ router.post(
 router.post(
   "/:id/passengers/:passengerId/document",
   authenticate,
+  requirePermission("bookings.edit"),
   documentUpload.single("document"),
   uploadPassengerDocument,
 );
 router.get(
   "/:id/passengers/:passengerId/document",
   authenticate,
+  requirePermission("bookings.view"),
   downloadPassengerDocument,
 );
 router.delete(
   "/:id/passengers/:passengerId/document",
   authenticate,
+  requirePermission("bookings.edit"),
   deletePassengerDocument,
 );
-router.get("/:id/documents/:docId", authenticate, downloadPassengerDocument);
-router.delete("/:id/documents/:docId", authenticate, deletePassengerDocument);
+router.get(
+  "/:id/documents/:docId",
+  authenticate,
+  requirePermission("bookings.view"),
+  downloadPassengerDocument,
+);
+router.delete(
+  "/:id/documents/:docId",
+  authenticate,
+  requirePermission("bookings.edit"),
+  deletePassengerDocument,
+);
 router.post(
   "/:id/cancel",
   authenticate,

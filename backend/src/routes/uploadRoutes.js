@@ -4,26 +4,31 @@ const upload = require("../middleware/upload");
 const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
-
-const allowedOrigins = [
-  "https://youthcamping.online",
-  "https://www.youthcamping.online",
-  "https://admin.youthcamping.online",
-];
+const { getAllowedOrigins } = require("../middleware/cors");
 
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const normalized = origin.replace(/\/$/, "");
-    if (
-      allowedOrigins.includes(normalized) ||
-      /\.vercel\.app$/i.test(normalized) ||
+    const allowed = getAllowedOrigins();
+    const isProd = process.env.NODE_ENV === "production";
+    const isLocal =
       /^https?:\/\/localhost(:\d+)?$/i.test(normalized) ||
-      /patelparth3315/i.test(normalized)
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/i.test(normalized);
+
+    if (allowed.includes(normalized)) {
+      return callback(null, true);
+    }
+    if (!isProd && isLocal) {
+      return callback(null, true);
+    }
+    if (
+      normalized.endsWith(".youthcamping.online") ||
+      normalized.endsWith(".youthcamping.in")
     ) {
       return callback(null, true);
     }
-    callback(null, false);
+    return callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

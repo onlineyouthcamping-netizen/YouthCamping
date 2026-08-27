@@ -37,6 +37,10 @@ const {
   isCollectionVerified,
   isEligibleCollectionAssignee,
   requireCollectionVerifier,
+  canTerminalApproveVendorPayout,
+  vendorPayoutRequiresFounder,
+  vendorPayoutThresholdAmount,
+  operationalVendorRecordStatus,
 } = require("../src/utils/collectionVerification");
 const {
   reviewCollectionFC,
@@ -155,6 +159,20 @@ describe("strict collection verification identity", () => {
     expect(canCompleteCollectionVerification({ role: "superadmin" })).toBe(true);
     expect(canCompleteCollectionVerification({ role: "super_admin" })).toBe(true);
     expect(canCompleteCollectionVerification({ role: "finance_controller" })).toBe(true);
+  });
+
+  it("requires Founder for vendor payouts over ₹50,000", () => {
+    const fc = { role: "finance_controller" };
+    const founder = { role: "superadmin" };
+    expect(vendorPayoutRequiresFounder(50000)).toBe(false);
+    expect(vendorPayoutRequiresFounder(50001)).toBe(true);
+    expect(canTerminalApproveVendorPayout(fc, 50000)).toBe(true);
+    expect(canTerminalApproveVendorPayout(fc, 50001)).toBe(false);
+    expect(canTerminalApproveVendorPayout(founder, 90000)).toBe(true);
+    expect(canTerminalApproveVendorPayout({ role: "sales" }, 1000)).toBe(false);
+    expect(vendorPayoutThresholdAmount({ agreedAmount: 90000, advancePaid: 20000 })).toBe(70000);
+    expect(operationalVendorRecordStatus(10000, 10000, "PENDING")).toBe("Advance Paid");
+    expect(operationalVendorRecordStatus(10000, 10000, "APPROVED_FOUNDER")).toBe("Paid");
   });
 
   it("allows admin only when they are the protected founder identity", () => {

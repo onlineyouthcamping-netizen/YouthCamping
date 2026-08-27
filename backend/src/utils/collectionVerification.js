@@ -75,6 +75,34 @@ function canCompleteCollectionVerification(user) {
   return isFounderIdentity(user) || isFinanceControllerIdentity(user);
 }
 
+const VENDOR_PAYOUT_FOUNDER_THRESHOLD_INR = 50000;
+
+function vendorPayoutThresholdAmount(payment) {
+  const agreed = Number(payment?.agreedAmount || 0);
+  const advance = Number(payment?.advancePaid || 0);
+  const remaining = Math.max(0, agreed - advance);
+  return remaining > 0 ? remaining : agreed;
+}
+
+function vendorPayoutRequiresFounder(amount) {
+  return Number(amount || 0) > VENDOR_PAYOUT_FOUNDER_THRESHOLD_INR;
+}
+
+function canTerminalApproveVendorPayout(user, amount) {
+  if (!canCompleteCollectionVerification(user)) return false;
+  if (vendorPayoutRequiresFounder(amount)) return isFounderIdentity(user);
+  return true;
+}
+
+function operationalVendorRecordStatus(agreedAmount, advancePaid, approvalStatus) {
+  const agreed = Number(agreedAmount || 0);
+  const advance = Number(advancePaid || 0);
+  const approved = isCollectionVerified(approvalStatus);
+  if (approved && agreed > 0 && advance >= agreed) return "Paid";
+  if (advance > 0) return "Advance Paid";
+  return "Pending";
+}
+
 function requireCollectionVerifier(req, res, next) {
   const user = req.user || req.admin;
   if (!user) {
@@ -128,4 +156,9 @@ module.exports = {
   denyCollectionVerification,
   isIncomingCustomerCollection,
   isEligibleCollectionAssignee,
+  VENDOR_PAYOUT_FOUNDER_THRESHOLD_INR,
+  vendorPayoutThresholdAmount,
+  vendorPayoutRequiresFounder,
+  canTerminalApproveVendorPayout,
+  operationalVendorRecordStatus,
 };

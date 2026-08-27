@@ -3968,16 +3968,13 @@ exports.cancelBookingWithRefund = async (req, res, next) => {
 /**
  * Plain booking status update — separate responsibility from cancellation.
  * Only mutates `status`. Never touches payments, refunds, amounts, or emails.
- *
- * Allowed transitions (see utils/bookingStatus.js):
- *   pending → confirmed, pending → cancelled, confirmed → cancelled
+ * Cancellation / rejection must use POST /:id/cancel.
  */
 exports.updateBookingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     const tenantId = resolveTenantId(req);
-    const role = req.user?.role;
 
     if (!status) {
       return res
@@ -3985,9 +3982,15 @@ exports.updateBookingStatus = async (req, res, next) => {
         .json({ success: false, message: "status is required" });
     }
 
-    const whereCondition = role === "superadmin" || role === "admin"
-      ? { OR: [{ id }, { bookingId: id }] }
-      : { OR: [{ id, tenantId }, { bookingId: id, tenantId }] };
+    const targetStatus = String(status).trim().toLowerCase();
+    if (targetStatus === "cancelled" || targetStatus === "rejected") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation must go through POST /api/bookings/:id/cancel",
+      });
+    }
+
+    const whereCondition = { OR: [{ id, tenantId }, { bookingId: id, tenantId }] };
 
     const booking = await prisma.booking.findFirst({ where: whereCondition });
     if (!booking) {

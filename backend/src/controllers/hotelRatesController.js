@@ -1,4 +1,4 @@
-const prisma = require('../lib/prisma');
+const { prisma } = require('../lib/prisma');
 
 /**
  * Fetch all rates for a specific hotel and year (defaults to 2027)

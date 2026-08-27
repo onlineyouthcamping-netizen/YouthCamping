@@ -10,6 +10,9 @@ const {
   canCompleteCollectionVerification,
   denyCollectionVerification,
   isCashCollectionMode,
+  isFounderIdentity,
+  vendorPayoutThresholdAmount,
+  canTerminalApproveVendorPayout,
 } = require("../utils/collectionVerification");
 const {
   isCanonicalSource,
@@ -1126,6 +1129,76 @@ exports.reviewVendorPaymentFC = async (req, res) => {
         throw { statusCode: 400, message: VENDOR_PROOF_REQUIRED };
       }
 
+      const thresholdAmount = vendorPayoutThresholdAmount(payment);
+      const actor = req.user || req.admin;
+      const canSettle = canTerminalApproveVendorPayout(actor, thresholdAmount);
+
+      const previousState = {
+        approvalStatus: payment.approvalStatus,
+        status: payment.status,
+      };
+
+      const allowedStatuses = ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"];
+
+      if (!canSettle) {
+        const updateHold = await tx.opsVendorPayment.updateMany({
+          where: {
+            id: payment.id,
+            tenantId,
+            approvalStatus: { in: allowedStatuses },
+          },
+          data: {
+            approvalStatus: "REVIEWED_FINANCE_CONTROLLER",
+            reviewedByFinanceAt: new Date(),
+            reviewedByFinanceId: user.id,
+            requiresFounderApproval: true,
+            ...vendorProofWriteFields(resolvedProof, undefined, payment),
+          },
+        });
+
+        if (updateHold.count === 0) {
+          throw {
+            statusCode: 409,
+            message: "Conflict: Vendor payment is not in a pending review state or has already been modified.",
+          };
+        }
+
+        const held = await tx.opsVendorPayment.findUnique({
+          where: { id: payment.id },
+          include: { trip: true, collectionAccount: true },
+        });
+
+        await tx.financeAuditLog.create({
+          data: {
+            tenantId,
+            entityType: "VENDOR_PAYMENT",
+            entityId: payment.id,
+            tripId: payment.tripId,
+            action: "REVIEWED_FC",
+            performedBy: user.id,
+            performedByName: user.name,
+            performedAt: new Date(),
+            oldValue: JSON.stringify(previousState),
+            newValue: JSON.stringify({
+              approvalStatus: "REVIEWED_FINANCE_CONTROLLER",
+              requiresFounderApproval: true,
+            }),
+            changeDescription: `Vendor payout held for Founder approval (${payment.vendorName}, remaining ₹${thresholdAmount})`,
+            reason: sanitizeReason(reason) || null,
+            ipAddress: req.ip || null,
+            userAgent: req.get("user-agent") || null,
+          },
+        });
+
+        return {
+          updated: held,
+          remainingPayable: held?.remainingPayable,
+          operationalSyncResolved: isCanonicalSource(held?.sourceType, held?.sourceId),
+          requiresFounderApproval: true,
+          heldForFounder: true,
+        };
+      }
+
       // Calculate strictly on the server-side from database fields
       const agreed = Number(payment.agreedAmount || 0);
       const { finalAdvance, finalRemaining, newStatus } = clearedVendorPayoutAmounts(
@@ -1133,13 +1206,7 @@ exports.reviewVendorPaymentFC = async (req, res) => {
         payment.advancePaid,
       );
 
-      const previousState = {
-        approvalStatus: payment.approvalStatus,
-        status: payment.status,
-      };
-
       const newApprovalStatus = "APPROVED_FOUNDER";
-      const allowedStatuses = ["PENDING", "REJECTED", "REVIEWED_FINANCE_CONTROLLER"];
 
       // Atomic conditional update — always the resolved OpsVendorPayment id
       // (request param may be a Departure Hub hotel/fleet/guide id).
@@ -1205,8 +1272,20 @@ exports.reviewVendorPaymentFC = async (req, res) => {
         },
       });
 
-      return { updated, remainingPayable: finalRemaining, operationalSyncResolved: isCanonicalSource(updated?.sourceType, updated?.sourceId) };
+      return { updated, remainingPayable: finalRemaining, operationalSyncResolved: isCanonicalSource(updated?.sourceType, updated?.sourceId), requiresFounderApproval: false, heldForFounder: false };
     });
+
+    if (result.heldForFounder) {
+      return res.json({
+        success: true,
+        status: "success",
+        message: "Finance Controller reviewed. Founder approval required for payouts over ₹50,000.",
+        payment: result.updated,
+        requiresFounderApproval: true,
+        remainingPayable: result.remainingPayable,
+        operationalLinked: result.operationalSyncResolved,
+      });
+    }
 
     return res.json({
       success: true,
@@ -1234,10 +1313,10 @@ exports.reviewVendorPaymentFC = async (req, res) => {
  */
 exports.approveVendorPaymentFounder = async (req, res) => {
   try {
-    if (!canCompleteCollectionVerification(req.user || req.admin)) {
+    if (!isFounderIdentity(req.user || req.admin)) {
       return res.status(403).json({
         success: false,
-        message: "Forbidden: only Founder or Finance Controller can approve vendor payouts",
+        message: "Forbidden: only Founder can complete founder approval for vendor payouts",
       });
     }
     const { paymentId } = req.params;

@@ -5,6 +5,22 @@ const LOCAL_UPLOAD_DIR = path.join(__dirname, "../../uploads/documents");
 
 console.log("[STORAGE] Using local document storage:", LOCAL_UPLOAD_DIR);
 
+function resolveSafeLocalPath(storagePath) {
+  if (!storagePath || typeof storagePath !== "string" || storagePath.includes("\0")) {
+    throw new Error("Document not found in storage.");
+  }
+  const normalized = path.normalize(storagePath).replace(/^[/\\]+/, "");
+  if (!normalized || normalized === "." || normalized.startsWith("..") || path.isAbsolute(storagePath)) {
+    throw new Error("Document not found in storage.");
+  }
+  const fullLocalPath = path.resolve(path.join(LOCAL_UPLOAD_DIR, normalized));
+  const root = path.resolve(LOCAL_UPLOAD_DIR);
+  if (fullLocalPath !== root && !fullLocalPath.startsWith(root + path.sep)) {
+    throw new Error("Document not found in storage.");
+  }
+  return fullLocalPath;
+}
+
 /**
  * Uploads a file buffer to local VPS storage.
  * @param {Buffer} fileBuffer
@@ -14,7 +30,7 @@ console.log("[STORAGE] Using local document storage:", LOCAL_UPLOAD_DIR);
  */
 async function uploadFile(fileBuffer, storagePath, _mimeType) {
   try {
-    const fullLocalPath = path.join(LOCAL_UPLOAD_DIR, storagePath);
+    const fullLocalPath = resolveSafeLocalPath(storagePath);
     const parentDir = path.dirname(fullLocalPath);
 
     if (!fs.existsSync(parentDir)) {
@@ -36,9 +52,9 @@ async function uploadFile(fileBuffer, storagePath, _mimeType) {
  * @returns {Promise<{ buffer: Buffer }>}
  */
 async function downloadFile(storagePath) {
-  const fullLocalPath = path.join(LOCAL_UPLOAD_DIR, storagePath);
+  const fullLocalPath = resolveSafeLocalPath(storagePath);
   if (fs.existsSync(fullLocalPath)) {
-    console.log("[STORAGE] Retrieving file from local storage:", storagePath);
+    console.log("[STORAGE] Retrieving file from local storage");
     const buffer = fs.readFileSync(fullLocalPath);
     return { buffer };
   }
@@ -52,7 +68,7 @@ async function downloadFile(storagePath) {
  * @returns {Promise<boolean>}
  */
 async function deleteFile(storagePath) {
-  const fullLocalPath = path.join(LOCAL_UPLOAD_DIR, storagePath);
+  const fullLocalPath = resolveSafeLocalPath(storagePath);
   if (fs.existsSync(fullLocalPath)) {
     try {
       fs.unlinkSync(fullLocalPath);
@@ -70,4 +86,5 @@ module.exports = {
   downloadFile,
   deleteFile,
   LOCAL_UPLOAD_DIR,
+  resolveSafeLocalPath,
 };

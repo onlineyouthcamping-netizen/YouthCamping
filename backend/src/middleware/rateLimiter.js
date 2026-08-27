@@ -1,5 +1,6 @@
 const passwordChangeStore = new Map();
 const apiKeyGenStore = new Map();
+const aiItineraryStore = new Map();
 
 // Helper to clean up old rate limit records (older than 24h)
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -66,5 +67,41 @@ exports.apiKeyGenerationLimiter = (req, res, next) => {
 
   record.count += 1;
   apiKeyGenStore.set(userId, record);
+  next();
+};
+
+/**
+ * Rate limiter for AI itinerary generation (max 20 per hour per authenticated user).
+ */
+exports.aiItineraryLimiter = (req, res, next) => {
+  if (
+    process.env.DISABLE_RATE_LIMIT === "true" ||
+    process.env.NODE_ENV === "test"
+  ) {
+    return next();
+  }
+
+  const userId = req.user?.id || req.ip;
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000;
+  cleanStore(aiItineraryStore);
+
+  let record = aiItineraryStore.get(userId);
+  if (!record || now - record.resetTime > windowMs) {
+    record = { count: 1, resetTime: now };
+    aiItineraryStore.set(userId, record);
+    return next();
+  }
+
+  if (record.count >= 20) {
+    return res.status(429).json({
+      success: false,
+      message:
+        "Too many itinerary generation requests. Maximum 20 per hour allowed.",
+    });
+  }
+
+  record.count += 1;
+  aiItineraryStore.set(userId, record);
   next();
 };

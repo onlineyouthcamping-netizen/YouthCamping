@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   optionalAuthenticate,
+  authenticate,
   requirePermission,
 } = require("../middleware/auth");
 const activityController = require("../controllers/activityMasterController");
@@ -9,10 +10,12 @@ const activityController = require("../controllers/activityMasterController");
 /**
  * ─────────────────────────────────────────────────────────────────────────────
  * ENTERPRISE ACTIVITY MASTER DIRECTORY ROUTES
- * Protects Master Data and Operational Activity assignments with RBAC
- * Supports test environments and fallback authentication
+ * Reads stay optionally authenticated. Every mutation requires a session
+ * plus ops.manage (or aliased operations.edit).
  * ─────────────────────────────────────────────────────────────────────────────
  */
+
+const mutateActivity = [authenticate, requirePermission("ops.manage")];
 
 router.use(optionalAuthenticate);
 
@@ -26,25 +29,40 @@ router.get(
   activityController.getActivityVendorComparison,
 );
 router.get("/:id", activityController.getActivityMasterById);
-router.post("/", activityController.createActivityMaster);
-router.put("/:id", activityController.updateActivityMaster);
-router.post("/:id/documents", activityController.addActivityDocument);
+router.post("/", ...mutateActivity, activityController.createActivityMaster);
+router.put("/:id", ...mutateActivity, activityController.updateActivityMaster);
+router.post(
+  "/:id/documents",
+  ...mutateActivity,
+  activityController.addActivityDocument,
+);
 
 // --- 2. 0-Coupled Seasonal Activity-Vendor Contracts ---
-router.post("/contracts", activityController.createActivityContract);
+router.post(
+  "/contracts",
+  ...mutateActivity,
+  activityController.createActivityContract,
+);
 
 // --- 3. Operational Departure Activity Assignments ---
-router.post("/departures", activityController.createDepartureActivity);
+router.post(
+  "/departures",
+  ...mutateActivity,
+  activityController.createDepartureActivity,
+);
 router.post(
   "/departures/allocate-passenger",
+  ...mutateActivity,
   activityController.allocatePassengerActivity,
 );
 router.post(
   "/departures/:id/voucher",
+  ...mutateActivity,
   activityController.generateActivityVoucher,
 );
 router.put(
   "/departures/:id/status",
+  ...mutateActivity,
   activityController.updateDepartureActivityStatus,
 );
 

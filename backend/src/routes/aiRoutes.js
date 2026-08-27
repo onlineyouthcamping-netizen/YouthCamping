@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { authenticate } = require("../middleware/auth");
+const { aiItineraryLimiter } = require("../middleware/rateLimiter");
 
 const SYSTEM_PROMPT = `You are an expert travel itinerary structurer for a luxury travel company.
 Your job is to take raw trip details provided by a travel agent and return ONLY a perfectly structured JSON object — no markdown, no code blocks, no explanations.
@@ -71,7 +73,7 @@ JSON SCHEMA TO RETURN:
   }
 }`;
 
-router.post("/generate-itinerary", async (req, res) => {
+router.post("/generate-itinerary", authenticate, aiItineraryLimiter, async (req, res) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     return res

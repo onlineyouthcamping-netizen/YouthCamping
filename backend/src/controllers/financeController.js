@@ -1221,6 +1221,7 @@ exports.verifyIncomingPayment = async (req, res) => {
         if (action === "VERIFY" && clientPayment.booking) {
           const allVerified = await prisma.opsClientPayment.findMany({
             where: {
+              tenantId,
               bookingId: { in: [clientPayment.booking.id, clientPayment.booking.bookingId] },
               status: "Verified",
             },
@@ -1540,8 +1541,8 @@ exports.verifyTicketingPrice = async (req, res) => {
     const userId = req.user?.id;
     const userName = req.user?.name || "Finance Controller";
 
-    const ticket = await prisma.trainTicketRequest.findUnique({
-      where: { id },
+    const ticket = await prisma.trainTicketRequest.findFirst({
+      where: { id, tenantId: req.user?.tenantId || req.admin?.tenantId || "default" },
     });
 
     if (!ticket) {
@@ -1713,8 +1714,9 @@ exports.verifyDeparturePayment = async (req, res) => {
     const { action, notes } = req.body;
     const userId = req.user?.id;
 
-    const payment = await prisma.opsGuidePayment.findUnique({
-      where: { id },
+    const tenantId = req.user?.tenantId || req.admin?.tenantId || "default";
+    const payment = await prisma.opsGuidePayment.findFirst({
+      where: { id, tenantId },
     });
 
     if (!payment) {

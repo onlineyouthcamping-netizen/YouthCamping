@@ -1101,3 +1101,153 @@ describe("batchVerifyStationCash tenant isolation", () => {
     expect(mutatedIds).not.toContain("other_tenant_1");
   });
 });
+
+describe("vendor payout ₹50,000 Founder threshold", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function payoutTx(payment) {
+    return {
+      opsVendorPayment: {
+        findFirst: jest.fn().mockResolvedValue(payment),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn().mockResolvedValue({
+          ...payment,
+          approvalStatus: payment.held
+            ? "REVIEWED_FINANCE_CONTROLLER"
+            : "APPROVED_FOUNDER",
+        }),
+      },
+      opsHotelBooking: { findFirst: jest.fn(), updateMany: jest.fn() },
+      opsTransportFleet: { findFirst: jest.fn() },
+      opsGuidePayment: { findFirst: jest.fn() },
+      financeAuditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
+  }
+
+  it("lets Finance Controller fully approve payouts at or under ₹50,000", async () => {
+    const payment = {
+      id: "vp_40k",
+      tenantId: "tenant-a",
+      tripId: "trip_1",
+      vendorName: "Camp",
+      category: "Hotels",
+      agreedAmount: 40000,
+      advancePaid: 0,
+      remainingPayable: 40000,
+      approvalStatus: "PENDING",
+      status: "Pending",
+    };
+    const tx = payoutTx(payment);
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const res = createRes();
+    await reviewVendorPaymentFC(
+      {
+        params: { paymentId: "vp_40k" },
+        body: { invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
+        user: { id: "fc_1", name: "FC", role: "finance_controller", tenantId: "tenant-a" },
+        ip: "127.0.0.1",
+        get: () => "jest",
+      },
+      res,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.requiresFounderApproval).toBe(false);
+    expect(tx.opsVendorPayment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ approvalStatus: "APPROVED_FOUNDER" }),
+      }),
+    );
+  });
+
+  it("holds payouts over ₹50,000 for Founder when Finance Controller reviews", async () => {
+    const payment = {
+      id: "vp_60k",
+      tenantId: "tenant-a",
+      tripId: "trip_1",
+      vendorName: "Camp",
+      category: "Hotels",
+      agreedAmount: 60000,
+      advancePaid: 0,
+      remainingPayable: 60000,
+      approvalStatus: "PENDING",
+      status: "Pending",
+      held: true,
+    };
+    const tx = payoutTx(payment);
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const res = createRes();
+    await reviewVendorPaymentFC(
+      {
+        params: { paymentId: "vp_60k" },
+        body: { invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
+        user: { id: "fc_1", name: "FC", role: "finance_controller", tenantId: "tenant-a" },
+        ip: "127.0.0.1",
+        get: () => "jest",
+      },
+      res,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.requiresFounderApproval).toBe(true);
+    expect(tx.opsVendorPayment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          approvalStatus: "REVIEWED_FINANCE_CONTROLLER",
+          requiresFounderApproval: true,
+        }),
+      }),
+    );
+    expect(tx.opsVendorPayment.updateMany.mock.calls[0][0].data.status).toBeUndefined();
+  });
+
+  it("lets Founder fully approve payouts over ₹50,000", async () => {
+    const payment = {
+      id: "vp_60k_f",
+      tenantId: "tenant-a",
+      tripId: "trip_1",
+      vendorName: "Camp",
+      category: "Hotels",
+      agreedAmount: 60000,
+      advancePaid: 0,
+      remainingPayable: 60000,
+      approvalStatus: "PENDING",
+      status: "Pending",
+    };
+    const tx = payoutTx(payment);
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const res = createRes();
+    await reviewVendorPaymentFC(
+      {
+        params: { paymentId: "vp_60k_f" },
+        body: { invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
+        user: { id: "founder_1", name: "Founder", role: "superadmin", tenantId: "tenant-a" },
+        ip: "127.0.0.1",
+        get: () => "jest",
+      },
+      res,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.requiresFounderApproval).toBe(false);
+    expect(tx.opsVendorPayment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ approvalStatus: "APPROVED_FOUNDER" }),
+      }),
+    );
+  });
+
+  it("rejects Finance Controller on the Founder-only approve endpoint", async () => {
+    const res = createRes();
+    await approveVendorPaymentFounder(
+      {
+        params: { paymentId: "vp_1" },
+        body: { invoiceFileUrl: "https://cdn.example.com/payout.jpg" },
+        user: { id: "fc_1", name: "FC", role: "finance_controller", tenantId: "tenant-a" },
+        ip: "127.0.0.1",
+        get: () => "jest",
+      },
+      res,
+    );
+    expect(res.statusCode).toBe(403);
+  });
+});

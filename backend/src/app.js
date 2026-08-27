@@ -145,18 +145,33 @@ app.use("/api/attachments", require("./routes/attachmentRoutes"));
 app.use("/api", require("./routes/guideAdminRoutes"));
 app.use("/api/admin/activities", require("./routes/activityRoutes"));
 
+const {
+  authenticate: authenticateUploads,
+  requirePermission: requireUploadPermission,
+} = require("./middleware/auth");
+const {
+  servePrivatePassengerDocument,
+} = require("./middleware/servePrivateDocuments");
 const { protect: protectAnalytics } = require("./middleware/auth");
 const {
   getBookingLinksAnalytics,
 } = require("./controllers/bookingLinkController");
 app.get("/api/analytics", protectAnalytics, getBookingLinksAnalytics);
 
-// Serve Static Files under both /uploads and /api/uploads
+// Passenger identity documents are never public. Serve only after auth + tenant check.
+const privateDocumentGuards = [
+  authenticateUploads,
+  requireUploadPermission("bookings.view"),
+  servePrivatePassengerDocument,
+];
+app.use("/uploads/documents", ...privateDocumentGuards);
+app.use("/api/uploads/documents", ...privateDocumentGuards);
+
+// Public marketing/media uploads only — never backend/uploads (identity documents).
 const uploadDirs = [
   path.join(__dirname, "../../public/uploads"),
   path.join(__dirname, "../public/uploads"),
   path.join(process.cwd(), "public/uploads"),
-  path.join(process.cwd(), "uploads"),
 ];
 uploadDirs.forEach((dir) => {
   try {

@@ -14,6 +14,8 @@ dist/
 scratch/
 *.zip
 *.archive/
+# Runtime uploads (passenger identity documents must never be committed)
+backend/uploads/
 /uploads/
 /public/
 

@@ -9,9 +9,15 @@ const express = require("express");
 const router = express.Router();
 const { prisma, queryWithTimeout } = require("../utils/database");
 const {
+  authenticate,
+  requirePermission,
+} = require("../middleware/auth");
+const {
   validatePagination,
   validateBooleanParam,
 } = require("../utils/validators");
+
+const mutateReview = [authenticate, requirePermission("website.edit")];
 
 router.get("/", async (req, res, next) => {
   try {
@@ -154,7 +160,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // CREATE Review
-router.post("/", async (req, res) => {
+router.post("/", ...mutateReview, async (req, res) => {
   try {
     const {
       userName,
@@ -215,7 +221,7 @@ router.post("/", async (req, res) => {
 });
 
 // UPDATE Review
-router.put("/:id", async (req, res) => {
+router.put("/:id", ...mutateReview, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -269,7 +275,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE Review
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", ...mutateReview, async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.review.delete({

@@ -7,6 +7,9 @@ const {
   denyCollectionVerification,
   TERMINAL_APPROVED,
   canonicalCollectionStatus,
+  operationalVendorRecordStatus,
+  vendorPayoutThresholdAmount,
+  canTerminalApproveVendorPayout,
 } = require("../utils/collectionVerification");
 const {
   resolveSourceFromBody,
@@ -66,6 +69,7 @@ async function refreshBookingFromApprovedReceipts(booking) {
   const ids = [booking.id, booking.bookingId].filter(Boolean);
   const allVerified = await prisma.opsClientPayment.findMany({
     where: {
+      tenantId: booking.tenantId || "default",
       bookingId: { in: ids },
       approvalStatus: TERMINAL_APPROVED,
     },
@@ -456,6 +460,7 @@ exports.verifyClientPayment = async (req, res) => {
     // Update booking totals
     const booking = await prisma.booking.findFirst({
       where: {
+        tenantId,
         OR: [{ bookingId: receipt.bookingId }, { id: receipt.bookingId }],
       },
     });
@@ -1178,8 +1183,6 @@ exports.createVendorPayment = async (req, res) => {
       collectionAccountId,
       transactionId,
       invoiceProof,
-      status,
-      approvalStatus,
       remarks,
       sourceType: bodySourceType,
       sourceId: bodySourceId,
@@ -1244,17 +1247,12 @@ exports.createVendorPayment = async (req, res) => {
       advance = 0;
     }
     const remaining = Math.max(0, agreed - advance);
-    const resolvedApproval = isMisc
-      ? "PENDING"
-      : approvalStatus || payment?.approvalStatus || "PENDING";
-    const resolvedStatus = isMisc
-      ? "Pending"
-      : status ||
-        (advance >= agreed && agreed > 0
-          ? "Paid"
-          : advance > 0
-            ? "Advance Paid"
-            : "Pending");
+    const resolvedApproval = payment?.approvalStatus || "PENDING";
+    const resolvedStatus = operationalVendorRecordStatus(
+      agreed,
+      advance,
+      resolvedApproval,
+    );
 
     if (payment) {
       payment = await prisma.opsVendorPayment.update({
@@ -1348,8 +1346,6 @@ exports.updateVendorPayment = async (req, res) => {
       collectionAccountId,
       transactionId,
       invoiceProof,
-      status,
-      approvalStatus,
       remarks,
       paidBy,
       sourceType: bodySourceType,
@@ -1435,14 +1431,11 @@ exports.updateVendorPayment = async (req, res) => {
       const finalAgreed = agreed !== undefined ? agreed : existing.agreedAmount;
       const finalAdvance = advance !== undefined ? advance : existing.advancePaid;
       const remaining = Math.max(0, finalAgreed - finalAdvance);
-      const computedStatus =
-        status !== undefined
-          ? status
-          : finalAdvance >= finalAgreed && finalAgreed > 0
-            ? "Paid"
-            : finalAdvance > 0
-              ? "Advance Paid"
-              : "Pending";
+      const computedStatus = operationalVendorRecordStatus(
+        finalAgreed,
+        finalAdvance,
+        existing.approvalStatus,
+      );
 
       updated = await prisma.opsVendorPayment.update({
         where: { id: existing.id },
@@ -1467,10 +1460,6 @@ exports.updateVendorPayment = async (req, res) => {
             transactionId !== undefined ? transactionId : existing.transactionId,
           ...vendorProofFieldsFromBody(req.body, existing),
           status: computedStatus,
-          ...(approvalStatus !== undefined
-            ? { approvalStatus }
-            : {}),
-          ...(paidBy !== undefined ? { paidBy } : {}),
           remarks: remarks !== undefined ? remarks : existing.remarks,
           ...(resolvedSource && !existing.sourceId
             ? { sourceType: resolvedSource.sourceType, sourceId: resolvedSource.sourceId }
@@ -1496,13 +1485,11 @@ exports.updateVendorPayment = async (req, res) => {
       const finalAgreed = agreed || 0;
       const finalAdvance = advance || 0;
       const remaining = Math.max(0, finalAgreed - finalAdvance);
-      const computedStatus =
-        status ||
-        (finalAdvance >= finalAgreed && finalAgreed > 0
-          ? "Paid"
-          : finalAdvance > 0
-            ? "Advance Paid"
-            : "Pending");
+      const computedStatus = operationalVendorRecordStatus(
+        finalAgreed,
+        finalAdvance,
+        "PENDING",
+      );
 
       updated = await prisma.opsVendorPayment.create({
         data: {
@@ -1521,7 +1508,7 @@ exports.updateVendorPayment = async (req, res) => {
           transactionId: transactionId || `TXN-${Date.now()}`,
           ...vendorProofFieldsFromBody(req.body),
           status: computedStatus,
-          ...(approvalStatus !== undefined ? { approvalStatus } : {}),
+          approvalStatus: "PENDING",
           paidBy:
             paidBy !== undefined
               ? paidBy
@@ -1563,10 +1550,11 @@ exports.verifyVendorPayment = async (req, res) => {
       return denyCollectionVerification(res);
     }
     const { id } = req.params;
-    const { status, remarks } = req.body;
+    const tenantId = resolveTenantId(req);
+    const { remarks } = req.body || {};
 
-    const existing = await prisma.opsVendorPayment.findUnique({
-      where: { id },
+    const existing = await prisma.opsVendorPayment.findFirst({
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -1575,10 +1563,31 @@ exports.verifyVendorPayment = async (req, res) => {
         .json({ success: false, message: "Vendor payment record not found" });
     }
 
+    const thresholdAmount = vendorPayoutThresholdAmount(existing);
+    if (!canTerminalApproveVendorPayout(req.user || req.admin, thresholdAmount)) {
+      return res.status(403).json({
+        success: false,
+        message: "Founder approval required for vendor payouts over ₹50,000",
+      });
+    }
+
+    const agreed = Number(existing.agreedAmount || 0);
+    const recorded = Number(existing.advancePaid || 0);
+    const finalAdvance = Math.max(agreed, recorded);
+    const remaining = Math.max(0, agreed - finalAdvance);
+    const nextStatus = operationalVendorRecordStatus(
+      agreed,
+      finalAdvance,
+      TERMINAL_APPROVED,
+    );
+
     const updated = await prisma.opsVendorPayment.update({
-      where: { id },
+      where: { id: existing.id },
       data: {
-        status: status || "Paid",
+        approvalStatus: TERMINAL_APPROVED,
+        status: nextStatus,
+        advancePaid: finalAdvance,
+        remainingPayable: remaining,
         remarks: remarks || existing.remarks,
       },
     });
