@@ -21,6 +21,35 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+import { Metadata } from "next";
+import { pageMetadata, stripHtml, truncateMeta } from "@/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const blogResult = await fetchBlogBySlugResult(slug);
+  const blog = blogResult.ok ? blogResult.data : null;
+  if (!blog) {
+    return pageMetadata({
+      title: "Story | YouthCamping",
+      description: "A YouthCamping travel story.",
+      path: `/blogs/${slug}`,
+      index: false,
+    });
+  }
+  const description =
+    truncateMeta(stripHtml(blog.content || blog.description || "")) ||
+    `Read ${blog.title} on YouthCamping.`;
+  return pageMetadata({
+    title: `${blog.title} | YouthCamping`,
+    description,
+    path: `/blogs/${slug}`,
+    image: normalizeImageUrl(blog.image),
+  });
+}
 
 export default async function BlogDetailPage({
   params,

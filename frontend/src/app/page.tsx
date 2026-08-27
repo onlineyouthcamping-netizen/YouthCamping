@@ -1,4 +1,5 @@
 import React from "react";
+import { Metadata } from "next";
 import PageRenderer from "@/components/PageRenderer";
 import FloatingSocialBar from "@/components/FloatingSocialBar";
 import {
@@ -9,8 +10,16 @@ import {
 } from "@/lib/api";
 import { unwrapData } from "@/lib/publicData";
 import { Trip, Review, Blog } from "@/types";
+import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
+
+export const metadata: Metadata = pageMetadata({
+  title: "YouthCamping — Adventure Tours for Young India",
+  description:
+    "Book Himachal Pradesh, Ladakh, Kashmir, Kerala group tours. Best adventure trips for young adults from Gujarat.",
+  path: "/",
+});
 
 export default async function Home() {
   const [tripsResult, reviewsResult, blogsResult, pageResult] =

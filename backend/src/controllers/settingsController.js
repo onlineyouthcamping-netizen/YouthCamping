@@ -18,7 +18,7 @@ const defaultFooterConfig = {
     "Money Plant High Street, A 738, Jagatpur Rd, Gota, Ahmedabad, Gujarat 382470",
   phone: "+91-99242 46267",
   email: "info@youthcamping.com",
-  website: "youthcamping.in",
+  website: "youthcamping.online",
   copyright: "ALL RIGHTS RESERVED.",
   logoUrl: "/logo-stacked.png",
   showSocial: true,

@@ -58,9 +58,9 @@ exports.updateSeo = async (req, res, next) => {
 
 exports.getSitemap = async (req, res) => res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.youthcamping.online/</loc></url>
+  <url><loc>https://youthcamping.online/</loc></url>
 </urlset>`);
 
 exports.getRobots = async (req, res) => res.type("text/plain").send(`User-agent: *
 Allow: /
-Sitemap: https://www.youthcamping.online/sitemap.xml`);
+Sitemap: https://youthcamping.online/sitemap.xml`);

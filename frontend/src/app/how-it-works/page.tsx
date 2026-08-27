@@ -11,11 +11,14 @@ import {
   PhoneCall,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "How It Works | YouthCamping OS",
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "How It Works | YouthCamping",
   description:
-    "Learn how to book, customize, and embark on your YouthCamping expedition in 4 easy steps.",
-};
+    "How to book a YouthCamping group trip: choose a destination, reserve a seat, get confirmation, and travel.",
+  path: "/how-it-works",
+});
 
 const steps = [
   {

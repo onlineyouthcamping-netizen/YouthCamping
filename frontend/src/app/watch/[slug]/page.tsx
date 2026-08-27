@@ -12,6 +12,8 @@ import {
   MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
+import { pageMetadata, stripHtml, truncateMeta } from "@/lib/seo";
+import { PUBLIC_SITE_ORIGIN, absoluteSiteUrl } from "@/lib/site";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -23,23 +25,25 @@ export async function generateMetadata({
   const { slug } = await params;
   const blogResult = await fetchBlogBySlugResult(slug);
   if (!blogResult.ok || !blogResult.data)
-    return { title: blogResult.ok ? "Not Found" : "Temporarily unavailable" };
+    return pageMetadata({
+      title: blogResult.ok ? "Not Found" : "Temporarily unavailable",
+      description: "YouthCamping travel video.",
+      path: `/watch/${slug}`,
+      index: false,
+    });
 
   const blog = blogResult.data;
-
-  const excerpt = "Watch this exclusive travel documentary by Youthcamping.";
+  const excerpt =
+    truncateMeta(stripHtml(blog.content || "")) ||
+    `Watch ${blog.title} on YouthCamping.`;
   const imageUrl = normalizeImageUrl(blog.image);
 
-  return {
-    title: `Watch: ${blog.title} | Youthcamping`,
+  return pageMetadata({
+    title: `Watch: ${blog.title} | YouthCamping`,
     description: excerpt,
-    openGraph: {
-      title: `Watch: ${blog.title}`,
-      description: excerpt,
-      images: imageUrl ? [{ url: imageUrl }] : [],
-      type: "video.movie",
-    },
-  };
+    path: `/watch/${slug}`,
+    image: imageUrl,
+  });
 }
 
 export default async function VideoWatchPage({ params }: PageProps) {
@@ -148,12 +152,13 @@ export default async function VideoWatchPage({ params }: PageProps) {
               "Watch this exclusive travel documentary by Youthcamping.",
             thumbnailUrl: normalizeImageUrl(blog.image),
             uploadDate: blog.createdAt,
+            url: absoluteSiteUrl(`/watch/${slug}`),
             publisher: {
               "@type": "Organization",
               name: "Youthcamping",
               logo: {
                 "@type": "ImageObject",
-                url: "https://youthcamping.online/logo.png",
+                url: `${PUBLIC_SITE_ORIGIN}/logo.png`,
               },
             },
             embedUrl: videoUrl,

@@ -1,7 +1,9 @@
-import { fetchTripBySlugResult } from "@/lib/api";
+import { fetchTripBySlugResult, normalizeImageUrl } from "@/lib/api";
 import { formatDuration } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import ServiceUnavailable from "@/components/ServiceUnavailable";
+import { Metadata } from "next";
+import { pageMetadata, tripJsonLd, tripSeoFields } from "@/lib/seo";
 export const revalidate = 30;
 
 import {
@@ -17,6 +19,32 @@ import StickyBookingCard from "@/components/StickyBookingCard";
 import TripDetailView from "@/components/TripDetailView";
 import Link from "next/link";
 import TripInquiryAutoTrigger from "@/components/TripInquiryAutoTrigger";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const tripResult = await fetchTripBySlugResult(slug);
+  const trip = tripResult.ok ? tripResult.data : null;
+  if (!trip) {
+    return pageMetadata({
+      title: "Trip | YouthCamping",
+      description: "YouthCamping group adventure trip.",
+      path: `/trips/${slug}`,
+      index: false,
+    });
+  }
+  const seo = tripSeoFields(trip);
+  return pageMetadata({
+    title: seo.title,
+    description: seo.description,
+    path: `/trips/${slug}`,
+    image: normalizeImageUrl(seo.image) || seo.image,
+    keywords: seo.keywords,
+  });
+}
 
 export default async function TripDetailPage({
   params,
@@ -46,9 +74,17 @@ export default async function TripDetailPage({
   ];
 
   const durationStr = formatDuration(trip.duration);
+  const seo = tripSeoFields(trip);
+  const jsonLdImage = normalizeImageUrl(seo.image) || seo.image || undefined;
 
   return (
     <div className="bg-white min-h-screen font-montserrat">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(tripJsonLd(trip, jsonLdImage)),
+        }}
+      />
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-10 pt-[84px] pb-3 md:pb-4 space-y-4 md:space-y-6">
         {/* 1. Photo Gallery Grid (At top of page below header) */}
         <TripGallerySection trip={trip} />

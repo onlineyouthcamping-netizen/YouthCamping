@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   X,
   ArrowRight,
@@ -28,13 +29,18 @@ const SECTIONS: Section[] = [
     label: "Cancellation Policy",
     type: "list",
     content: [
-      { label: "Before more than 40 days of Departure", val: "10% deduction" },
-      { label: "Before 21 to 40 days of Departure", val: "25% deduction" },
-      { label: "Before 11 to 20 days of Departure", val: "40% deduction" },
-      { label: "Before 2 to 10 days of Departure", val: "60% deduction" },
-      { label: "In the last 48 hours of Departure", val: "90% deduction" },
+      { label: "Advance booking amount", val: "Non-refundable" },
+      { label: "Before 45 days of departure", val: "80% refund" },
+      { label: "Before 30 days of departure", val: "50% refund" },
+      { label: "Before 15 days of departure", val: "25% refund" },
+      {
+        label: "Rescheduling dates (20–30 days prior)",
+        val: "Extra 25% of package cost",
+      },
+      { label: "Within 15 days of departure", val: "No refund" },
+      { label: "No show", val: "No refund" },
     ],
-    note: "Cancellation would be granted by the Senior Registration Manager on receiving cancellation requests through the website.",
+    note: "Cancellation would be granted by the Higher Authorities on receiving a cancellation request through registered mail ID only. Refunds are paid in 7 to 12 working days by bank transfer. Full payment has to be done before 15 days of trip departure. Trip-page policy, if stated, overrides this schedule.",
   },
   {
     id: "inclusions",
@@ -49,11 +55,14 @@ const SECTIONS: Section[] = [
     label: "Terms & Conditions",
     type: "simple",
     content: [
-      "The itinerary is subject to change due to weather or unforeseen conditions.",
-      "All travellers must carry a valid ID proof.",
-      "The decision of the trip captain will be final in case of any disputes.",
-      "YouthCamping is not responsible for any personal loss or damage.",
+      "You participate in this adventure & leisure trip with proper medical advice, on your own will and risk. You are solely responsible for any injury or accident (minor or fatal) during the trip.",
+      "YouthCamping is not responsible for such incidents, including risk from wild animals and water bodies near the campsite.",
+      "Neither YouthCamping nor its agents shall be liable for accident, injury, illness, death, or loss/damage to baggage arising from persons who are not its direct employees.",
+      "Bookings are accepted on the website. Payments are accepted only in the current account (details/barcode on the site) or cash at the office — not through 3rd-party portals, agents, or apps.",
+      "Full trip payment must be made before 15 days of trip departure. If not paid, participation will be cancelled. Groups under 10 persons are guided by the driver (no separate guide).",
+      "Photos and videos from the trip are YouthCamping property and may not be used without permission. Disputes are under Ahmedabad jurisdiction only.",
     ],
+    note: "By booking you agree to the full Terms & Conditions.",
   },
   {
     id: "carry",
@@ -161,16 +170,14 @@ export default function PopupDetails({
       if (sec.id === "cancellation" && startDate) {
         content = content.map((item: any) => {
           let label = item.label;
-          if (label.toLowerCase().includes("more than 40 days")) {
-            label = `Before ${formatDate(41)}`;
-          } else if (label.toLowerCase().includes("21 to 40 days")) {
-            label = `${formatDate(40)} to ${formatDate(21)}`;
-          } else if (label.toLowerCase().includes("11 to 20 days")) {
-            label = `${formatDate(20)} to ${formatDate(11)}`;
-          } else if (label.toLowerCase().includes("2 to 10 days")) {
-            label = `${formatDate(10)} to ${formatDate(2)}`;
-          } else if (label.toLowerCase().includes("48 hours")) {
-            label = `After ${formatDate(2)}`;
+          if (label.toLowerCase().includes("before 45 days")) {
+            label = `Before ${formatDate(45)}`;
+          } else if (label.toLowerCase().includes("before 30 days")) {
+            label = `Before ${formatDate(30)}`;
+          } else if (label.toLowerCase().includes("before 15 days")) {
+            label = `Before ${formatDate(15)}`;
+          } else if (label.toLowerCase().includes("within 15 days")) {
+            label = `After ${formatDate(15)}`;
           }
           return { ...item, label };
         });
@@ -422,6 +429,22 @@ export default function PopupDetails({
                       <p className="font-medium text-zinc-700">{item}</p>
                     </div>
                   ))}
+                  {activeSection.note && (
+                    <div className="flex items-start gap-3 p-3.5 bg-amber-50/60 rounded-xl border border-amber-100 mt-3">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-zinc-600 font-medium font-montserrat leading-relaxed">
+                        {activeSection.note}{" "}
+                        {activeSection.id === "terms" && (
+                          <Link
+                            href="/terms-and-conditions"
+                            className="text-[#D4541A] font-bold underline underline-offset-2"
+                          >
+                            Read the full Terms &amp; Conditions
+                          </Link>
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

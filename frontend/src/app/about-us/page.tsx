@@ -1,6 +1,7 @@
 import React from "react";
-import Metadata from "next";
+import { Metadata } from "next";
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
 import {
   Compass,
   Heart,
@@ -13,6 +14,13 @@ import {
   Phone,
   ArrowRight,
 } from "lucide-react";
+
+export const metadata: Metadata = pageMetadata({
+  title: "About Us | YouthCamping",
+  description:
+    "YouthCamping runs small-batch group adventure trips across India, with a focus on safety and local stays.",
+  path: "/about-us",
+});
 
 const values = [
   {

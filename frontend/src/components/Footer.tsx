@@ -84,6 +84,12 @@ const DEFAULT_COLUMNS: ColumnItem[] = [
         href: "/cancellation-policy",
         visible: true,
       },
+      {
+        id: "u6",
+        label: "Sitemap",
+        href: "/sitemap",
+        visible: true,
+      },
     ],
   },
 ];
@@ -99,6 +105,7 @@ const LEGAL_LINKS = [
   { href: "/terms-and-conditions", label: "Terms" },
   { href: "/privacy-policy", label: "Privacy" },
   { href: "/cancellation-policy", label: "Cancellation" },
+  { href: "/sitemap", label: "Sitemap" },
 ];
 
 // ─── Style helpers ───────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const { getPublicSiteBaseUrl } = require("../utils/publicSiteUrl");
 const path = require("path");
 const fs = require("fs");
 const { sendEmail } = require("../lib/email");
@@ -493,7 +494,7 @@ exports.sendBookingAttachments = async (req, res) => {
       const fileListText = attachments
         .map(
           (a) =>
-            `• *${a.title || a.originalName}*: https://youthcamping.online${a.fileUrl}`,
+            `• *${a.title || a.originalName}*: ${getPublicSiteBaseUrl()}${a.fileUrl}`,
         )
         .join("\n");
       const waText = encodeURIComponent(

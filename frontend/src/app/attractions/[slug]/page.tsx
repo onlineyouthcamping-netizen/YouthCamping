@@ -14,6 +14,35 @@ import {
 import { normalizeImageUrl, fetchAttractionBySlugResult } from "@/lib/api";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
 import ServiceUnavailable from "@/components/ServiceUnavailable";
+import { pageMetadata, stripHtml, truncateMeta } from "@/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const result = await fetchAttractionBySlugResult(slug);
+  const attraction = result.ok ? result.data : null;
+  if (!attraction) {
+    return pageMetadata({
+      title: "Place | YouthCamping",
+      description: "A YouthCamping destination guide.",
+      path: `/attractions/${slug}`,
+      index: false,
+    });
+  }
+  const title = attraction.name || attraction.title || slug;
+  const description =
+    truncateMeta(stripHtml(attraction.description || "")) ||
+    [title, attraction.location, attraction.category].filter(Boolean).join(" · ");
+  return pageMetadata({
+    title: `${title} | YouthCamping`,
+    description,
+    path: `/attractions/${slug}`,
+    image: normalizeImageUrl(attraction.image),
+  });
+}
 
 export default async function AttractionPage({
   params,

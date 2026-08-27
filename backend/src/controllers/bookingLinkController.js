@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { prisma } = require("../lib/prisma");
+const { getPublicSiteBaseUrl } = require("../utils/publicSiteUrl");
 
 const sha256 = (value) =>
   crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -10,13 +11,7 @@ const generateToken = () => {
   return { token, tokenPrefix: token.slice(0, 4) };
 };
 
-const getBaseUrl = () => {
-  const url =
-    process.env.FRONTEND_URL ||
-    process.env.CLIENT_URL ||
-    "https://youthcamping.online";
-  return url.replace(/\/$/, "");
-};
+const getBaseUrl = () => getPublicSiteBaseUrl();
 
 const getSigningSecret = () =>
   process.env.BOOKING_LINK_SECRET ||

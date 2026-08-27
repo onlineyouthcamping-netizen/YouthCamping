@@ -78,6 +78,16 @@ export function OptimizedImage({
     finalSrc = fallbackSrc;
   }
 
+  if (
+    typeof finalSrc === "string" &&
+    /https?:\/\/(www\.)?youthcamping\.in\/system\/images\//i.test(finalSrc)
+  ) {
+    finalSrc = finalSrc.replace(
+      /https?:\/\/(www\.)?youthcamping\.in\/system\/images\//i,
+      "https://vl-prod-static.b-cdn.net/system/images/",
+    );
+  }
+
   const isCloudinary = finalSrc && finalSrc.includes("res.cloudinary.com");
   const isUnsplash = finalSrc && finalSrc.includes("images.unsplash.com");
   const isBunny = finalSrc && finalSrc.includes("vl-prod-static.b-cdn.net");

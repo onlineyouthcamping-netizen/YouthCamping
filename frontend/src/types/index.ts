@@ -63,12 +63,24 @@ export interface AvailableDate {
   bookedCount: number;
 }
 
+export interface TripSeo {
+  title?: string;
+  description?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  keywords?: string[];
+}
+
 export interface Trip {
   id: string;
   _id?: string;
   title: string;
   slug: string;
   description: string;
+  shortDescription?: string;
+  seo?: TripSeo;
   heroImage: string;
   price: number;
   location: string;

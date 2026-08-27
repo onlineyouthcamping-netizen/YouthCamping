@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { LEGACY_PATH_REDIRECTS } from "./src/lib/legacyRedirects";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
@@ -40,6 +41,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'www.youthcamping.online',
+      },
+      {
+        protocol: 'https',
         hostname: 'www.youthcamping.in',
       },
       {
@@ -50,21 +55,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      {
-        source: "/about",
-        destination: "/about-us",
-        permanent: true,
-      },
-      {
-        source: "/tour-packages",
-        destination: "/trips",
-        permanent: true,
-      },
-      {
-        source: "/tours/:slug",
-        destination: "/trips/:slug",
-        permanent: true,
-      },
+      ...LEGACY_PATH_REDIRECTS.map((rule) => ({
+        source: rule.source,
+        destination: rule.destination,
+        statusCode: 301 as const,
+      })),
     ];
   },
   typescript: {

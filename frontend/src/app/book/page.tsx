@@ -2141,8 +2141,17 @@ function BookingForm() {
                           onChange={(e) => setAcceptTerms(e.target.checked)}
                         />
                         <span className="font-bold text-slate-700 text-[11px]">
-                          I agree to the terms and conditions and trip
-                          reservation guidelines *
+                          I agree to the{" "}
+                          <a
+                            href="/terms-and-conditions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#D4541A] underline underline-offset-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Terms and Conditions
+                          </a>{" "}
+                          and trip reservation guidelines *
                         </span>
                       </label>
 

@@ -1,5 +1,5 @@
-export const revalidate = 30;
-
+import { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { fetchPublicReviews, normalizeImageUrl } from "@/lib/api";
 import Link from "next/link";
 import {
@@ -11,6 +11,15 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+
+export const revalidate = 30;
+
+export const metadata: Metadata = pageMetadata({
+  title: "Traveller Reviews | YouthCamping",
+  description:
+    "Read authentic YouthCamping trip reviews from travellers on group adventures across India.",
+  path: "/reviews",
+});
 
 export default async function ReviewsPage() {
   let reviews = [];

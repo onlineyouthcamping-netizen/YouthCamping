@@ -5,6 +5,8 @@
  * PNR is excluded from customer-facing templates by default.
  */
 
+const { getPublicSiteBaseUrl } = require("./publicSiteUrl");
+
 const WAITLIST_DISCLAIMER =
   "If your ticket is waitlisted or RAC and does not get confirmed, YouthCamping is not responsible for railway confirmation. Please contact our team for available support and next steps.";
 
@@ -19,18 +21,7 @@ function buildApprovedEmail({ booking, ticket, template } = {}) {
       ? `\n\n${template?.waitlistDisclaimer || WAITLIST_DISCLAIMER}`
       : "";
 
-  const envUrl =
-    process.env.PUBLIC_SITE_URL ||
-    process.env.FRONTEND_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL;
-  let publicBase = "https://youthcamping.in";
-  if (envUrl && typeof envUrl === "string" && envUrl.trim().length > 0) {
-    let url = envUrl.trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
-    publicBase = url.replace(/\/+$/, "");
-  }
+  const publicBase = getPublicSiteBaseUrl();
 
   return {
     subject: `Your Train Ticket is Confirmed – ${booking?.tripName || "YouthCamping Trip"}`,

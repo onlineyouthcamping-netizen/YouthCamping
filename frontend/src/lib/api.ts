@@ -85,6 +85,13 @@ export const normalizeImageUrl = (url: any): string | undefined => {
   if (url.startsWith("http://") || url.startsWith("https://")) {
     if (url === "https://images.unsplash.com/photo-" || url.endsWith("photo-"))
       return undefined;
+    // Old CMS files also live on BunnyCDN. Rewrite so .in retirement does not break images.
+    if (/https?:\/\/(www\.)?youthcamping\.in\/system\/images\//i.test(url)) {
+      return url.replace(
+        /https?:\/\/(www\.)?youthcamping\.in\/system\/images\//i,
+        "https://vl-prod-static.b-cdn.net/system/images/",
+      );
+    }
     return url;
   }
 

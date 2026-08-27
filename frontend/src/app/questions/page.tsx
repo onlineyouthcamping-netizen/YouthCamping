@@ -18,7 +18,7 @@ const faqs = [
       },
       {
         q: "When is full payment due?",
-        a: "Full payment must be completed before your departure date. An advance booking amount is required to secure your seat at the time of booking.",
+        a: "Full payment has to be done before 15 days of trip departure. An advance booking amount is required to secure your seat at the time of booking and is non-refundable.",
       },
     ],
   },

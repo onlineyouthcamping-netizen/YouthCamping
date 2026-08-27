@@ -6,25 +6,12 @@ apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
+const { getPublicSiteBaseUrl } = require("../utils/publicSiteUrl");
+
 const BRAND_COLOR = "#0f172a";
 const ACCENT_COLOR = "#ff5722";
 const ACCENT_HOVER = "#e64a19";
-const LOGO_URL = "https://www.youthcamping.online/logo.png";
-
-const getPublicSiteBaseUrl = () => {
-  const envUrl =
-    process.env.PUBLIC_SITE_URL ||
-    process.env.FRONTEND_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL;
-  if (envUrl && typeof envUrl === "string" && envUrl.trim().length > 0) {
-    let url = envUrl.trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
-    return url.replace(/\/+$/, "");
-  }
-  return "https://youthcamping.online";
-};
+const LOGO_URL = "https://youthcamping.online/logo.png";
 
 const getBaseTemplate = (content, previewText) => `
 <!DOCTYPE html>
@@ -405,8 +392,8 @@ const templates = {
       trip.heroImage ||
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb";
     const bookingTokenLink = booking.bookingToken
-      ? `https://youthcamping.online/b/${booking.bookingToken}`
-      : "https://youthcamping.online/my-bookings";
+      ? `${getPublicSiteBaseUrl()}/b/${booking.bookingToken}`
+      : `${getPublicSiteBaseUrl()}/my-bookings`;
     const rawTicketStatus = String(
       booking.trainTicketStatus ||
         booking.passengers?.details?.ticketStatus ||
@@ -753,7 +740,7 @@ const templates = {
           <td style="text-align: right; vertical-align: middle;">
             <a href="https://instagram.com" target="_blank" style="color: #94a3b8; text-decoration: none; margin-left: 10px; font-size: 11px; font-weight: 600;">Instagram</a>
             <a href="https://youtube.com" target="_blank" style="color: #94a3b8; text-decoration: none; margin-left: 10px; font-size: 11px; font-weight: 600;">YouTube</a>
-            <a href="https://youthcamping.online" target="_blank" style="color: #94a3b8; text-decoration: none; margin-left: 10px; font-size: 11px; font-weight: 600;">Website</a>
+            <a href="${getPublicSiteBaseUrl()}" target="_blank" style="color: #94a3b8; text-decoration: none; margin-left: 10px; font-size: 11px; font-weight: 600;">Website</a>
           </td>
         </tr>
       </table>
@@ -824,7 +811,7 @@ const templates = {
 
       <p>Make sure you have all your essentials ready. Don't forget to check the weather forecast for your destination!</p>
       
-      <a href="${process.env.FRONTEND_URL}/packing-list" class="button">View Packing List</a>
+      <a href="${getPublicSiteBaseUrl()}/packing-list" class="button">View Packing List</a>
     `;
     return {
       subject: `Trip Reminder: Your journey to ${trip.title || booking.tripName || booking.tripId} is coming soon!`,
@@ -892,7 +879,7 @@ const templates = {
       <p>We have attached the official PDF invoice to this email for your records.</p>
       
       <div style="text-align: center;">
-        <a href="${process.env.FRONTEND_URL}/my-bookings" class="button">View My Booking</a>
+        <a href="${getPublicSiteBaseUrl()}/my-bookings" class="button">View My Booking</a>
       </div>
     `;
     return {

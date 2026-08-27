@@ -1,9 +1,18 @@
 import Link from "next/link";
-export const revalidate = 30;
-
+import { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { fetchPublicBlogs, normalizeImageUrl } from "@/lib/api";
 import { BookOpen, ChevronRight, ArrowLeft, Clock, User } from "lucide-react";
 import { OptimizedImage } from "@/components/ui/OptimizedImage";
+
+export const revalidate = 30;
+
+export const metadata: Metadata = pageMetadata({
+  title: "Travel Stories | YouthCamping",
+  description:
+    "Travel diaries, packing notes, and route stories from YouthCamping trips.",
+  path: "/stories",
+});
 
 export default async function StoriesPage() {
   let blogs: any[] = [];

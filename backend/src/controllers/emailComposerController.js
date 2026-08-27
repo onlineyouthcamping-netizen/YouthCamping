@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const { getPublicSiteBaseUrl } = require("../utils/publicSiteUrl");
 const SibApiV3Sdk = require("sib-api-v3-sdk");
 const {
   sumRecordedCollectionsForBooking,
@@ -136,7 +137,7 @@ function wrapInBrandedLayout(
       </div>
       <div class="footer">
         <p>&copy; ${new Date().getFullYear()} YouthCamping. All rights reserved.</p>
-        <p><a href="https://youthcamping.online">Visit Website</a> &bull; <a href="https://admin.youthcamping.online">Admin Portal</a></p>
+        <p><a href="${getPublicSiteBaseUrl()}">Visit Website</a> &bull; <a href="https://admin.youthcamping.online">Admin Portal</a></p>
       </div>
     </div>
   </div>
@@ -472,7 +473,7 @@ function wrapInBrandedLayout(
       <div class="footer">
         <p>&copy; ${new Date().getFullYear()} YouthCamping. All rights reserved.</p>
         <p>This is an automated operational notification regarding your travel reservation.</p>
-        <p><a href="mailto:onlineyouthcamping@gmail.com">onlineyouthcamping@gmail.com</a> &bull; <a href="https://youthcamping.online">Visit Website</a> &bull; <a href="https://admin.youthcamping.online">Admin Portal</a></p>
+        <p><a href="mailto:onlineyouthcamping@gmail.com">onlineyouthcamping@gmail.com</a> &bull; <a href="${getPublicSiteBaseUrl()}">Visit Website</a> &bull; <a href="https://admin.youthcamping.online">Admin Portal</a></p>
       </div>
     </div>
   </div>
