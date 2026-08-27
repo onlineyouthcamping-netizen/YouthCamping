@@ -20,6 +20,7 @@ cd ..
 
 echo "🌐 [4/6] Building Next.js Public Website (frontend)..."
 cd frontend
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://api.youthcamping.online/api}"
 npm install --no-audit
 npm run build
 cd ..
@@ -42,7 +43,13 @@ fi
 cd ..
 
 echo "🔁 [6/6] Reloading PM2 services with updated bundle..."
-pm2 restart all --update-env || pm2 reload all
+pm2 restart youthcamping-backend --update-env || true
+if pm2 describe youthcamping-web >/dev/null 2>&1; then
+  pm2 reload youthcamping-web --update-env
+else
+  pm2 start frontend/ecosystem.config.js
+fi
+pm2 save
 
 echo "=============================================================================="
 echo "✅ VPS Update Completed Successfully!"
